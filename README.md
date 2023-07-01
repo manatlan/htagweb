@@ -42,7 +42,6 @@ The concepts are the same :
 A "hello world" could be :
 
 ```python
-
 from htag import Tag
 
 class App(Tag.div):
@@ -51,6 +50,25 @@ class App(Tag.div):
 
 from htagweb import WebServer # or WebServerWS
 WebServer( App ).run()
+```
+
+or, with gunicorn (in a `server.py` file):
+
+```python
+from htag import Tag
+
+class App(Tag.div):
+    def init(self):
+        self+= "hello world"
+
+from htagweb import WebServer # or WebServerWS
+app=WebServer( App )
+```
+
+and run server :
+
+```bash
+gunicorn -w 4 -k uvicorn.workers.UvicornH11Worker -b localhost:8000 --preload server:app
 ```
 
 See more in "examples" folder

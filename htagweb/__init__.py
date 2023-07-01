@@ -187,10 +187,10 @@ class WebBase(Starlette):
         Starlette.add_middleware(self,WebServerSession )
 
 
-    def run(self, host="127.0.0.1", port=8000, openBrowser=True):   # localhost, by default !!
+    def run(self, host="0.0.0.0", port=8000, openBrowser=False):   # localhost, by default !!
         if openBrowser:
             import webbrowser
-            webbrowser.open_new_tab(f"http://{host}:{port}")
+            webbrowser.open_new_tab(f"http://localhost:{port}")
 
         uvicorn.run(self, host=host, port=port)
 
