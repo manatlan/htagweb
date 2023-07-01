@@ -1,0 +1,34 @@
+[tool.poetry]
+name = "htagweb"
+version = "0.0.0" # auto-updated
+description = "It's a robust webserver (http/ws) for hosting htag apps on the web (a process by user)"
+authors = ["manatlan <manatlan@gmail.com>"]
+readme = 'README.md'
+license="MIT"
+keywords=['htag','webserver']
+homepage = "https://github.com/manatlan/htagweb"
+repository = "https://github.com/manatlan/htagweb"
+documentation = "https://github.com/manatlan/htagweb"
+classifiers = [
+        "Operating System :: OS Independent",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+        "Topic :: Software Development :: Build Tools",
+        "License :: OSI Approved :: Apache Software License",
+]
+
+[tool.poetry.dependencies]
+# https://python-poetry.org/docs/dependency-specification/
+python = "^3.8"
+htag = ">= 0.9.44"
+starlette = ">= 0.21.0"
+uvicorn = ">= 0.22.0"
+pycryptodomex = ">= 3.0.0"
+shared_memory_dict = ">= 0.7.2"
+
+[tool.poetry.dev-dependencies]
+pytest = "^3.0"
+pytest-cov = "^2.6"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
