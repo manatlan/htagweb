@@ -115,7 +115,11 @@ class WebServerSession:  # ASGI Middleware, for starlette
 
 #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
 def startManager(port,timeout): #sec (timeout session)
-    Manager(port).run(timeout)
+    try:
+        Manager(port).run(timeout)
+        print("Manager started!")
+    except Exception as e:
+        print("Manager not started because",e)
 #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
 
 
@@ -181,7 +185,10 @@ class WebBase(Starlette):
             p = multiprocessing.Process(target=startManager,args=(port,timeout,),name="ManagerServer")
             p.start()
 
-        Starlette.__init__(self,debug=True, on_startup=[_startManager,],routes=routes)
+        async def _stopManager():
+            await self.manager.shutdown()
+
+        Starlette.__init__(self,debug=True, on_startup=[_startManager,],on_shutdown=[_stopManager],routes=routes)
 
         if obj:
             async def handleHome(request):
