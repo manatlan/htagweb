@@ -1,5 +1,11 @@
 # htagweb
 
+[![Test](https://github.com/manatlan/htagweb/actions/workflows/on_commit_do_all_unittests.yml/badge.svg)](https://github.com/manatlan/htagweb/actions/workflows/on_commit_do_all_unittests.yml)
+
+<a href="https://pypi.org/project/htagweb/">
+    <img src="https://badge.fury.io/py/htagweb.svg?x" alt="Package version">
+</a>
+
 ## NOT READY
 
 
