@@ -5,8 +5,6 @@ from datetime import datetime
 
 from htagweb.manager import Manager,AppProcess,AppProcessException,shm
 
-pytest_plugins = ("pytest_asyncio",)
-
 
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
