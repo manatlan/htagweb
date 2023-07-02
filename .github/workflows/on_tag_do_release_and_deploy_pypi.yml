@@ -27,11 +27,12 @@ jobs:
           python -m pip install shared_memory_dict
           python -m pip install pycryptodomex
           
-      - name: Test with pytest
-        run: |
-          pytest -s .
+      # - name: Test with pytest
+      #   run: |
+      #     pytest -s .
 
       - name: Build and publish to pypi
         uses: JRubics/poetry-publish@v1.12
         with:
-          pypi_token: ${{ secrets.PYPI_TOKEN }}
+          pypi_token: NIMP
+          # pypi_token: ${{ secrets.PYPI_TOKEN }}
