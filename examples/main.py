@@ -1,3 +1,4 @@
+import os,sys; sys.path.insert(0,os.path.dirname(os.path.dirname(__file__)))
 from htagweb import WebServer,WebServerWS
 from starlette.responses import HTMLResponse
 
