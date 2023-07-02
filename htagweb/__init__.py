@@ -7,6 +7,8 @@
 # https://github.com/manatlan/htag
 # #############################################################################
 
+__version__ = "0.0.0" # auto updated
+
 """
 WebServer & WebServerWS
 ~~~~~~~~~~~~~~~~~~~~~~~~
