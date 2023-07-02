@@ -44,7 +44,7 @@ The concepts are the same :
 - perhaps a bi-modal version (use ws, and fallback to http when ws com error)
 
 
-----
+## Examples
 
 A "hello world" could be :
 
@@ -79,3 +79,7 @@ gunicorn -w 4 -k uvicorn.workers.UvicornH11Worker -b localhost:8000 --preload se
 ```
 
 See more in "examples" folder
+
+```bash
+python3 examples/main.py
+```
