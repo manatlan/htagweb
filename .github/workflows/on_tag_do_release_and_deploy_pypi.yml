@@ -25,7 +25,8 @@ jobs:
           python -m pip install starlette
           python -m pip install uvicorn
           python -m pip install shared_memory_dict
-
+          python -m pip install pycryptodomex
+          
       - name: Test with pytest
         run: |
           pytest -s .
