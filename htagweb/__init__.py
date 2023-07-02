@@ -107,10 +107,11 @@ class WebServerSession:  # ASGI Middleware, for starlette
 #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
 
 def startManager(port,timeout): #sec (timeout session)
+    asyncio.set_event_loop(asyncio.new_event_loop())
     try:
         Manager(port).run(timeout)
     except Exception as e:
-        pass
+        print("ERROR, can't start Manager:",e)
 
 #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
 
