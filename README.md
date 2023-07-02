@@ -37,7 +37,8 @@ The concepts are the same :
 
 ## Roadmap / futur
 
-- uvloop compatible
+- make it uvloop compatible
+- better logging !!!!
 - graceful shutdown of the manager
 - more parameters (session size, etc ...)
 - parano mode
