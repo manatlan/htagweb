@@ -2,11 +2,6 @@
 
 ## NOT READY
 
-## NOT READY
-
-## NOT READY
-
-## NOT READY
 
 
 This "htagweb" module provides two htag's "runners":
