@@ -6,11 +6,7 @@
     <img src="https://badge.fury.io/py/htagweb.svg?x" alt="Package version">
 </a>
 
-## NOT READY
-## NOT READY
-## NOT READY
-
-
+**IMPORTANT**: not compatible with **uvloop** !!!
 
 This "htagweb" module provides two htag's "runners":
 

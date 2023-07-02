@@ -248,27 +248,6 @@ class Manager:
                 await asyncio.sleep(60) # check sessions every minute
                 self.seskeeper(max)
 
-    #==============================================================================================
-    #==============================================================================================
-    #==============================================================================================
-    #TODO: here it's not good
-    #TODO: it works on windows, and on linux with python3.10
-    #TODO: but not py<3.10, because can't reuse the loop
-    #TODO: should do something better, with graceful death !
-    #==============================================================================================
-    #==============================================================================================
-    #==============================================================================================
-
-        # # https://stackoverflow.com/a/73884759/1284499
-        # if sys.version_info < (3, 10):
-        #     loop = asyncio.get_event_loop()
-        # else:
-        #     try:
-        #         loop = asyncio.get_running_loop()
-        #     except RuntimeError:
-        #         loop = asyncio.new_event_loop()
-
-        #     asyncio.set_event_loop(loop)
 
         loop=asyncio.new_event_loop()
         asyncio.set_event_loop(loop)    # force a new loop ;'(
