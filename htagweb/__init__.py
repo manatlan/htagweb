@@ -120,12 +120,7 @@ def startManager(port,timeout): #sec (timeout session)
     #==============================================================================================
     #==============================================================================================
 
-    asyncio.set_event_loop(asyncio.new_event_loop())    # force a new loop ;'(
-
-    try:
-        Manager(port).run(timeout)
-    except Exception as e:
-        print("ERROR, can't start Manager:",e)
+    Manager(port).run(timeout)
 
 #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
 
