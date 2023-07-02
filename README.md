@@ -78,7 +78,7 @@ and run server :
 gunicorn -w 4 -k uvicorn.workers.UvicornH11Worker -b localhost:8000 --preload server:app
 ```
 
-See more in "examples" folder
+See a more advanced example in [examples folder](https://github.com/manatlan/htagweb/tree/master/examples)
 
 ```bash
 python3 examples/main.py
