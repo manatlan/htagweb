@@ -28,13 +28,6 @@ jobs:
       run: |
           python -m pip install --upgrade pip poetry
           poetry install
-      # python -m pip install pytest pytest-asyncio
-      # python -m pip install htag
-      # python -m pip install starlette
-      # python -m pip install uvicorn
-      # python -m pip install shared_memory_dict
-      # python -m pip install pycryptodomex
-
 
     - name: Test with pytest
       run: |
