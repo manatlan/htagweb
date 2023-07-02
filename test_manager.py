@@ -38,7 +38,8 @@ class AppKo(Tag.div):
 
 @pytest.mark.asyncio
 async def test_AppProcess():
-    a=AppProcess("u1","__main__.Appz",( [], {}),js="/*js*/",appkey="apppkkkk")
+
+    a=AppProcess("u1","test_manager.Appz",( [], {}),js="/*js*/",appkey="apppkkkk")
     assert a.is_alive()
 
     # get the html (first render)
@@ -73,7 +74,7 @@ async def test_AppProcess():
 async def test_AppProcess_ko():
 
     # test a class with bug during init process
-    app=AppProcess("u1","__main__.AppKo",( [], {}),js="/*js*/",appkey="apppkkkk")
+    app=AppProcess("u1","test_manager.AppKo",( [], {}),js="/*js*/",appkey="apppkkkk")
     # will print the stacktrace on stdout ;-(
     # (exception is bypassed, and render a html error page ;-( )
     # so we need to force quit the process
@@ -85,15 +86,14 @@ async def test_AppProcess_ko():
 
     # test an existing class, but not htag one
     with pytest.raises( AppProcessException ):
-        AppProcess("u1","__main__.Nimp",( [], {}),js="/*js*/",appkey="apppkkkk")
+        AppProcess("u1","test_manager.Nimp",( [], {}),js="/*js*/",appkey="apppkkkk")
 
-    print("test_AppProcess_ko OK")
 
 
 @pytest.mark.asyncio
-async def test_manager(m):
-    uid,fqn="u1","__main__.Appz"
-
+async def test_manager():
+    uid,fqn="u1","test_manager.Appz"
+    m=Manager(17777)
 
     #!!!!!!!!!!!!!!!!!!!!!!!!!!! register request for uid
     scope={}
@@ -125,7 +125,6 @@ async def test_manager(m):
     # and its apps too.
     assert not app.is_alive()
 
-    print("test_manager ok")
 
 
 if __name__=="__main__":
@@ -135,7 +134,7 @@ if __name__=="__main__":
 
     asyncio.run( test_AppProcess() )
     asyncio.run( test_AppProcess_ko() )
+    asyncio.run( test_manager() )
 
-    manager=Manager(17777)
-    asyncio.run( test_manager(manager) )
+    print("ok")
 
