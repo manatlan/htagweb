@@ -13,7 +13,7 @@
 This "htagweb" module provides two htag's "runners":
 
  * WebServer     : for http only exchanges
- * WebServerWS   ! for http/ws exchanges (first rendering is on http)
+ * WebServerWS   : for http/ws exchanges (first rendering is on http)
 
 Theses runners are a lot more complete than the defaults ones (WebHTTP & WebWS, provided nativly with htag)
 If you want to expose your HTag apps on the web : **they are the only real/official solutions**.
