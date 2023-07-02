@@ -109,7 +109,18 @@ class WebServerSession:  # ASGI Middleware, for starlette
 #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
 
 def startManager(port,timeout): #sec (timeout session)
-    asyncio.set_event_loop(asyncio.new_event_loop())
+    #==============================================================================================
+    #==============================================================================================
+    #==============================================================================================
+    #TODO: here it's not good
+    #TODO: it works on windows, and on linux with python3.10
+    #TODO: but not py<3.10, because can't reuse the loop
+    #TODO: should do something better, with graceful death !
+    #==============================================================================================
+    #==============================================================================================
+    #==============================================================================================
+
+    asyncio.set_event_loop(asyncio.new_event_loop())    # force a new loop ;'(
 
     try:
         Manager(port).run(timeout)
@@ -177,6 +188,16 @@ class WebBase(Starlette):
         self.manager = ManagerClient(port)
 
         async def _startManager():
+            #==============================================================================================
+            #==============================================================================================
+            #==============================================================================================
+            #TODO: here it's not good
+            #TODO: it works on windows, and on linux with python3.10
+            #TODO: but not py<3.10, because can't reuse the loop
+            #TODO: should do something better, with graceful death !
+            #==============================================================================================
+            #==============================================================================================
+            #==============================================================================================
             import multiprocessing
             p = multiprocessing.Process(target=startManager,args=(port,timeout,),name="ManagerServer")
             p.start()
