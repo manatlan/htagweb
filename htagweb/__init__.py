@@ -11,7 +11,7 @@ __version__ = "0.0.0" # auto updated
 
 try:
     import uvloop
-    raise Exception("htagweb is not compatible with uvloop")
+    raise Exception("htagweb is not compatible with uvloop, yet")
 except ImportError:
     pass
 
@@ -119,7 +119,7 @@ def startManager(port,timeout): #sec (timeout session)
         Manager(port).run(timeout)
         print("Manager started!")
     except Exception as e:
-        print("Manager not started because",e)
+        print("Manager can't started (already running?)")
 #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
 
 

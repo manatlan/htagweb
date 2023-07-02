@@ -253,19 +253,21 @@ class Manager:
         asyncio.set_event_loop(loop)    # force a new loop ;'(
 
         try:
-            self.server = loop.run_until_complete( asyncio.start_server( handle_server, '127.0.0.1', self.port) )
+            servertask = asyncio.start_server( handle_server, '127.0.0.1', self.port)
+            loop.create_task( servertask )
 
             # one server started, so we can tun the sessions keeper
-            asyncio.ensure_future( loopSesKeeper(timeout) )
+            loop.create_task( loopSesKeeper(timeout) )
 
-            log('MANAGER SERVER Serving on {}'.format(self.server.sockets[0].getsockname()))
+            log('MANAGER SERVER Serving on {}'.format(self.port))
             loop.run_forever()
         except KeyboardInterrupt:
             pass
-        self.server.close()
+        finally:
+            loop.close()
 
     async def shutdown(self):
-        print("TODO:","do shutdown gracefully")
+        print("TODO: IMPLEMENT MANAGER SHUTDOWN (it's running now!)")
 
     async def ht_render(self, uid:str,fqn:str,init_params,js:str, renew=False) -> str:
 
