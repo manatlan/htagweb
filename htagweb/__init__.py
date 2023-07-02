@@ -9,6 +9,12 @@
 
 __version__ = "0.0.0" # auto updated
 
+try:
+    import uvloop
+    raise Exception("htagweb is not compatible with uvloop")
+except ImportError:
+    pass
+
 """
 WebServer & WebServerWS
 ~~~~~~~~~~~~~~~~~~~~~~~~
