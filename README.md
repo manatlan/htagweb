@@ -35,6 +35,14 @@ The concepts are the same :
  - All user's instances(process) are destroyed, after an inactivity timeout (not like in desktop mode, to preserve healthy of the webserver)
  - the "session" live as long as the server live (may not be a problem on many hosting service (where they shutdown the server after inactivities))
 
+## Roadmap / futur
+
+- uvloop compatible
+- graceful shutdown of the manager
+- more parameters (session size, etc ...)
+- parano mode
+- perhaps a bi-modal version (use ws, and fallback to http when ws com error)
+
 
 ----
 
