@@ -38,6 +38,7 @@ The concepts are the same :
 ## Roadmap / futur
 
 - make it uvloop compatible
+- replace starlette by fastapi ;-)
 - better logging !!!!
 - graceful shutdown of the manager
 - more parameters (session size, etc ...)
