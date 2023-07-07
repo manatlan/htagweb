@@ -9,12 +9,6 @@
 
 __version__ = "0.0.0" # auto updated
 
-try:
-    import uvloop
-    raise Exception("htagweb is not compatible with uvloop, yet")
-except ImportError:
-    pass
-
 """
 WebServer & WebServerWS
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -41,8 +35,7 @@ from starlette.routing import Route,WebSocketRoute
 from starlette.endpoints import WebSocketEndpoint
 
 #=-=-=-=-=-=-
-from . import shm
-from .manager import Manager
+from .uidprocess import UidProxy
 from .crypto import decrypt,encrypt,JSCRYPTO
 #=-=-=-=-=-=-
 
@@ -90,11 +83,6 @@ class WebServerSession:  # ASGI Middleware, for starlette
 
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
         scope["uid"] = uid
-        scope["session"] = shm.session(uid) # create a smd
-
-        # declare session
-        glob=shm.wses()
-        glob[uid]=datetime.now()
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         async def send_wrapper(message: Message) -> None:
@@ -112,42 +100,6 @@ class WebServerSession:  # ASGI Middleware, for starlette
             await send(message)
 
         await self.app(scope, receive, send_wrapper)
-
-#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
-def startManager(port,timeout): #sec (timeout session)
-    try:
-        Manager(port).run(timeout)
-        print("Manager started!")
-    except Exception as e:
-        print("Manager can't started (already running?)")
-#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
-
-
-class ManagerClient:
-    def __init__(self,port):
-        self.port=port
-
-    def __getattr__(self,name:str):
-        async def _(*a,**k):
-            reader, writer = await asyncio.open_connection("127.0.0.1", self.port)
-
-            question = pickle.dumps( (name,a,k) )
-            # logger.debug('Sending data of size: %s',len(question))
-            writer.write(question)
-
-            await writer.drain()
-            writer.write_eof()
-
-            data = await reader.read()
-            # logger.debug('recept data of size: %s',len(data))
-            reponse = pickle.loads( data )
-            if isinstance(reponse,Exception):
-                raise reponse
-
-            writer.close()
-            await writer.wait_closed()
-            return reponse
-        return _
 
 
 
@@ -177,18 +129,7 @@ class WebBase(Starlette):
         # self.crypt="test"   # or None
         self.crypt=None
 
-        port=27777 # manager server port
-        self.manager = ManagerClient(port)
-
-        async def _startManager():
-            import multiprocessing
-            p = multiprocessing.Process(target=startManager,args=(port,timeout,),name="ManagerServer")
-            p.start()
-
-        async def _stopManager():
-            await self.manager.shutdown()
-
-        Starlette.__init__(self,debug=True, on_startup=[_startManager,],on_shutdown=[_stopManager],routes=routes)
+        Starlette.__init__(self,debug=True, on_startup=[],on_shutdown=[],routes=routes)
 
         if obj:
             async def handleHome(request):
@@ -208,7 +149,10 @@ class WebBase(Starlette):
 
     async def interact(self,uid:str,fqn:str,query:str) -> str:
         data = self._str2dict( query )
-        actions = await self.manager.ht_interact(uid, fqn, data )
+        p=UidProxy( uid )
+        #~ actions = await self.manager.ht_interact(uid, fqn, data )
+        actions = await p.ht_interact(fqn,data)
+        
         if isinstance(actions,dict):
             return self._dict2str( actions )
         else:
@@ -230,8 +174,10 @@ async function dict2str(d) { return JSON.stringify(d); }
             """+js
 
         init_params = commons.url2ak( str(request.url) )
-        html = await self.manager.ht_render(uid,fqn,init_params, fjs, renew )
-
+        p=UidProxy( uid )
+        #~ html = await self.manager.ht_render(uid,fqn,init_params, fjs, renew )
+        html = await p.ht_create(fqn, fjs, init_params, renew=renew)
+        assert isinstance(html,str),html
         return html
 
     def _dict2str(self,dico:dict) -> str:
@@ -337,5 +283,4 @@ ws.onmessage = async function(e) {
 )
         html = await self.render(request,uid,fqn, js,renew )
         return HTMLResponse( html )
-
 

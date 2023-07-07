@@ -6,8 +6,6 @@
     <img src="https://badge.fury.io/py/htagweb.svg?x" alt="Package version">
 </a>
 
-**IMPORTANT**: not compatible with **uvloop** !!!
-
 This "htagweb" module provides two htag's "runners":
 
  * WebServer     : for http only exchanges
@@ -18,10 +16,11 @@ If you want to expose your HTag apps on the web : **they are the only real/offic
 Theses are a lot robust and IRL tested.
 
  * based on [starlette](https://pypi.org/project/starlette/)
- * each htag app is runned in its own process, per user (real isolation!)
+ * compatible with **uvloop** !!!
+ * Each user has its own process (for session, and htag app)
  * real starlette session available (in htag instance, and starlette request)
  * compatible with oauth2 authents ( [authlib](https://pypi.org/project/Authlib/) )
- * works with multiple uvicorn/gunicorn webworkers
+ * ??? works with multiple uvicorn/gunicorn webworkers ???
  * real process managments (interactions timeout, process expirations, ...)
  * **NOT READY YET** parano mode (can aes encrypt all communications between client & server ... to avoid mitm'proxies)
 
@@ -31,16 +30,15 @@ the risk may be minimal (only DoS), stealing datas may not be possible.
 
 The concepts are the same :
 
- - one user can run only one instance(process) of an htag app at one time (like in desktop mode).
- - All user's instances(process) are destroyed, after an inactivity timeout (not like in desktop mode, to preserve healthy of the webserver)
+ - one user can run only one instance of an htag app at one time (like in desktop mode).
+ - All user processes are destroyed, after an inactivity timeout (not like in desktop mode, to preserve healthy of the webserver)
  - the "session" live as long as the server live (may not be a problem on many hosting service (where they shutdown the server after inactivities))
 
 ## Roadmap / futur
 
-- make it uvloop compatible
+- graceful shutdown of the manager
 - replace starlette by fastapi ;-)
 - better logging !!!!
-- graceful shutdown of the manager
 - more parameters (session size, etc ...)
 - parano mode
 - perhaps a bi-modal version (use ws, and fallback to http when ws com error)

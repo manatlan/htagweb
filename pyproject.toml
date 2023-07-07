@@ -18,12 +18,11 @@ classifiers = [
 
 [tool.poetry.dependencies]
 # https://python-poetry.org/docs/dependency-specification/
-python = "^3.8"
+python = "^3.7"
 htag = ">= 0.9.44"
 starlette = ">= 0.21.0"
 uvicorn = ">= 0.22.0"
 pycryptodomex = ">= 3.0.0"
-shared_memory_dict = ">= 0.7.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.0"
