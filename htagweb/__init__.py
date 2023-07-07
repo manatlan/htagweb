@@ -23,6 +23,7 @@ WebServer & WebServerWS
 - 30s timeout for interactions/render times
 - parano mode (aes encryption in exchanges)
 """
+from logging import shutdown
 import uvicorn
 
 from htag import Tag
@@ -129,7 +130,10 @@ class WebBase(Starlette):
         # self.crypt="test"   # or None
         self.crypt=None
 
-        Starlette.__init__(self,debug=True, on_startup=[],on_shutdown=[],routes=routes)
+        async def shutdown():
+            UidProxy.shutdown()
+
+        Starlette.__init__(self,debug=True, on_startup=[],on_shutdown=[shutdown],routes=routes)
 
         if obj:
             async def handleHome(request):
@@ -152,7 +156,7 @@ class WebBase(Starlette):
         p=UidProxy( uid )
         #~ actions = await self.manager.ht_interact(uid, fqn, data )
         actions = await p.ht_interact(fqn,data)
-        
+
         if isinstance(actions,dict):
             return self._dict2str( actions )
         else:
