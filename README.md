@@ -17,10 +17,10 @@ Theses are a lot robust and IRL tested.
 
  * based on [starlette](https://pypi.org/project/starlette/)
  * compatible with **uvloop** !!!
+ * **NOT FULLY COMPATIBLE** with multiple uvicorn/gunicorn webworkers !!!
  * Each user has its own process (for session, and htag app)
  * real starlette session available (in htag instance, and starlette request)
  * compatible with oauth2 authents ( [authlib](https://pypi.org/project/Authlib/) )
- * ??? works with multiple uvicorn/gunicorn webworkers ???
  * real process managments (interactions timeout, process expirations, ...)
  * **NOT READY YET** parano mode (can aes encrypt all communications between client & server ... to avoid mitm'proxies)
 
