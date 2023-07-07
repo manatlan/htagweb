@@ -63,7 +63,7 @@ async def test_pye_ok():
 
     p1=UidProxy("u1")
 
-    code="""
+    string="""
 import sys
 
 async def test():
@@ -73,7 +73,7 @@ print( await test(), web.request.method, web.request.url )
 web.response.status_code=201
 web.response.content_type="text/plain"
 """
-    x=await p1.exec( code )
+    x=await p1.exec( string )
     assert x.status_code==201
     assert x.headers["content-type"].startswith("text/plain")
     assert x.body and isinstance(x.body,bytes)
