@@ -15,6 +15,7 @@ from htagweb.manager import Manager
 @pytest.mark.asyncio
 async def test_the_base():
 
+    c=Manager()
     c=Manager() # no effect
     c=Manager() # no effect
     c=Manager() # no effect
