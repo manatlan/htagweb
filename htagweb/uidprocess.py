@@ -20,7 +20,6 @@ logging.basicConfig(format='[%(levelname)-5s] %(name)s: %(message)s',level=loggi
 
 logger = logging.getLogger(__name__)
 
-LOCK = multiprocessing.Lock()
 
 async def async_exec(stmts:str, env=None):
     """ trick to eval async thing """
@@ -203,17 +202,19 @@ def uidprocess(uid,queues, timeout = 10*60):
     logger.info("Process %s: ended",uid)
 
 # https://stackoverflow.com/questions/18213619/sharing-a-lock-between-gunicorn-workers?rq=1
-
+# https://docs.gunicorn.org/en/latest/design.html
 
 
 
 class UidProxyException(Exception): pass
 class UidProxy:
-#    PP = multiprocessing.Manager().dict()
+    # PP = multiprocessing.Manager().dict()
+    LOCK = multiprocessing.Lock()
+
     PP = {}
 
     def __init__(self,uid, timeout:float = 10*60 ):
-        with LOCK:
+        with UidProxy.LOCK:
             reuse=uid in UidProxy.PP
             if reuse:
                 p,qin,qout=UidProxy.PP[uid]
