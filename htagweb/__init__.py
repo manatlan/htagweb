@@ -36,6 +36,7 @@ from starlette.routing import Route,WebSocketRoute
 from starlette.endpoints import WebSocketEndpoint
 
 #=-=-=-=-=-=-
+from .manager import Manager
 from .uidprocess import UidProxy
 from .crypto import decrypt,encrypt,JSCRYPTO
 #=-=-=-=-=-=-
@@ -124,16 +125,22 @@ def findfqn(x) -> str:
 
     return tagClass.__module__+"."+tagClass.__qualname__
 
+MANAGER:Manager = None
+
 class WebBase(Starlette):
 
     def __init__(self,obj=None,timeout=5*60, routes=None):
         # self.crypt="test"   # or None
         self.crypt=None
 
-        async def shutdown():
+        async def on_startup():
+            global MANAGER
+            MANAGER=Manager()     # only one will run ! but all ref to the good one
+        async def on_shutdown():
             UidProxy.shutdown()
+            MANAGER.shutdown()
 
-        Starlette.__init__(self,debug=True, on_startup=[],on_shutdown=[shutdown],routes=routes)
+        Starlette.__init__(self,debug=True, on_startup=[on_startup],on_shutdown=[on_shutdown],routes=routes)
 
         if obj:
             async def handleHome(request):
@@ -153,9 +160,8 @@ class WebBase(Starlette):
 
     async def interact(self,uid:str,fqn:str,query:str) -> str:
         data = self._str2dict( query )
-        p=UidProxy( uid )
         #~ actions = await self.manager.ht_interact(uid, fqn, data )
-        actions = await p.ht_interact(fqn,data)
+        actions = MANAGER.ht_interact(uid,fqn,data)
 
         if isinstance(actions,dict):
             return self._dict2str( actions )
@@ -178,10 +184,8 @@ async function dict2str(d) { return JSON.stringify(d); }
             """+js
 
         init_params = commons.url2ak( str(request.url) )
-        p=UidProxy( uid )
         #~ html = await self.manager.ht_render(uid,fqn,init_params, fjs, renew )
-        html = await p.ht_create(fqn, fjs, init_params, renew=renew)
-        assert isinstance(html,str),html
+        html = MANAGER.ht_create(uid,fqn, fjs, init_params, renew=renew)
         return html
 
     def _dict2str(self,dico:dict) -> str:

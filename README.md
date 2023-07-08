@@ -17,7 +17,7 @@ Theses are a lot robust and IRL tested.
 
  * based on [starlette](https://pypi.org/project/starlette/)
  * compatible with **uvloop** !!!
- * **NOT FULLY COMPATIBLE** with multiple uvicorn/gunicorn webworkers !!!
+ * compatible with multiple gunicorn webworkers !!!
  * Each user has its own process (for session, and htag app)
  * real starlette session available (in htag instance, and starlette request)
  * compatible with oauth2 authents ( [authlib](https://pypi.org/project/Authlib/) )

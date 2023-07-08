@@ -1,12 +1,21 @@
 import sys
 import asyncio
 import multiprocessing
+from .uidprocess import UidProxy
 
 def mainprocess(input,output):
     print("MAINPROCESS")
 
     async def ping(msg):
         return f"hello {msg}"
+
+    async def ht_create(uid,fqn,js,init_params=None,renew=False):
+        p=UidProxy(uid)
+        return await p.ht_create(fqn,js,init_params,renew)
+
+    async def ht_interact(uid,fqn,data):
+        p=UidProxy(uid)
+        return await p.ht_interact(fqn,data)
 
     methods=locals()
 
@@ -24,6 +33,7 @@ def mainprocess(input,output):
             output.send( r )
 
     asyncio.run( loop() )
+    UidProxy.shutdown()
     print("MAINPROCESS EXITED")
 
 
@@ -46,7 +56,7 @@ class Manager:
         if self.pp:
             self.pp["input"].send( ("quit",([],{}) ))
             self.pp=None
-            del Manager._p
+            Manager._p={}
 
     def __getattr__(self,action:str):
         def _(*a,**k):

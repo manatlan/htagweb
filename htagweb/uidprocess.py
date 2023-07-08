@@ -208,33 +208,29 @@ def uidprocess(uid,queues, timeout = 10*60):
 
 class UidProxyException(Exception): pass
 class UidProxy:
-    # PP = multiprocessing.Manager().dict()
-    LOCK = multiprocessing.Lock()
-
     PP = {}
 
     def __init__(self,uid, timeout:float = 10*60 ):
-        with UidProxy.LOCK:
-            reuse=uid in UidProxy.PP
-            if reuse:
-                p,qin,qout=UidProxy.PP[uid]
-                reuse = p.is_alive()
+        reuse=uid in UidProxy.PP
+        if reuse:
+            p,qin,qout=UidProxy.PP[uid]
+            reuse = p.is_alive()
 
-            if reuse:
-                logger.info("UidProxy: reuse process %s",uid)
-            else:
-                logger.info("UidProxy: start process %s",uid)
-                qin=multiprocessing.Queue()
-                qout=multiprocessing.Queue()
+        if reuse:
+            logger.info("UidProxy: reuse process %s",uid)
+        else:
+            logger.info("UidProxy: start process %s",uid)
+            qin=multiprocessing.Queue()
+            qout=multiprocessing.Queue()
 
-                p=multiprocessing.Process( target=uidprocess, args=(uid, (qin,qout), timeout), name=f"process {uid}" )
-                #~ p=threading.Thread( target=uidprocess, args=(uid, (qin,qout)), name=f"process {uid}" )
-                p.start()
-                UidProxy.PP[uid]=p,qin,qout
+            p=multiprocessing.Process( target=uidprocess, args=(uid, (qin,qout), timeout), name=f"process {uid}" )
+            #~ p=threading.Thread( target=uidprocess, args=(uid, (qin,qout)), name=f"process {uid}" )
+            p.start()
+            UidProxy.PP[uid]=p,qin,qout
 
-            self.qin=qin
-            self.qout=qout
-            self.uid=uid
+        self.qin=qin
+        self.qout=qout
+        self.uid=uid
 
     def quit(self):
         """ quit process of this uid """
