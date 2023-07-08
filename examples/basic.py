@@ -13,59 +13,68 @@ async def homepage(request):
 
 async def inc(request):
     global DATA
-    send("hllllll")
+    Manager.send("hllllll")
     DATA+=1
     return RedirectResponse("/")
 
 p=multiprocessing.Manager().dict()
 
-def send(msg):
-    qs,rr=p[1]
-    qs.send(msg)
+class Manager:
+    @staticmethod
+    def start():
 
-    x=rr.recv()
-    print(f"COM SEND {msg}, recept={x}")
+        def mainprocess(input,output):
+            print("MAINPROCESS")
 
+            async def loop():
+                while 1:
+                    event = input.recv()
+                    print("::: RECV=",event,file=sys.stdout,flush=True)
+                    if event=="quit":
+                        break
+                    output.send(f"hello {event}")
 
-def mainprocess(input,output):
-    print("MAINPROCESS")
+            asyncio.run( loop() )
+            print("MAINPROCESS EXITED")
 
-    async def loop():
-        while 1:
-            event = input.recv()
-            print("::: RECV=",event,file=sys.stdout,flush=True)
-            if event=="quit":
-                break
-            output.send(f"hello {event}")
+        if not p:
+            qs,qr=multiprocessing.Pipe()
+            rs,rr=multiprocessing.Pipe()
+            p["input"]=qs
+            p["output"]=rr
 
-    asyncio.run( loop() )
-    print("MAINPROCESS EXITED")
+            ps = multiprocessing.Process(target=mainprocess, args=[qr,rs])
+            ps.start()
+            return ps
+        else:
+            return None
+
+    @staticmethod
+    def quit():
+        p["input"].send("quit")
+
+    @staticmethod
+    def send(msg):
+        p["input"].send(msg)
+
+        x=p["output"].recv()
+        print(f"COM SEND {msg}, recept={x}")
+
 
 ps=None
 
 async def startup():
     global ps
-    if p:
-        ps=None
-        print("already running")
-    else:
-        print("start")
-        qs,qr=multiprocessing.Pipe()
-        rs,rr=multiprocessing.Pipe()
-        p[1]=qs,rr
+    ps=Manager.start()
 
-        ps = multiprocessing.Process(target=mainprocess, args=[qr,rs])
-        ps.start()
-
-        await asyncio.sleep(1)
-        send( "debut" )
+    await asyncio.sleep(1)
+    Manager.send( "debut" )
 
 async def shutdown():
     print("SHHHHHHHHHHHHHHHHHHHHHHUUUUUUUUUUUUUUUUUUUUUUTTTTTTTTTTTTTTTTTT",ps)
     if ps:
         print(">>>> it's me which has runned the mainprocess")
-        qin,qout=p[1]
-        qin.send("quit")
+        Manager.quit()
     else:
         print(">>>> it's NOT me which has runned the mainprocess !!!!!!!!!!!!!!")
 
