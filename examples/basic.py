@@ -13,7 +13,7 @@ async def homepage(request):
 
 async def inc(request):
     global DATA
-    Manager.send("hllllll")
+    Manager.send("ping","hllllll")
     DATA+=1
     return RedirectResponse("/")
 
@@ -26,13 +26,23 @@ class Manager:
         def mainprocess(input,output):
             print("MAINPROCESS")
 
+            async def ping(msg):
+                return f"hello {msg}"
+
+            methods=locals()
+
             async def loop():
                 while 1:
-                    event = input.recv()
-                    print("::: RECV=",event,file=sys.stdout,flush=True)
-                    if event=="quit":
+                    action,(a,k) = input.recv()
+                    print("::: RECV=",action,file=sys.stdout,flush=True)
+                    if action=="quit":
                         break
-                    output.send(f"hello {event}")
+
+                    method=methods[action]
+                    # logger.info("Process %s: %s",uid,action)
+                    r=await method(*a,**k)
+
+                    output.send( r )
 
             asyncio.run( loop() )
             print("MAINPROCESS EXITED")
@@ -51,15 +61,24 @@ class Manager:
 
     @staticmethod
     def quit():
-        p["input"].send("quit")
+        p["input"].send( ("quit",([],{}) ))
 
     @staticmethod
-    def send(msg):
-        p["input"].send(msg)
+    def send(method,*a,**k):
+        p["input"].send( (method,(a,k)))
 
         x=p["output"].recv()
-        print(f"COM SEND {msg}, recept={x}")
+        print(f"::manager action {method}({a}), recept={x}")
+        return x
 
+    # @classmethod
+    # def __getattr__(cls,action:str):
+    #     async def _(*a,**k):
+    #         p["input"].send( (action,(a,k)))
+
+    #         x=p["output"].recv()
+    #         return x
+    #     return _
 
 ps=None
 
@@ -68,15 +87,12 @@ async def startup():
     ps=Manager.start()
 
     await asyncio.sleep(1)
-    Manager.send( "debut" )
+    Manager.send( "ping","debut" )
 
 async def shutdown():
-    print("SHHHHHHHHHHHHHHHHHHHHHHUUUUUUUUUUUUUUUUUUUUUUTTTTTTTTTTTTTTTTTT",ps)
-    if ps:
-        print(">>>> it's me which has runned the mainprocess")
+    global ps
+    if ps: # the one who have started it, kill it ;-)
         Manager.quit()
-    else:
-        print(">>>> it's NOT me which has runned the mainprocess !!!!!!!!!!!!!!")
 
 app = Starlette(debug=True, routes=[
     Route('/', homepage),
