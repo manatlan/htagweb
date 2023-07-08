@@ -13,25 +13,30 @@ async def homepage(request):
 
 async def inc(request):
     global DATA
-    qs,qr=p[1]
-    qs.send("hello")
-    print("COM SEND")
+    send("hllllll")
     DATA+=1
     return RedirectResponse("/")
 
 p=multiprocessing.Manager().dict()
 
-def mainprocess(qs,qr):
+def send(msg):
+    qs,rr=p[1]
+    qs.send(msg)
+
+    x=rr.recv()
+    print(f"COM SEND {msg}, recept={x}")
+
+
+def mainprocess(input,output):
     print("MAINPROCESS")
-    print(qs,qr,file=sys.stderr,flush=True)
 
     async def loop():
         while 1:
-            event = qr.recv()
+            event = input.recv()
             print("::: RECV=",event,file=sys.stdout,flush=True)
             if event=="quit":
                 break
-            # qs.send(f"hello {event}")
+            output.send(f"hello {event}")
 
     asyncio.run( loop() )
     print("MAINPROCESS EXITED")
@@ -45,14 +50,15 @@ async def startup():
         print("already running")
     else:
         print("start")
-        p[1]=multiprocessing.Pipe()
+        qs,qr=multiprocessing.Pipe()
+        rs,rr=multiprocessing.Pipe()
+        p[1]=qs,rr
 
-        ps = multiprocessing.Process(target=mainprocess, args=p[1])
+        ps = multiprocessing.Process(target=mainprocess, args=[qr,rs])
         ps.start()
 
         await asyncio.sleep(1)
-        qs,qr=p[1]
-        qs.send( ("hello",42) )
+        send( "debut" )
 
 async def shutdown():
     print("SHHHHHHHHHHHHHHHHHHHHHHUUUUUUUUUUUUUUUUUUUUUUTTTTTTTTTTTTTTTTTT",ps)
