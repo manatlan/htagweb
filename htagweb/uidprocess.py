@@ -16,7 +16,7 @@ from htag.render import HRenderer
 from starlette.requests import Request
 from starlette.responses import Response
 
-# logging.basicConfig(format='[%(levelname)-5s] %(name)s: %(message)s',level=logging.INFO)
+logging.basicConfig(format='[%(levelname)-5s] %(name)s: %(message)s',level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
@@ -180,6 +180,8 @@ def uidprocess(uid,queues, timeout = 10*60):
                 logger.info("Process %s: inactivity timeout (%ssec)",uid,timeout)
                 break
 
+            qout.put("ok")
+
             if action=="quit":
                 break
             else:
@@ -195,14 +197,17 @@ def uidprocess(uid,queues, timeout = 10*60):
 
 
     asyncio.run( processloop() )
+    qin.close()
+    qout.close()
     logger.info("Process %s: ended",uid)
 
 
 class UidProxyException(Exception): pass
 class UidProxy:
-    PP={}
+#    PP = multiprocessing.Manager().dict()
+    PP = {}
 
-    def __init__(self,uid, timeout = 10*60 ):
+    def __init__(self,uid, timeout:float = 10*60 ):
         reuse=uid in UidProxy.PP
         if reuse:
             p,qin,qout=UidProxy.PP[uid]
@@ -229,6 +234,8 @@ class UidProxy:
         self.qin.put( ('quit',( (),{} )) )
         if self.uid in UidProxy.PP:
             del UidProxy.PP[self.uid]
+        self.qin.close()
+        self.qout.close()
 
     @classmethod
     def shutdown(cls):
@@ -255,7 +262,21 @@ class UidProxy:
     def _com(self,action,*a,**k):
         """ SYNC COM ! """
         logger.info(">> UidProxy: com %s(%s,%s)",action,a,k)
-        self.qin.put( (action,(a,k)) )
+
+        # send request
+        try:
+            self.qin.put( (action,(a,k)) )
+        except Exception:
+            raise UidProxyException(f"queue is closed") # in this process !
+
+        # wait a confirmation (to test ps is alive)
+        try:
+            x=self.qout.get(timeout=0.5)    # minimal response
+            assert x=="ok"
+        except Exception:
+            raise UidProxyException(f"queue is closed on process side") # in the other process !
+
+        # wait the real response
         x:dict=self.qout.get(timeout=30)
         if "error" in x:
             raise UidProxyException(f"unknown UidProxy action {action} : {x['error']}")

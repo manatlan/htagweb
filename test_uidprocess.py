@@ -80,9 +80,43 @@ web.response.content_type="text/plain"
 
     UidProxy.shutdown()
 
+
+@pytest.mark.asyncio
+async def test_com_after_quit():
+    try:
+        p1=UidProxy("u1")
+        await p1.ping("x")
+
+        p1.quit()
+        await asyncio.sleep(0.1)
+
+        with pytest.raises( UidProxyException ):
+            await p1.ping("hello") # UidProxyException(f"queue is closed")
+
+    finally:
+        UidProxy.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_com_after_timeout_death():
+    try:
+        p1=UidProxy("u1",0.5)
+        await p1.ping("x")
+
+        await asyncio.sleep(1)
+
+        with pytest.raises( UidProxyException ):
+            await p1.ping("hello") # UidProxyException(f"queue is closed on process side")
+
+    finally:
+        UidProxy.shutdown()
+
+
 if __name__=="__main__":
     asyncio.run( test_bad_interop_unknown_method() )
     asyncio.run( test_bad_interop_bad_signature() )
     asyncio.run( test_ok_ping() )
     asyncio.run( test_htag_ok() )
     asyncio.run( test_pye_ok() )
+    asyncio.run( test_com_after_quit() )
+    asyncio.run( test_com_after_timeout_death() )
