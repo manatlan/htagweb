@@ -9,6 +9,10 @@ def mainprocess(input,output):
     async def ping(msg):
         return f"hello {msg}"
 
+    async def exec(uid,request):
+        p=UidProxy(uid)
+        return await p.exec(request)
+
     async def ht_create(uid,fqn,js,init_params=None,renew=False):
         p=UidProxy(uid)
         return await p.ht_create(fqn,js,init_params,renew)
