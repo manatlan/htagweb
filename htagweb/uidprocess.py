@@ -20,6 +20,7 @@ logging.basicConfig(format='[%(levelname)-5s] %(name)s: %(message)s',level=loggi
 
 logger = logging.getLogger(__name__)
 
+LOCK = multiprocessing.Lock()
 
 async def async_exec(stmts:str, env=None):
     """ trick to eval async thing """
@@ -201,6 +202,10 @@ def uidprocess(uid,queues, timeout = 10*60):
     qout.close()
     logger.info("Process %s: ended",uid)
 
+# https://stackoverflow.com/questions/18213619/sharing-a-lock-between-gunicorn-workers?rq=1
+
+
+
 
 class UidProxyException(Exception): pass
 class UidProxy:
@@ -208,26 +213,27 @@ class UidProxy:
     PP = {}
 
     def __init__(self,uid, timeout:float = 10*60 ):
-        reuse=uid in UidProxy.PP
-        if reuse:
-            p,qin,qout=UidProxy.PP[uid]
-            reuse = p.is_alive()
+        with LOCK:
+            reuse=uid in UidProxy.PP
+            if reuse:
+                p,qin,qout=UidProxy.PP[uid]
+                reuse = p.is_alive()
 
-        if reuse:
-            logger.info("UidProxy: reuse process %s",uid)
-        else:
-            logger.info("UidProxy: start process %s",uid)
-            qin=multiprocessing.Queue()
-            qout=multiprocessing.Queue()
+            if reuse:
+                logger.info("UidProxy: reuse process %s",uid)
+            else:
+                logger.info("UidProxy: start process %s",uid)
+                qin=multiprocessing.Queue()
+                qout=multiprocessing.Queue()
 
-            p=multiprocessing.Process( target=uidprocess, args=(uid, (qin,qout), timeout), name=f"process {uid}" )
-            #~ p=threading.Thread( target=uidprocess, args=(uid, (qin,qout)), name=f"process {uid}" )
-            p.start()
-            UidProxy.PP[uid]=p,qin,qout
+                p=multiprocessing.Process( target=uidprocess, args=(uid, (qin,qout), timeout), name=f"process {uid}" )
+                #~ p=threading.Thread( target=uidprocess, args=(uid, (qin,qout)), name=f"process {uid}" )
+                p.start()
+                UidProxy.PP[uid]=p,qin,qout
 
-        self.qin=qin
-        self.qout=qout
-        self.uid=uid
+            self.qin=qin
+            self.qout=qout
+            self.uid=uid
 
     def quit(self):
         """ quit process of this uid """

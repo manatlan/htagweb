@@ -1,5 +1,5 @@
 from htag import Tag # the only thing you'll need ;-)
-
+import os
 
 class App(Tag.body):
     def init(self):
@@ -12,6 +12,7 @@ class App(Tag.body):
 
     def redraw(self):
         self.clear()
+        self+= Tag.div(os.getpid())
         self <= Tag.button("add", _onclick=self.sett)
         self <= Tag.button("clir", _onclick=self.clir)
         self+=self.session.get("toto","?")
