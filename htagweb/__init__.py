@@ -23,38 +23,31 @@ WebServer & WebServerWS
 - 30s timeout for interactions/render times
 - parano mode (aes encryption in exchanges)
 """
-from logging import shutdown
 import uvicorn,multiprocessing
+import json
+from types import ModuleType
+import uuid,logging
 
 from htag import Tag
-from htag.render import HRenderer
 from htag.runners import commons
 
 from starlette.applications import Starlette
-from starlette.responses import HTMLResponse,JSONResponse,PlainTextResponse
+from starlette.responses import HTMLResponse,PlainTextResponse
 from starlette.routing import Route,WebSocketRoute
 from starlette.endpoints import WebSocketEndpoint
 from starlette.middleware import Middleware
+from starlette.datastructures import MutableHeaders
+from starlette.requests import HTTPConnection
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 #=-=-=-=-=-=-
 from .manager import Manager
 from .crypto import decrypt,encrypt,JSCRYPTO
 #=-=-=-=-=-=-
 
-import os
-import json
-import asyncio,pickle
-from types import ModuleType
-from datetime import datetime
-
+logger = logging.getLogger(__name__)
 #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
-import json
-import sys
-import uuid
 
-from starlette.datastructures import MutableHeaders
-from starlette.requests import HTTPConnection
-from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 MANAGER:Manager = None
 SESSIONS=multiprocessing.Manager().dict()
@@ -160,7 +153,6 @@ class WebBase(Starlette):
 
     async def interact(self,uid:str,session:dict,fqn:str,query:str) -> str:
         data = self._str2dict( query )
-        #~ actions = await self.manager.ht_interact(uid, fqn, data )
         actions = MANAGER.ht_interact(uid,session,fqn,data)
 
         if isinstance(actions,dict):
@@ -184,7 +176,6 @@ async function dict2str(d) { return JSON.stringify(d); }
             """+js
 
         init_params = commons.url2ak( str(request.url) )
-        #~ html = await self.manager.ht_render(uid,fqn,init_params, fjs, renew )
         html = MANAGER.ht_create(uid,request.session,fqn, fjs, init_params, renew=renew)
         return html
 
@@ -252,7 +243,6 @@ class WebServerWS(WebBase):
         self.wss=wss
 
         class WsInteract(WebSocketEndpoint):
-            # encoding = "json"
             encoding = "text"
 
             async def on_receive(this, websocket, query:str):

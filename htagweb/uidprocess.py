@@ -10,7 +10,7 @@ import asyncio,sys,threading
 import multiprocessing
 import queue
 import logging,importlib
-import traceback,os
+import traceback
 import ast
 from htag.render import HRenderer
 from starlette.requests import Request

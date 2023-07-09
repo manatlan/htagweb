@@ -1,7 +1,18 @@
+# -*- coding: utf-8 -*-
+# #############################################################################
+# Copyright (C) 2023 manatlan manatlan[at]gmail(dot)com
+#
+# MIT licence
+#
+# https://github.com/manatlan/htag
+# #############################################################################
 import sys
 import asyncio
 import multiprocessing
 from .uidprocess import UidProxy
+import logging
+
+logger = logging.getLogger(__name__)
 
 def mainprocess(input,output):
     print("MAINPROCESS")
@@ -66,7 +77,5 @@ class Manager:
         def _(*a,**k):
             self.pp["input"].send( (action,(a,k)))
 
-            x=self.pp["output"].recv()
-            print(f"::manager action {action}({a}), recept={x}")
-            return x
+            return self.pp["output"].recv()
         return _
