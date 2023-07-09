@@ -9,16 +9,16 @@ def mainprocess(input,output):
     async def ping(msg):
         return f"hello {msg}"
 
-    async def exec(uid,request):
-        p=UidProxy(uid)
+    async def exec(uid,session,request):
+        p=UidProxy(uid,session)
         return await p.exec(request)
 
-    async def ht_create(uid,fqn,js,init_params=None,renew=False):
-        p=UidProxy(uid)
+    async def ht_create(uid,session,fqn,js,init_params=None,renew=False):
+        p=UidProxy(uid,session)
         return await p.ht_create(fqn,js,init_params,renew)
 
-    async def ht_interact(uid,fqn,data):
-        p=UidProxy(uid)
+    async def ht_interact(uid,session,fqn,data):
+        p=UidProxy(uid,session)
         return await p.ht_interact(fqn,data)
 
     methods=locals()

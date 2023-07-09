@@ -161,7 +161,7 @@ class WebBase(Starlette):
     async def interact(self,uid:str,fqn:str,query:str) -> str:
         data = self._str2dict( query )
         #~ actions = await self.manager.ht_interact(uid, fqn, data )
-        actions = MANAGER.ht_interact(uid,fqn,data)
+        actions = MANAGER.ht_interact(uid,session,fqn,data)
 
         if isinstance(actions,dict):
             return self._dict2str( actions )
@@ -185,7 +185,7 @@ async function dict2str(d) { return JSON.stringify(d); }
 
         init_params = commons.url2ak( str(request.url) )
         #~ html = await self.manager.ht_render(uid,fqn,init_params, fjs, renew )
-        html = MANAGER.ht_create(uid,fqn, fjs, init_params, renew=renew)
+        html = MANAGER.ht_create(uid,session,fqn, fjs, init_params, renew=renew)
         return html
 
     def _dict2str(self,dico:dict) -> str:

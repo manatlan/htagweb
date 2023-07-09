@@ -31,14 +31,14 @@ async def test_htag_ok():
     m=Manager()
     uid="u1"
 
-    x=m.ht_create(uid,"test_uidprocess.App","//jscom")
+    x=m.ht_create(uid,{},"test_uidprocess.App","//jscom")
     assert isinstance(x,str)
     assert "//jscom" in x
     assert "function action(" in x
     assert ">say hello</Button>" in x
 
     data=dict(id="ut",method="doit",args=(),kargs={})
-    x=m.ht_interact(uid,"test_uidprocess.App", data)
+    x=m.ht_interact(uid,{},"test_uidprocess.App", data)
     assert isinstance(x,dict)
     assert "update" in x
     ll=list(x["update"].items())

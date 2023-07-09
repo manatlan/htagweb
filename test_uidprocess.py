@@ -14,14 +14,14 @@ class App(Tag.body):
 
 @pytest.mark.asyncio
 async def test_bad_interop_unknown_method():
-    p1=UidProxy("u1")
+    p1=UidProxy("u1",{})
     with pytest.raises( UidProxyException ):
         await p1.unknown(42) # >> Process u1: error ''unknown''
     UidProxy.shutdown()
 
 @pytest.mark.asyncio
 async def test_bad_interop_bad_signature():
-    p1=UidProxy("u1")
+    p1=UidProxy("u1",{})
     with pytest.raises( UidProxyException ):
         await p1.ping() # >> Process u1: error 'ping() missing 1 required positional argument: 'msg''
     UidProxy.shutdown()
@@ -29,7 +29,7 @@ async def test_bad_interop_bad_signature():
 
 @pytest.mark.asyncio
 async def test_ok_ping():
-    p1=UidProxy("u1")
+    p1=UidProxy("u1",{})
     r=await p1.ping("manatlan")
     assert r == "hello manatlan"
     UidProxy.shutdown()
@@ -38,7 +38,7 @@ async def test_ok_ping():
 @pytest.mark.asyncio
 async def test_htag_ok():
 
-    p1=UidProxy("u1")
+    p1=UidProxy("u1",{})
 
     x=await p1.ht_create("test_uidprocess.App","//jscom")
     assert isinstance(x,str)
@@ -84,7 +84,7 @@ async def test_htag_ok():
 @pytest.mark.asyncio
 async def test_com_after_quit():
     try:
-        p1=UidProxy("u1")
+        p1=UidProxy("u1",{})
         await p1.ping("x")
 
         p1.quit()
@@ -100,7 +100,7 @@ async def test_com_after_quit():
 @pytest.mark.asyncio
 async def test_com_after_timeout_death():
     try:
-        p1=UidProxy("u1",0.5)
+        p1=UidProxy("u1",{},0.5)
         await p1.ping("x")
 
         await asyncio.sleep(1)

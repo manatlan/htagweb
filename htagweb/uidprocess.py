@@ -39,8 +39,7 @@ async def async_exec(stmts:str, env=None):
     return await eval(f"{fn_name}()", env)
 
 
-def uidprocess(uid,queues, timeout = 10*60):
-    session={}
+def uidprocess(uid,session,queues, timeout = 10*60):
     hts={}
     qin,qout = queues
 
@@ -224,7 +223,7 @@ class UidProxyException(Exception): pass
 class UidProxy:
     PP = {}
 
-    def __init__(self,uid, timeout:float = 10*60 ):
+    def __init__(self,uid, session, timeout:float = 10*60 ):
         reuse=uid in UidProxy.PP
         if reuse:
             p,qin,qout=UidProxy.PP[uid]
@@ -237,7 +236,7 @@ class UidProxy:
             qin=multiprocessing.Queue()
             qout=multiprocessing.Queue()
 
-            p=multiprocessing.Process( target=uidprocess, args=(uid, (qin,qout), timeout), name=f"process {uid}" )
+            p=multiprocessing.Process( target=uidprocess, args=(uid, session, (qin,qout), timeout), name=f"process {uid}" )
             #~ p=threading.Thread( target=uidprocess, args=(uid, (qin,qout)), name=f"process {uid}" )
             p.start()
             UidProxy.PP[uid]=p,qin,qout
@@ -258,7 +257,7 @@ class UidProxy:
     def shutdown(cls):
         """ terminate all UidProxy' process"""
         for uid in list(cls.PP.keys()):
-            UidProxy(uid).quit()
+            UidProxy(uid,{}).quit() #TODO: pas bo du tout !!!!!
 
     #~ async def _com(self,action,*a,**k):
         #~ logger.info(">> UidProxy: com %s(%s,%s)",action,a,k)
