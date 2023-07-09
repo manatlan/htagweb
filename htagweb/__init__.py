@@ -38,7 +38,6 @@ from starlette.middleware import Middleware
 
 #=-=-=-=-=-=-
 from .manager import Manager
-from .uidprocess import UidProxy
 from .crypto import decrypt,encrypt,JSCRYPTO
 #=-=-=-=-=-=-
 
@@ -57,6 +56,8 @@ from starlette.datastructures import MutableHeaders
 from starlette.requests import HTTPConnection
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+MANAGER:Manager = None
+SESSIONS=multiprocessing.Manager().dict()
 
 class WebServerSession:  # ASGI Middleware, for starlette
     def __init__(
@@ -83,10 +84,11 @@ class WebServerSession:  # ASGI Middleware, for starlette
             uid = connection.cookies[self.session_cookie]
         else:
             uid=str(uuid.uuid4())
-            scope["session"] = multiprocessing.Manager().dict()
+            SESSIONS[uid] = {}
 
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
         scope["uid"] = uid
+        scope["session"] = SESSIONS[uid]
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         async def send_wrapper(message: Message) -> None:
@@ -127,7 +129,6 @@ def findfqn(x) -> str:
 
     return tagClass.__module__+"."+tagClass.__qualname__
 
-MANAGER:Manager = None
 
 class WebBase(Starlette):
 
@@ -139,7 +140,6 @@ class WebBase(Starlette):
             global MANAGER
             MANAGER=Manager()     # only one will run ! but all ref to the good one
         async def on_shutdown():
-            UidProxy.shutdown()
             MANAGER.shutdown()
 
         Starlette.__init__(self,debug=True, on_startup=[on_startup],on_shutdown=[on_shutdown],routes=routes,middleware=[Middleware(WebServerSession)])
@@ -158,7 +158,7 @@ class WebBase(Starlette):
         uvicorn.run(self, host=host, port=port)
 
 
-    async def interact(self,uid:str,fqn:str,query:str) -> str:
+    async def interact(self,uid:str,session:dict,fqn:str,query:str) -> str:
         data = self._str2dict( query )
         #~ actions = await self.manager.ht_interact(uid, fqn, data )
         actions = MANAGER.ht_interact(uid,session,fqn,data)
@@ -185,7 +185,7 @@ async function dict2str(d) { return JSON.stringify(d); }
 
         init_params = commons.url2ak( str(request.url) )
         #~ html = await self.manager.ht_render(uid,fqn,init_params, fjs, renew )
-        html = MANAGER.ht_create(uid,session,fqn, fjs, init_params, renew=renew)
+        html = MANAGER.ht_create(uid,request.session,fqn, fjs, init_params, renew=renew)
         return html
 
     def _dict2str(self,dico:dict) -> str:
@@ -210,8 +210,6 @@ class WebServer(WebBase):
 
     async def serve(self,request, obj, renew=False ) -> HTMLResponse:
         # assert obj is correct type
-
-        print(":::::::::::::::::::::::::::::::",request.session)
 
         uid=request.scope["uid"]    # WebServerSession made that possible
         fqn=findfqn(obj)
@@ -239,7 +237,7 @@ window.addEventListener('DOMContentLoaded', start );
         fqn=request.path_params.get('fqn',None)
 
         query=await request.body()
-        response = await self.interact(uid, fqn, query.decode() )
+        response = await self.interact(uid,request.session, fqn, query.decode() )
         return PlainTextResponse( response )
 
 
@@ -261,7 +259,7 @@ class WebServerWS(WebBase):
                 uid=websocket.scope["uid"]    # WebServerSession made that possible
                 fqn=websocket.query_params['fqn']
 
-                response = await self.interact(uid, fqn, query )
+                response = await self.interact(uid, websocket.session, fqn, query )
                 await websocket.send_text( response )
 
         WebBase.__init__(self,obj,timeout,[WebSocketRoute("/ws", WsInteract)] )
