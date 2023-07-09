@@ -75,6 +75,11 @@ class WebServerSession:  # ASGI Middleware, for starlette
 
         if self.session_cookie in connection.cookies:
             uid = connection.cookies[self.session_cookie]
+            if uid not in SESSIONS:
+                # when the browser is open, it can reuse the cookie
+                #but session is empty, so we create an empty one
+                logging.warn("WebServerSession, reusing cookie without session")
+                SESSIONS[uid] = {}
         else:
             uid=str(uuid.uuid4())
             SESSIONS[uid] = {}
