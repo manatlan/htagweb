@@ -49,30 +49,30 @@ async def test_htag_ok():
 
     m.shutdown()
 
-@pytest.mark.asyncio
-async def test_pye_ok():
+# @pytest.mark.asyncio
+# async def test_pye_ok():
 
-    m=Manager()
-    uid="u1"
+#     m=Manager()
+#     uid="u1"
 
-    string="""
-import sys
+#     string="""
+# import sys
 
-async def test():
-    return sys.version
+# async def test():
+#     return sys.version
 
-print( await test(), web.request.method, web.request.url )
-web.response.status_code=201
-web.response.content_type="text/plain"
-"""
-    x=m.exec( uid, string )
-    assert x.status_code==201
-    assert x.headers["content-type"].startswith("text/plain")
-    assert x.body and isinstance(x.body,bytes)
+# print( await test(), web.request.method, web.request.url )
+# web.response.status_code=201
+# web.response.content_type="text/plain"
+# """
+#     x=m.exec( uid, string )
+#     assert x.status_code==201
+#     assert x.headers["content-type"].startswith("text/plain")
+#     assert x.body and isinstance(x.body,bytes)
 
-    m.shutdown()
+#     m.shutdown()
 
 if __name__=="__main__":
     asyncio.run( test_the_base() )
     asyncio.run( test_htag_ok() )
-    asyncio.run( test_pye_ok() )
+    # asyncio.run( test_pye_ok() )

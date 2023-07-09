@@ -24,7 +24,7 @@ WebServer & WebServerWS
 - parano mode (aes encryption in exchanges)
 """
 from logging import shutdown
-import uvicorn
+import uvicorn,multiprocessing
 
 from htag import Tag
 from htag.render import HRenderer
@@ -34,6 +34,7 @@ from starlette.applications import Starlette
 from starlette.responses import HTMLResponse,JSONResponse,PlainTextResponse
 from starlette.routing import Route,WebSocketRoute
 from starlette.endpoints import WebSocketEndpoint
+from starlette.middleware import Middleware
 
 #=-=-=-=-=-=-
 from .manager import Manager
@@ -82,6 +83,7 @@ class WebServerSession:  # ASGI Middleware, for starlette
             uid = connection.cookies[self.session_cookie]
         else:
             uid=str(uuid.uuid4())
+            scope["session"] = multiprocessing.Manager().dict()
 
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
         scope["uid"] = uid
@@ -140,14 +142,12 @@ class WebBase(Starlette):
             UidProxy.shutdown()
             MANAGER.shutdown()
 
-        Starlette.__init__(self,debug=True, on_startup=[on_startup],on_shutdown=[on_shutdown],routes=routes)
+        Starlette.__init__(self,debug=True, on_startup=[on_startup],on_shutdown=[on_shutdown],routes=routes,middleware=[Middleware(WebServerSession)])
 
         if obj:
             async def handleHome(request):
                 return await self.serve(request,obj)
             self.add_route( '/', handleHome )
-
-        Starlette.add_middleware(self,WebServerSession )
 
 
     def run(self, host="0.0.0.0", port=8000, openBrowser=False):   # localhost, by default !!
@@ -210,6 +210,9 @@ class WebServer(WebBase):
 
     async def serve(self,request, obj, renew=False ) -> HTMLResponse:
         # assert obj is correct type
+
+        print(":::::::::::::::::::::::::::::::",request.session)
+
         uid=request.scope["uid"]    # WebServerSession made that possible
         fqn=findfqn(obj)
 

@@ -15,8 +15,8 @@ def test_fqn():
         findfqn("mod_name")
 
     assert findfqn("mod.name") == "mod.name"
-    assert findfqn(MyTag) in ["__main__.MyTag","test_server.MyTag"]
-    assert findfqn(sys.modules[__name__]) in ["__main__.App","test_server.App"]
+    assert findfqn(MyTag) in ["__main__.MyTag","test_servers.MyTag"]
+    assert findfqn(sys.modules[__name__]) in ["__main__.App","test_servers.App"]
 
 def test_app_served():
     class Hello(Tag.div):
@@ -47,7 +47,7 @@ def test_app_with_serve():
     for HTServer in [WebServer,WebServerWS]:
         app=HTServer()
         async def handlePath(request):
-            return request.app.serve(request, Hello)
+            return await request.app.serve(request, Hello)
         app.add_route("/", handlePath )
 
         client = TestClient(app)

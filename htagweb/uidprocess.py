@@ -50,98 +50,98 @@ def uidprocess(uid,queues, timeout = 10*60):
         """ just for UT """
         return f"hello {msg}"
 
-    #==========================================================
-    async def exec(request:Request) -> Response:
-    #==========================================================
-        # this thing will disappear and be in Server Client
-        # this thing will disappear and be in Server Client
-        # this thing will disappear and be in Server Client
-        # this thing will disappear and be in Server Client
-        # this thing will disappear and be in Server Client
-        # this thing will disappear and be in Server Client
-        # this thing will disappear and be in Server Client
-        # this thing will disappear and be in Server Client
-        # this thing will disappear and be in Server Client
-        # this thing will disappear and be in Server Client
-        # this thing will disappear and be in Server Client
-        # this thing will disappear and be in Server Client
-        # this thing will disappear and be in Server Client
-        # this thing will disappear and be in Server Client
-        """ 'pye' feature, execute a pye/bottle python file in async/starlette context which mimics bottle requests"""
+    # #==========================================================
+    # async def exec(request:Request) -> Response:
+    # #==========================================================
+    #     # this thing will disappear and be in Server Client
+    #     # this thing will disappear and be in Server Client
+    #     # this thing will disappear and be in Server Client
+    #     # this thing will disappear and be in Server Client
+    #     # this thing will disappear and be in Server Client
+    #     # this thing will disappear and be in Server Client
+    #     # this thing will disappear and be in Server Client
+    #     # this thing will disappear and be in Server Client
+    #     # this thing will disappear and be in Server Client
+    #     # this thing will disappear and be in Server Client
+    #     # this thing will disappear and be in Server Client
+    #     # this thing will disappear and be in Server Client
+    #     # this thing will disappear and be in Server Client
+    #     # this thing will disappear and be in Server Client
+    #     """ 'pye' feature, execute a pye/bottle python file in async/starlette context which mimics bottle requests"""
 
-        if isinstance(request,str): # UT ONLY
-            filename = "*string*"
-            filecontent=request
+    #     if isinstance(request,str): # UT ONLY
+    #         filename = "*string*"
+    #         filecontent=request
 
-            # build a fake Request object
-            request=Request(dict(type="http",path=filename,headers={},method="GET"))
-        else:
-            filename = str(request.url)
-            filecontent=open(filename).read()
+    #         # build a fake Request object
+    #         request=Request(dict(type="http",path=filename,headers={},method="GET"))
+    #     else:
+    #         filename = str(request.url)
+    #         filecontent=open(filename).read()
 
 
-        class MyResponse:
-            ''' mimic bottle response object '''
-            status_code=200
-            content=None
-            headers={}
-            content_type="text/html"
+    #     class MyResponse:
+    #         ''' mimic bottle response object '''
+    #         status_code=200
+    #         content=None
+    #         headers={}
+    #         content_type="text/html"
 
-            _set_cookies=[]
-            def set_cookie(self,*a,**k):
-                self._set_cookies.append( (a,k) )
-            _delete_cookies=[]
-            def delete_cookie(self,*a,**k):
-                self._delete_cookies.append( (a,k) )
+    #         _set_cookies=[]
+    #         def set_cookie(self,*a,**k):
+    #             self._set_cookies.append( (a,k) )
+    #         _delete_cookies=[]
+    #         def delete_cookie(self,*a,**k):
+    #             self._delete_cookies.append( (a,k) )
 
-        class Web:
-            ''' mimic bottle web '''
+    #     class Web:
+    #         ''' mimic bottle web '''
 
-        # create a fake web instance (mimic bottle web)
-        web=Web()
-        web.request  = request
-        web.response = MyResponse()
-        try:
-            if hasattr(web.request,"session"):
-                web.request.session = session   #<- the only reason, to execute the file in user context/process (for session)
-        except AssertionError:
-            logger.warn("Can't attach session (A SessionMiddleware must be installed to access request.session)")
+    #     # create a fake web instance (mimic bottle web)
+    #     web=Web()
+    #     web.request  = request
+    #     web.response = MyResponse()
+    #     try:
+    #         if hasattr(web.request,"session"):
+    #             web.request.session = session   #<- the only reason, to execute the file in user context/process (for session)
+    #     except AssertionError:
+    #         logger.warn("Can't attach session (A SessionMiddleware must be installed to access request.session)")
 
-        scope=dict(globals())
-        scope.update({
-            "__file__": filename,
-            "__name__": "__main__",
-            "web": web,
-        })
+    #     scope=dict(globals())
+    #     scope.update({
+    #         "__file__": filename,
+    #         "__name__": "__main__",
+    #         "web": web,
+    #     })
 
-        # will capture stdout to fullfil the response body
-        class StdoutProxy:
-            def __init__(self):
-                self.buf=[]
-            def flush(self,*a):
-                pass
-            def write(self, text):
-                self.buf.append(text)
-                return len(text) # do nothing
-            @property
-            def content(self):
-                return "".join( sys.stdout.buf )
+    #     # will capture stdout to fullfil the response body
+    #     class StdoutProxy:
+    #         def __init__(self):
+    #             self.buf=[]
+    #         def flush(self,*a):
+    #             pass
+    #         def write(self, text):
+    #             self.buf.append(text)
+    #             return len(text) # do nothing
+    #         @property
+    #         def content(self):
+    #             return "".join( sys.stdout.buf )
 
-        # execute the file content (eval async)
-        try:
-            sys.stdout = StdoutProxy()
-            await async_exec(filecontent,scope)
-        finally:
-            content=sys.stdout.content
-            sys.stdout = sys.__stdout__
+    #     # execute the file content (eval async)
+    #     try:
+    #         sys.stdout = StdoutProxy()
+    #         await async_exec(filecontent,scope)
+    #     finally:
+    #         content=sys.stdout.content
+    #         sys.stdout = sys.__stdout__
 
-        # return a real starlette Response
-        r=Response( web.response.content or content, web.response.status_code, web.response.headers, web.response.content_type)
-        for a,k in web.response._set_cookies:
-            r.set_cookie(*a,**k)
-        for a,k in web.response._delete_cookies:
-            r.delete_cookie(*a,**k)
-        return r
+    #     # return a real starlette Response
+    #     r=Response( web.response.content or content, web.response.status_code, web.response.headers, web.response.content_type)
+    #     for a,k in web.response._set_cookies:
+    #         r.set_cookie(*a,**k)
+    #     for a,k in web.response._delete_cookies:
+    #         r.delete_cookie(*a,**k)
+    #     return r
 
     #==========================================================
     async def ht_create(fqn,js,init_params=None,renew=False):        # -> str
