@@ -13,30 +13,30 @@ import logging,importlib
 import traceback
 import ast
 from htag.render import HRenderer
-from starlette.requests import Request
-from starlette.responses import Response
+# from starlette.requests import Request
+# from starlette.responses import Response
 
 logging.basicConfig(format='[%(levelname)-5s] %(name)s: %(message)s',level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
 
-async def async_exec(stmts:str, env=None):
-    """ trick to eval async thing """
-    parsed_stmts = ast.parse(stmts)
+# async def async_exec(stmts:str, env=None):
+#     """ trick to eval async thing """
+#     parsed_stmts = ast.parse(stmts)
 
-    fn_name = "_async_exec_f"
+#     fn_name = "_async_exec_f"
 
-    fn = f"async def {fn_name}(): pass"
-    parsed_fn = ast.parse(fn)
+#     fn = f"async def {fn_name}(): pass"
+#     parsed_fn = ast.parse(fn)
 
-    for node in parsed_stmts.body:
-        ast.increment_lineno(node)
+#     for node in parsed_stmts.body:
+#         ast.increment_lineno(node)
 
-    parsed_fn.body[0].body = parsed_stmts.body
-    exec(compile(parsed_fn, filename="<ast>", mode="exec"), env)
+#     parsed_fn.body[0].body = parsed_stmts.body
+#     exec(compile(parsed_fn, filename="<ast>", mode="exec"), env)
 
-    return await eval(f"{fn_name}()", env)
+#     return await eval(f"{fn_name}()", env)
 
 
 def uidprocess(uid,session,queues, timeout = 10*60):
@@ -283,19 +283,19 @@ class UidProxy:
         try:
             self.qin.put( (action,(a,k)) )
         except Exception:
-            raise UidProxyException(f"queue is closed") # in this process !
+            return UidProxyException(f"queue is closed") # in this process !
 
         # wait a confirmation (to test ps is alive)
         try:
             x=self.qout.get(timeout=0.5)    # minimal response
             assert x=="ok"
         except Exception:
-            raise UidProxyException(f"queue is closed on process side") # in the other process !
+            return UidProxyException(f"queue is closed on process side") # in the other process !
 
         # wait the real response
         x:dict=self.qout.get(timeout=30)
         if "error" in x:
-            raise UidProxyException(f"unknown UidProxy action {action} : {x['error']}")
+            return UidProxyException(f"UidProxy action '{action}' -> {x['error']}")
         else:
             r=x["result"]
             logger.info("<< UidProxy: com %s << %s",action,hasattr(r,"__len__") and len(r) or r)
@@ -303,8 +303,7 @@ class UidProxy:
 
     def __getattr__(self,action:str):
         async def _(*a,**k):
-            x=self._com( action, *a,**k )
-            return x
+            return self._com( action, *a,**k )
         return _
 
 

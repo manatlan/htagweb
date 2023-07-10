@@ -15,15 +15,15 @@ class App(Tag.body):
 @pytest.mark.asyncio
 async def test_bad_interop_unknown_method():
     p1=UidProxy("u1",{})
-    with pytest.raises( UidProxyException ):
-        await p1.unknown(42) # >> Process u1: error ''unknown''
+    r = await p1.unknown(42) # >> Process u1: error ''unknown''
+    assert isinstance(r,UidProxyException)
     UidProxy.shutdown()
 
 @pytest.mark.asyncio
 async def test_bad_interop_bad_signature():
     p1=UidProxy("u1",{})
-    with pytest.raises( UidProxyException ):
-        await p1.ping() # >> Process u1: error 'ping() missing 1 required positional argument: 'msg''
+    r=await p1.ping() # >> Process u1: error 'ping() missing 1 required positional argument: 'msg''
+    assert isinstance(r,UidProxyException)
     UidProxy.shutdown()
 
 
@@ -90,8 +90,8 @@ async def test_com_after_quit():
         p1.quit()
         await asyncio.sleep(0.1)
 
-        with pytest.raises( UidProxyException ):
-            await p1.ping("hello") # UidProxyException(f"queue is closed")
+        r=await p1.ping("hello") # UidProxyException(f"queue is closed")
+        assert isinstance(r,UidProxyException)
 
     finally:
         UidProxy.shutdown()
@@ -105,8 +105,8 @@ async def test_com_after_timeout_death():
 
         await asyncio.sleep(1)
 
-        with pytest.raises( UidProxyException ):
-            await p1.ping("hello") # UidProxyException(f"queue is closed on process side")
+        r = await p1.ping("hello") # UidProxyException(f"queue is closed on process side")
+        assert isinstance(r,UidProxyException)
 
     finally:
         UidProxy.shutdown()

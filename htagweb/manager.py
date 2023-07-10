@@ -74,5 +74,9 @@ class Manager:
         def _(*a,**k):
             self.pp["input"].send( (action,(a,k)))
 
-            return self.pp["output"].recv()
+            o= self.pp["output"].recv()
+            if isinstance(o,Exception):
+                raise o
+            else:
+                return o
         return _
