@@ -50,6 +50,7 @@ def mainprocess(input,output):
 
 class Manager:
     _p=multiprocessing.Manager().dict()
+    SESSIONS=multiprocessing.Manager().dict()
 
     def __init__(self):
         if not Manager._p:

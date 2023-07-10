@@ -50,7 +50,6 @@ logger = logging.getLogger(__name__)
 
 
 MANAGER:Manager = None
-SESSIONS=multiprocessing.Manager().dict()
 
 class WebServerSession:  # ASGI Middleware, for starlette
     def __init__(
@@ -75,18 +74,18 @@ class WebServerSession:  # ASGI Middleware, for starlette
 
         if self.session_cookie in connection.cookies:
             uid = connection.cookies[self.session_cookie]
-            if uid not in SESSIONS:
+            if uid not in Manager.SESSIONS:
                 # when the browser is open, it can reuse the cookie
                 #but session is empty, so we create an empty one
                 logging.warn("WebServerSession, reusing cookie without session")
-                SESSIONS[uid] = {}
+                Manager.SESSIONS[uid] = {}
         else:
             uid=str(uuid.uuid4())
-            SESSIONS[uid] = {}
+            Manager.SESSIONS[uid] = {}
 
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
         scope["uid"] = uid
-        scope["session"] = SESSIONS[uid]
+        scope["session"] = Manager.SESSIONS[uid]
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         async def send_wrapper(message: Message) -> None:
