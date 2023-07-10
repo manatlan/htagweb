@@ -6,37 +6,18 @@
 #
 # https://github.com/manatlan/htag
 # #############################################################################
-import asyncio,sys,threading
+import asyncio
 import multiprocessing
 import queue
 import logging,importlib
 import traceback
-import ast
 from htag.render import HRenderer
-# from starlette.requests import Request
-# from starlette.responses import Response
 
 logging.basicConfig(format='[%(levelname)-5s] %(name)s: %(message)s',level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
 
-# async def async_exec(stmts:str, env=None):
-#     """ trick to eval async thing """
-#     parsed_stmts = ast.parse(stmts)
-
-#     fn_name = "_async_exec_f"
-
-#     fn = f"async def {fn_name}(): pass"
-#     parsed_fn = ast.parse(fn)
-
-#     for node in parsed_stmts.body:
-#         ast.increment_lineno(node)
-
-#     parsed_fn.body[0].body = parsed_stmts.body
-#     exec(compile(parsed_fn, filename="<ast>", mode="exec"), env)
-
-#     return await eval(f"{fn_name}()", env)
 
 
 def uidprocess(uid,session,queues, timeout = 10*60):
@@ -48,99 +29,6 @@ def uidprocess(uid,session,queues, timeout = 10*60):
     #==========================================================
         """ just for UT """
         return f"hello {msg}"
-
-    # #==========================================================
-    # async def exec(request:Request) -> Response:
-    # #==========================================================
-    #     # this thing will disappear and be in Server Client
-    #     # this thing will disappear and be in Server Client
-    #     # this thing will disappear and be in Server Client
-    #     # this thing will disappear and be in Server Client
-    #     # this thing will disappear and be in Server Client
-    #     # this thing will disappear and be in Server Client
-    #     # this thing will disappear and be in Server Client
-    #     # this thing will disappear and be in Server Client
-    #     # this thing will disappear and be in Server Client
-    #     # this thing will disappear and be in Server Client
-    #     # this thing will disappear and be in Server Client
-    #     # this thing will disappear and be in Server Client
-    #     # this thing will disappear and be in Server Client
-    #     # this thing will disappear and be in Server Client
-    #     """ 'pye' feature, execute a pye/bottle python file in async/starlette context which mimics bottle requests"""
-
-    #     if isinstance(request,str): # UT ONLY
-    #         filename = "*string*"
-    #         filecontent=request
-
-    #         # build a fake Request object
-    #         request=Request(dict(type="http",path=filename,headers={},method="GET"))
-    #     else:
-    #         filename = str(request.url)
-    #         filecontent=open(filename).read()
-
-
-    #     class MyResponse:
-    #         ''' mimic bottle response object '''
-    #         status_code=200
-    #         content=None
-    #         headers={}
-    #         content_type="text/html"
-
-    #         _set_cookies=[]
-    #         def set_cookie(self,*a,**k):
-    #             self._set_cookies.append( (a,k) )
-    #         _delete_cookies=[]
-    #         def delete_cookie(self,*a,**k):
-    #             self._delete_cookies.append( (a,k) )
-
-    #     class Web:
-    #         ''' mimic bottle web '''
-
-    #     # create a fake web instance (mimic bottle web)
-    #     web=Web()
-    #     web.request  = request
-    #     web.response = MyResponse()
-    #     try:
-    #         if hasattr(web.request,"session"):
-    #             web.request.session = session   #<- the only reason, to execute the file in user context/process (for session)
-    #     except AssertionError:
-    #         logger.warn("Can't attach session (A SessionMiddleware must be installed to access request.session)")
-
-    #     scope=dict(globals())
-    #     scope.update({
-    #         "__file__": filename,
-    #         "__name__": "__main__",
-    #         "web": web,
-    #     })
-
-    #     # will capture stdout to fullfil the response body
-    #     class StdoutProxy:
-    #         def __init__(self):
-    #             self.buf=[]
-    #         def flush(self,*a):
-    #             pass
-    #         def write(self, text):
-    #             self.buf.append(text)
-    #             return len(text) # do nothing
-    #         @property
-    #         def content(self):
-    #             return "".join( sys.stdout.buf )
-
-    #     # execute the file content (eval async)
-    #     try:
-    #         sys.stdout = StdoutProxy()
-    #         await async_exec(filecontent,scope)
-    #     finally:
-    #         content=sys.stdout.content
-    #         sys.stdout = sys.__stdout__
-
-    #     # return a real starlette Response
-    #     r=Response( web.response.content or content, web.response.status_code, web.response.headers, web.response.content_type)
-    #     for a,k in web.response._set_cookies:
-    #         r.set_cookie(*a,**k)
-    #     for a,k in web.response._delete_cookies:
-    #         r.delete_cookie(*a,**k)
-    #     return r
 
     #==========================================================
     async def ht_create(fqn,js,init_params=None,renew=False):        # -> str
@@ -186,7 +74,6 @@ def uidprocess(uid,session,queues, timeout = 10*60):
     async def processloop():
         #process loop
         while 1:
-            #TODO: here timeout on inactivity
             try:
                 action,(a,k) = qin.get(timeout=timeout)
             except queue.Empty:
@@ -258,22 +145,6 @@ class UidProxy:
         """ terminate all UidProxy' process"""
         for uid in list(cls.PP.keys()):
             UidProxy(uid,{}).quit() #TODO: pas bo du tout !!!!!
-
-    #~ async def _com(self,action,*a,**k):
-        #~ logger.info(">> UidProxy: com %s(%s,%s)",action,a,k)
-        #~ self.qin.put( (action,(a,k)) )
-        #~ t1=time.time()
-        #~ while (time.time() - t1)<30:    #30s to process
-            #~ try:
-                #~ x:dict=self.qout.get_nowait()
-                #~ if "error" in x:
-                    #~ raise UidProxyException(f"unknown UidProxy action {action} : {x['error']}")
-                #~ else:
-                    #~ r=x["result"]
-                    #~ logger.info("<< UidProxy: com %s << %s",action,hasattr(r,"__len__") and len(r) or r)
-                    #~ return r
-            #~ except queue.Empty:
-                #~ await asyncio.sleep(0.1)
 
     def _com(self,action,*a,**k):
         """ SYNC COM ! """

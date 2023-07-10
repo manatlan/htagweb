@@ -9,8 +9,9 @@
 import sys
 import asyncio
 import multiprocessing,threading
-from .uidprocess import UidProxy
 import logging
+
+from .uidprocess import UidProxy
 
 logger = logging.getLogger(__name__)
 

@@ -58,28 +58,6 @@ async def test_htag_ok():
 
     UidProxy.shutdown()
 
-# @pytest.mark.asyncio
-# async def test_pye_ok():
-
-#     p1=UidProxy("u1")
-
-#     string="""
-# import sys
-
-# async def test():
-#     return sys.version
-
-# print( await test(), web.request.method, web.request.url )
-# web.response.status_code=201
-# web.response.content_type="text/plain"
-# """
-#     x=await p1.exec( string )
-#     assert x.status_code==201
-#     assert x.headers["content-type"].startswith("text/plain")
-#     assert x.body and isinstance(x.body,bytes)
-
-#     UidProxy.shutdown()
-
 
 @pytest.mark.asyncio
 async def test_com_after_quit():
@@ -117,6 +95,5 @@ if __name__=="__main__":
     asyncio.run( test_bad_interop_bad_signature() )
     asyncio.run( test_ok_ping() )
     asyncio.run( test_htag_ok() )
-    # asyncio.run( test_pye_ok() )
     asyncio.run( test_com_after_quit() )
     asyncio.run( test_com_after_timeout_death() )

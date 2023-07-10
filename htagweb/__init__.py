@@ -13,15 +13,13 @@ __version__ = "0.0.0" # auto updated
 WebServer & WebServerWS
 ~~~~~~~~~~~~~~~~~~~~~~~~
 - new versions of oldest WebHTTP & WebWS (nearly compatibles)
-- concept of an htag app application server (manager), which communicate with child process, with queue (web workers communicate with the manager using tcp socket)
-- Htag App runned in its own process, per user (real isolation!)
-- htag app can exit with .exit() (process killed)
+- concept of an htag app application server (manager), which communicate with child process, with queue
+- Htag Apps runned in a process, per user (real isolation!)
 - when session expire (after inactivity timeout), child process are destroyed
-- real shared session by user (really isolated!)
-- works with multiple uvicorn webworkers
+- works with multiple uvicorn webworkers, and uvloop
 - WebServerWS use ws/wss sockets to interact (instead of http/post)
 - 30s timeout for interactions/render times
-- parano mode (aes encryption in exchanges)
+- TODO: parano mode (aes encryption in exchanges)
 """
 import uvicorn,multiprocessing
 import json

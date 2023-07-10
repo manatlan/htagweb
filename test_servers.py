@@ -92,6 +92,5 @@ def test_app_webserver_basic(app):
 
 
 if __name__=="__main__":
-    # test_fqn()
+    test_fqn()
     # test_app_webserver_basic()
-    pass
