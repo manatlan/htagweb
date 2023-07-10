@@ -55,7 +55,6 @@ MANAGER:Manager = None
 @contextlib.asynccontextmanager
 async def lifespan(app):
     global MANAGER
-    print("life")
     MANAGER=Manager()     # only one will run !
 
     yield
