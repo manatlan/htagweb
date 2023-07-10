@@ -27,6 +27,7 @@ import uvicorn,multiprocessing
 import json
 from types import ModuleType
 import uuid,logging
+import contextlib
 
 from htag import Tag
 from htag.runners import commons
@@ -51,6 +52,16 @@ logger = logging.getLogger(__name__)
 
 MANAGER:Manager = None
 
+@contextlib.asynccontextmanager
+async def lifespan(app):
+    global MANAGER
+    print("life")
+    MANAGER=Manager()     # only one will run !
+
+    yield
+
+    MANAGER.shutdown()
+
 class WebServerSession:  # ASGI Middleware, for starlette
     def __init__(
         self,
@@ -74,18 +85,18 @@ class WebServerSession:  # ASGI Middleware, for starlette
 
         if self.session_cookie in connection.cookies:
             uid = connection.cookies[self.session_cookie]
-            if uid not in Manager.SESSIONS:
+            if uid not in MANAGER.SESSIONS:
                 # when the browser is open, it can reuse the cookie
                 #but session is empty, so we create an empty one
                 logging.warn("WebServerSession, reusing cookie without session")
-                Manager.SESSIONS[uid] = {}
+                MANAGER.SESSIONS[uid] = {}
         else:
             uid=str(uuid.uuid4())
-            Manager.SESSIONS[uid] = {}
+            MANAGER.SESSIONS[uid] = {}
 
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
         scope["uid"] = uid
-        scope["session"] = Manager.SESSIONS[uid]
+        scope["session"] = MANAGER.SESSIONS[uid]
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         async def send_wrapper(message: Message) -> None:
@@ -133,13 +144,7 @@ class WebBase(Starlette):
         # self.crypt="test"   # or None
         self.crypt=None
 
-        async def on_startup():
-            global MANAGER
-            MANAGER=Manager()     # only one will run ! but all ref to the good one
-        async def on_shutdown():
-            MANAGER.shutdown()
-
-        Starlette.__init__(self,debug=True, on_startup=[on_startup],on_shutdown=[on_shutdown],routes=routes,middleware=[Middleware(WebServerSession)])
+        Starlette.__init__(self,debug=True, lifespan=lifespan,routes=routes,middleware=[Middleware(WebServerSession)])
 
         if obj:
             async def handleHome(request):
