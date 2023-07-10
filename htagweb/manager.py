@@ -8,7 +8,7 @@
 # #############################################################################
 import sys
 import asyncio
-import multiprocessing
+import multiprocessing,threading
 from .uidprocess import UidProxy
 import logging
 
@@ -59,7 +59,7 @@ class Manager:
             Manager._p["input"]=qs
             Manager._p["output"]=rr
 
-            ps = multiprocessing.Process(target=mainprocess, args=[qr,rs])
+            ps = threading.Thread(target=mainprocess, args=[qr,rs])
             ps.start()
 
         self.pp=Manager._p

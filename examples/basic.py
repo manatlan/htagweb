@@ -8,11 +8,11 @@ from starlette.responses import HTMLResponse,RedirectResponse
 from starlette.routing import Route
 import os,multiprocessing
 import sys,asyncio
-# gunicorn -w 4 -k uvicorn.workers.UvicornH11Worker -b localhost:8000 --preload basic:app
+# gunicorn -w 4 -k uvicorn.workers.UvicornWorker -b localhost:8000 --preload basic:app
 
 DATA=1
 
-# MANAGER:Manager = None
+MANAGER:Manager = None
 
 async def homepage(request):
     return HTMLResponse(f"<h3>{os.getpid()}</h3>{DATA} <a href='/inc'>inc</a>")
@@ -26,7 +26,7 @@ async def inc(request):
 
 @contextlib.asynccontextmanager
 async def lifespan(app):
-    # global MANAGER
+    global MANAGER
     print("life")
     MANAGER=Manager()     # only one will run !
 

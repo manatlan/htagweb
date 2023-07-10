@@ -16,7 +16,8 @@ async def handlePath(request):
     app=request.app
     p=request.path_params.get("path")
     if p == "":
-        h="""
+        h=f"""
+        {os.getpid()}
         <li><a href="/a1">a1</a> : app without session
         <li><a href="/a2">a2</a> : app with session (not renewed)
         <li><a href="/a22">a22</a> : app with session (renewed at each refresh)
