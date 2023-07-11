@@ -96,6 +96,8 @@ class WebServerSession:  # ASGI Middleware, for starlette
         scope["session"] = MANAGER.SESSIONS[uid]
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+        print("****CURRENT SESSION",uid,scope["session"])
+
         async def send_wrapper(message: Message) -> None:
             if message["type"] == "http.response.start":
                 # send it back, in all cases

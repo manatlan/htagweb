@@ -95,14 +95,13 @@ from starlette.responses import HTMLResponse
 
 class SesApp(Tag.body):
     def init(self,p="nobody"):
-        self.session["cpt"]+=1
         self.b=Tag.Button("say hello",_onclick=self.bind.doit() )
-        self+=self.b
+        self+=self.b+Tag.cpt( self.session["cpt"] )
     def doit(self):
         self.session["cpt"]+=1
 
 @pytest.fixture
-def appses(request):
+def appses():
     app=WebServer()
     async def handlePath(request):
         return await request.app.serve(request, SesApp)
@@ -114,54 +113,112 @@ def appses(request):
     async def inccpt(request):
         request.session["cpt"]+=1
         return HTMLResponse( "ok" )
-    
+    async def ping(request):
+        return HTMLResponse( "pong" )
+
     app.add_route("/", handlePath )
+    app.add_route("/ping", ping )
     app.add_route("/cpt",  getcpt)
     app.add_route("/reset",  resetcpt)
     app.add_route("/inc",  inccpt)
     return app
 
-def test_session_base( appses ): # the main goal
+def test_session_http_before( appses ): # the main goal
 
     htagweb.MANAGER = htagweb.Manager()
 
     try:
         client=TestClient(appses)
 
-        # test create a var in session
+        # create a first exchange, to get the unique uid
+        response = client.get('/ping')
+        assert response.status_code == 200
+        assert response.text == "pong"
+
+        # get the unique uid in session
+        keys=list(htagweb.MANAGER.SESSIONS.keys())
+        assert len(keys)==1
+        uid=keys[0]
+
+        # set a var in session
+        ses=htagweb.MANAGER.SESSIONS[uid]
+        ses["cpt"]="X"
+
+        # assert this var is visible from an api
+        response = client.get('/cpt')
+        assert response.status_code == 200
+        assert response.text == "X"
+
+    finally:
+        htagweb.MANAGER.shutdown()
+
+
+
+def test_session_http_after( appses ): # the main goal
+
+    htagweb.MANAGER = htagweb.Manager()
+
+    try:
+        client=TestClient(appses)
+
+        # create a first exchange, to get the unique uid
+        response = client.get('/ping')
+        assert response.status_code == 200
+        assert response.text == "pong"
+
+        # get the unique uid in session
+        keys=list(htagweb.MANAGER.SESSIONS.keys())
+        assert len(keys)==1
+        uid=keys[0]
+
+        # assert the var is not present in session
+        assert "cpt" not in htagweb.MANAGER.SESSIONS[uid]
+
+        # request the api which init the var
         response = client.get('/reset')
         assert response.status_code == 200
-        assert response.text == "ok"
 
-        # test inc this var
-        response = client.get('/inc')
+        # assert the var is init
+        assert htagweb.MANAGER.SESSIONS[uid]["cpt"]==0
+
+    finally:
+        htagweb.MANAGER.shutdown()
+
+
+
+def test_session_htag_before( appses ): # the main goal
+
+    htagweb.MANAGER = htagweb.Manager()
+
+    try:
+        client=TestClient(appses)
+
+        # create a first exchange, to get the unique uid
+        response = client.get('/ping')
         assert response.status_code == 200
-        assert response.text == "ok"
+        assert response.text == "pong"
 
-        # test test the value is 1
-        response = client.get('/cpt')
-        assert response.status_code == 200
-        assert response.text == "1"
+        # get the unique uid in session
+        keys=list(htagweb.MANAGER.SESSIONS.keys())
+        assert len(keys)==1
+        uid=keys[0]
 
-        # instanciate the SesApp (should inc)
+        # set a var in session
+        htagweb.MANAGER.SESSIONS[uid]["cpt"]=42
+
+        # assert this var is visible from an htag
         response = client.get('/')
         assert response.status_code == 200
+        assert ">42</cpt>" in response.text
 
-        # test test the value is 2
-        response = client.get('/cpt')
-        assert response.status_code == 200
-        assert response.text == "2"
 
-        # interact with the htag instance
+        # and assert the interaction inc it
         fqn=findfqn( SesApp )
         msg=dict(id="ut",method="doit",args=(),kargs={})
         response = client.post("/"+fqn,json=msg)
         assert response.status_code == 200
 
-        # test the value is 3
-        response = client.get('/cpt')
-        assert response.status_code == 200
-        assert response.text == "3"
+        assert htagweb.MANAGER.SESSIONS[uid]["cpt"]==43
 
     finally:
         htagweb.MANAGER.shutdown()
@@ -171,5 +228,7 @@ def test_session_base( appses ): # the main goal
 
 if __name__=="__main__":
     test_fqn()
-    test_session_base()
+    # test_session_base()
     # test_app_webserver_basic()
+    # test_session_basic( appses() )
+    # test_session_base( appses() )

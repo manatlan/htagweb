@@ -51,7 +51,8 @@ def mainprocess(input,output):
 
 class Manager:
     _p=multiprocessing.Manager().dict()
-    SESSIONS=multiprocessing.Manager().dict()
+    SESSIONS={} #multiprocessing.Manager().dict()
+
 
     def __init__(self):
         if not Manager._p:
@@ -70,6 +71,7 @@ class Manager:
             self.pp["input"].send( ("quit",([],{}) ))
             self.pp=None
             Manager._p={}
+            Manager.SESSIONS={}
 
     def __getattr__(self,action:str):
         def _(*a,**k):
