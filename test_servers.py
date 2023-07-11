@@ -90,7 +90,86 @@ def test_app_webserver_basic(app):
     finally:
         htagweb.MANAGER.shutdown()
 
+#/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+from starlette.responses import HTMLResponse
+
+class SesApp(Tag.body):
+    def init(self,p="nobody"):
+        self.session["cpt"]+=1
+        self.b=Tag.Button("say hello",_onclick=self.bind.doit() )
+        self+=self.b
+    def doit(self):
+        self.session["cpt"]+=1
+
+@pytest.fixture
+def appses(request):
+    app=WebServer()
+    async def handlePath(request):
+        return await request.app.serve(request, SesApp)
+    async def getcpt(request):
+        return HTMLResponse( f"{request.session['cpt']}" )
+    async def resetcpt(request):
+        request.session["cpt"]=0
+        return HTMLResponse( "ok" )
+    async def inccpt(request):
+        request.session["cpt"]+=1
+        return HTMLResponse( "ok" )
+    
+    app.add_route("/", handlePath )
+    app.add_route("/cpt",  getcpt)
+    app.add_route("/reset",  resetcpt)
+    app.add_route("/inc",  inccpt)
+    return app
+
+def test_session_base( appses ): # the main goal
+
+    htagweb.MANAGER = htagweb.Manager()
+
+    try:
+        client=TestClient(appses)
+
+        # test create a var in session
+        response = client.get('/reset')
+        assert response.status_code == 200
+        assert response.text == "ok"
+
+        # test inc this var
+        response = client.get('/inc')
+        assert response.status_code == 200
+        assert response.text == "ok"
+
+        # test test the value is 1
+        response = client.get('/cpt')
+        assert response.status_code == 200
+        assert response.text == "1"
+
+        # instanciate the SesApp (should inc)
+        response = client.get('/')
+        assert response.status_code == 200
+
+        # test test the value is 2
+        response = client.get('/cpt')
+        assert response.status_code == 200
+        assert response.text == "2"
+
+        # interact with the htag instance
+        fqn=findfqn( SesApp )
+        msg=dict(id="ut",method="doit",args=(),kargs={})
+        response = client.post("/"+fqn,json=msg)
+        assert response.status_code == 200
+
+        # test the value is 3
+        response = client.get('/cpt')
+        assert response.status_code == 200
+        assert response.text == "3"
+
+    finally:
+        htagweb.MANAGER.shutdown()
+
+#/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+
 
 if __name__=="__main__":
     test_fqn()
+    test_session_base()
     # test_app_webserver_basic()
