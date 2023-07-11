@@ -8,6 +8,7 @@
 # #############################################################################
 import asyncio
 import multiprocessing
+import threading
 import queue
 import logging,importlib
 import traceback
@@ -79,6 +80,9 @@ def uidprocess(uid,session,queues, timeout = 10*60):
             except queue.Empty:
                 logger.info("Process %s: inactivity timeout (%ssec)",uid,timeout)
                 break
+            # except OSError:
+            #     logger.info("Process %s: breaks",uid)
+            #     break
 
             qout.put("ok")
 
@@ -123,8 +127,8 @@ class UidProxy:
             qin=multiprocessing.Queue()
             qout=multiprocessing.Queue()
 
-            p=multiprocessing.Process( target=uidprocess, args=(uid, session, (qin,qout), timeout), name=f"process {uid}" )
-            #~ p=threading.Thread( target=uidprocess, args=(uid, (qin,qout)), name=f"process {uid}" )
+            # p=multiprocessing.Process( target=uidprocess, args=(uid, session, (qin,qout), timeout), name=f"process {uid}" )
+            p=threading.Thread( target=uidprocess, args=(uid, session, (qin,qout)), name=f"process {uid}" )
             p.start()
             UidProxy.PP[uid]=p,qin,qout
 

@@ -8,8 +8,10 @@ class App(Tag.body):
     def init(self):
         self.b=Tag.Button("say hello",_onclick=self.bind.doit() )
         self+=self.b
+        self+=Tag.cpt(self.session['cpt'])
     def doit(self):
         self+="hello"
+        self.session['cpt']=self.session['cpt']+1
 
 
 @pytest.mark.asyncio
@@ -38,25 +40,35 @@ async def test_ok_ping():
 @pytest.mark.asyncio
 async def test_htag_ok():
 
-    p1=UidProxy("u1",{})
+    ses=dict(cpt=42)
 
-    x=await p1.ht_create("test_uidprocess.App","//jscom")
-    assert isinstance(x,str)
-    assert "//jscom" in x
-    assert "function action(" in x
-    assert ">say hello</Button>" in x
+    p1=UidProxy("u1",ses)
+    try:
+        fqn = "test_uidprocess.App"
 
-    data=dict(id="ut",method="doit",args=(),kargs={})
-    x=await p1.ht_interact("test_uidprocess.App", data)
-    assert isinstance(x,dict)
-    assert "update" in x
-    ll=list(x["update"].items())
-    assert len(ll) == 1 # one update
-    id,content = ll[0]
-    assert isinstance( id, int) and id
-    assert isinstance( content, str) and content
+        x=await p1.ht_create(fqn,"//jscom")
+        assert isinstance(x,str)
+        assert "//jscom" in x
+        assert "function action(" in x
+        assert ">say hello</Button>" in x
+        assert ">42</cpt>" in x
 
-    UidProxy.shutdown()
+        data=dict(id="ut",method="doit",args=(),kargs={})
+        x=await p1.ht_interact(fqn, data)
+        assert isinstance(x,dict)
+        assert "update" in x
+        ll=list(x["update"].items())
+        assert len(ll) == 1 # one update
+        id,content = ll[0]
+        assert isinstance( id, int) and id
+        assert isinstance( content, str) and content
+        assert "hello" in content
+
+        # assert the cpt var was incremented after interaction
+        assert ses["cpt"]==43
+
+    finally:
+        UidProxy.shutdown()
 
 
 @pytest.mark.asyncio
@@ -84,6 +96,7 @@ async def test_com_after_timeout_death():
         await asyncio.sleep(1)
 
         r = await p1.ping("hello") # UidProxyException(f"queue is closed on process side")
+        print(r)
         assert isinstance(r,UidProxyException)
 
     finally:
@@ -91,9 +104,9 @@ async def test_com_after_timeout_death():
 
 
 if __name__=="__main__":
-    asyncio.run( test_bad_interop_unknown_method() )
-    asyncio.run( test_bad_interop_bad_signature() )
-    asyncio.run( test_ok_ping() )
-    asyncio.run( test_htag_ok() )
-    asyncio.run( test_com_after_quit() )
+    # asyncio.run( test_bad_interop_unknown_method() )
+    # asyncio.run( test_bad_interop_bad_signature() )
+    # asyncio.run( test_ok_ping() )
+    # asyncio.run( test_htag_ok() )
+    # asyncio.run( test_com_after_quit() )
     asyncio.run( test_com_after_timeout_death() )

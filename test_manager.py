@@ -1,6 +1,7 @@
 import pytest
 import asyncio
 from htag import Tag
+from requests import Session
 from htagweb.manager import Manager
 
 
@@ -28,26 +29,35 @@ async def test_the_base():
 @pytest.mark.asyncio
 async def test_htag_ok():
 
+    ses=dict(cpt=42)
+
+
     m=Manager()
     uid="u1"
 
-    x=m.ht_create(uid,{},"test_uidprocess.App","//jscom")
-    assert isinstance(x,str)
-    assert "//jscom" in x
-    assert "function action(" in x
-    assert ">say hello</Button>" in x
+    try:
+        x=m.ht_create(uid,ses,"test_uidprocess.App","//jscom")
+        assert isinstance(x,str)
+        assert "//jscom" in x
+        assert "function action(" in x
+        assert ">say hello</Button>" in x
+        assert ">42</cpt>" in x
 
-    data=dict(id="ut",method="doit",args=(),kargs={})
-    x=m.ht_interact(uid,{},"test_uidprocess.App", data)
-    assert isinstance(x,dict)
-    assert "update" in x
-    ll=list(x["update"].items())
-    assert len(ll) == 1 # one update
-    id,content = ll[0]
-    assert isinstance( id, int) and id
-    assert isinstance( content, str) and content
+        data=dict(id="ut",method="doit",args=(),kargs={})
+        x=m.ht_interact(uid,ses,"test_uidprocess.App", data)
+        assert isinstance(x,dict)
+        assert "update" in x
+        ll=list(x["update"].items())
+        assert len(ll) == 1 # one update
+        id,content = ll[0]
+        assert isinstance( id, int) and id
+        assert isinstance( content, str) and content
 
-    m.shutdown()
+        # assert the cpt var was incremented after interaction
+        assert ses["cpt"]==43
+
+    finally:
+        m.shutdown()
 
 
 if __name__=="__main__":
