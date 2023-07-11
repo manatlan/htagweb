@@ -6,10 +6,10 @@
 #
 # https://github.com/manatlan/htag
 # #############################################################################
-import asyncio
+import asyncio,sys
 import multiprocessing
 import threading
-import queue
+import json
 import logging,importlib
 import traceback
 from htag.render import HRenderer
@@ -18,185 +18,134 @@ logging.basicConfig(format='[%(levelname)-5s] %(name)s: %(message)s',level=loggi
 
 logger = logging.getLogger(__name__)
 
+def mainprocess(uid,timeout, input,output):
+    print("Process Start",uid)
 
-
-
-def uidprocess(uid,session,queues, timeout = 10*60):
     hts={}
-    qin,qout = queues
 
-    #==========================================================
-    async def ping(msg):
-    #==========================================================
-        """ just for UT """
-        return f"hello {msg}"
+    class SesHT:
+        def __init__(self,session):
+            self.session = session
 
-    #==========================================================
-    async def ht_create(fqn,js,init_params=None,renew=False):        # -> str
-    #==========================================================
-        """ HRenderer creator """
-        if init_params is None : init_params=((),{})
+        async def ping(self, msg):
+            self.session["ping"]="here"
+            return f"hello {msg}"
 
-        #--------------------------- fqn -> module, name
-        names = fqn.split(".")
-        modulename,name=".".join(names[:-1]), names[-1]
-        module=importlib.import_module(modulename)
-        #---------------------------
-        htClass = getattr(module,name)
+        #==========================================================
+        async def ht_create(self, fqn,js,init_params=None,renew=False):        # -> str
+        #==========================================================
+            """ HRenderer creator """
+            self.session["ht_create"]="here"
+            if init_params is None : init_params=((),{})
 
-        hr=hts.get(fqn)
-        if renew or (hr is None) or str(init_params)!=str(hr.init):
-            ##HRenderer(tagClass: type, js:str, exit_callback:Optional[Callable]=None, init= ((),{}), fullerror=False, statics=[], session=None ):
-            hr=HRenderer( htClass,
-                    js=js,
-                    session=session,
-                    init= init_params,
-            )
-            hts[fqn] = hr
-        return str(hr)
+            #--------------------------- fqn -> module, name
+            names = fqn.split(".")
+            modulename,name=".".join(names[:-1]), names[-1]
+            module=importlib.import_module(modulename)
+            #---------------------------
+            htClass = getattr(module,name)
 
-
-    #==========================================================
-    async def ht_interact(fqn,data): # -> dict
-    #==========================================================
-        """ interact with hrenderer instance """
-        hr=hts[fqn]
-
-        #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\ to simplify ut
-        if data["id"]=="ut":
-            data["id"] = id(hr.tag) #only main tag ;-(
-        #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
-
-        return await hr.interact(data['id'],data['method'],data['args'],data['kargs'],data.get('event') )
+            hr=hts.get(fqn)
+            if renew or (hr is None) or str(init_params)!=str(hr.init):
+                ##HRenderer(tagClass: type, js:str, exit_callback:Optional[Callable]=None, init= ((),{}), fullerror=False, statics=[], session=None ):
+                hr=HRenderer( htClass,
+                        js=js,
+                        session=self.session,
+                        init= init_params,
+                )
+                hts[fqn] = hr
+            return str(hr)
 
 
-    methods=locals()
+        #==========================================================
+        async def ht_interact(self,fqn,data): # -> dict
+        #==========================================================
+            """ interact with hrenderer instance """
+            self.session["ht_interact"]="here"
+            hr=hts[fqn]
+            hr.session = self.session
 
-    async def processloop():
-        #process loop
-        while 1:
-            try:
-                action,(a,k) = qin.get(timeout=timeout)
-            except queue.Empty:
-                logger.info("Process %s: inactivity timeout (%ssec)",uid,timeout)
-                break
-            # except OSError:
-            #     logger.info("Process %s: breaks",uid)
-            #     break
+            #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\ to simplify ut
+            if data["id"]=="ut":
+                data["id"] = id(hr.tag) #only main tag ;-(
+            #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
 
-            qout.put("ok")
+            x = await hr.interact(data['id'],data['method'],data['args'],data['kargs'],data.get('event') )
 
+            self.session = hr.session
+            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
+            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
+            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
+            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
+            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
+            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
+            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
+            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
+            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
+            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
+            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
+            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
+            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
+            return x
+
+    async def loop():
+        while input.poll(timeout=timeout):
+            session,action,(a,k) = input.recv()
             if action=="quit":
                 break
-            else:
-                try:
-                    method=methods[action]
-                    logger.info("Process %s: %s",uid,action)
-                    r=await method(*a,**k)
 
-                    qout.put( dict(result=r) )
-                except Exception as e:
-                    logger.error("Process %s: ERROR '%s'",uid,e)
-                    qout.put( dict(error=traceback.format_exc(),exception=e) )
+            ss=SesHT(session)
 
+            method=getattr(ss,action)
+            r=await method(*a,**k)
 
-    asyncio.run( processloop() )
-    qin.close()
-    qout.close()
-    logger.info("Process %s: ended",uid)
+            output.send( (ss.session,r) )
 
-# https://stackoverflow.com/questions/18213619/sharing-a-lock-between-gunicorn-workers?rq=1
-# https://docs.gunicorn.org/en/latest/design.html
+    asyncio.run( loop() )
+    print("Process Stop",uid)
 
+clone = lambda x: json.loads(json.dumps(x))
 
+class UidProcess:
 
-class UidProxyException(Exception): pass
-class UidProxy:
-    PP = {}
+    def __init__(self,uid:str,session:dict,timeout=600):
+        self.session = session
+        qs,qr=multiprocessing.Pipe()
+        rs,rr=multiprocessing.Pipe()
+        self.input=qs
+        self.output=rr
 
-    def __init__(self,uid, session, timeout:float = 10*60 ):
-        reuse=uid in UidProxy.PP
-        if reuse:
-            p,qin,qout=UidProxy.PP[uid]
-            reuse = p.is_alive()
-
-        if reuse:
-            logger.info("UidProxy: reuse process %s",uid)
-        else:
-            logger.info("UidProxy: start process %s",uid)
-            qin=multiprocessing.Queue()
-            qout=multiprocessing.Queue()
-
-            # p=multiprocessing.Process( target=uidprocess, args=(uid, session, (qin,qout), timeout), name=f"process {uid}" )
-            p=threading.Thread( target=uidprocess, args=(uid, session, (qin,qout)), name=f"process {uid}" )
-            p.start()
-            UidProxy.PP[uid]=p,qin,qout
-
-        self.qin=qin
-        self.qout=qout
-        self.uid=uid
+        ps = multiprocessing.Process(target=mainprocess, args=[uid,timeout,qr,rs])
+        ps.start()
 
     def quit(self):
-        """ quit process of this uid """
-        self.qin.put( ('quit',( (),{} )) )
-        if self.uid in UidProxy.PP:
-            del UidProxy.PP[self.uid]
-        self.qin.close()
-        self.qout.close()
-
-    @classmethod
-    def shutdown(cls):
-        """ terminate all UidProxy' process"""
-        for uid in list(cls.PP.keys()):
-            UidProxy(uid,{}).quit() #TODO: pas bo du tout !!!!!
-
-    def _com(self,action,*a,**k):
-        """ SYNC COM ! """
-        logger.info(">> UidProxy: com %s(%s,%s)",action,a,k)
-
-        # send request
-        try:
-            self.qin.put( (action,(a,k)) )
-        except Exception:
-            return UidProxyException(f"queue is closed") # in this process !
-
-        # wait a confirmation (to test ps is alive)
-        try:
-            x=self.qout.get(timeout=0.5)    # minimal response
-            assert x=="ok"
-        except Exception:
-            return UidProxyException(f"queue is closed on process side") # in the other process !
-
-        # wait the real response
-        x:dict=self.qout.get(timeout=30)
-        if "error" in x:
-            return UidProxyException(f"UidProxy action '{action}' -> {x['error']}")
-        else:
-            r=x["result"]
-            logger.info("<< UidProxy: com %s << %s",action,hasattr(r,"__len__") and len(r) or r)
-            return r
+        self.input.send( ({},"quit",([],{}) ))
 
     def __getattr__(self,action:str):
-        async def _(*a,**k):
-            return self._com( action, *a,**k )
+        def _(*a,**k):
+            cses = clone(self.session)
+            try:
+                self.input.send( (cses,action,(a,k)))
+            except Exception as e:
+                return e
+
+            try:
+                cses,o= self.output.recv()
+            except Exception as e:
+                return e
+
+            if isinstance(o,Exception):
+                return o
+            else:
+                self.session.update(cses)
+
+                return o
         return _
 
 
-#/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
-
-
-#~ async def main():
-
-
-    #~ p1=UidProxy("u1")
-    #~ try:
-        #~ fakefile = lambda f: os.path.isfile(f) and Request(dict(method="GET",type="http",path=f,headers={}))
-
-        #~ x=await p1.exec( fakefile("../pscom_api.py") )
-        #~ print(x.status_code, x.body)
-
-    #~ finally: # needed if exception in try/catch --> we shutdown all process
-        #~ UidProxy.shutdown()
-
-#~ if __name__=="__main__":
-    #~ asyncio.run( main() )
+if __name__=="__main__":
+    ses=dict(a=42)
+    u=UidProcess("u1",ses)
+    u.ping("hello")
+    print(ses)
+    u.quit()

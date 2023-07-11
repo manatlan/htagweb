@@ -11,7 +11,7 @@ import asyncio
 import multiprocessing,threading
 import logging
 
-from .uidprocess import UidProxy
+from .uidprocess import UidProcess
 
 logger = logging.getLogger(__name__)
 
@@ -22,12 +22,12 @@ def mainprocess(input,output):
         return f"hello {msg}"
 
     async def ht_create(uid,session,fqn,js,init_params=None,renew=False):
-        p=UidProxy(uid,session)
-        return await p.ht_create(fqn,js,init_params,renew)
+        p=UidProcess(uid,session)
+        return p.ht_create(fqn,js,init_params,renew)
 
     async def ht_interact(uid,session,fqn,data):
-        p=UidProxy(uid,session)
-        return await p.ht_interact(fqn,data)
+        p=UidProcess(uid,session)
+        return p.ht_interact(fqn,data)
 
     methods=locals()
 
@@ -45,7 +45,7 @@ def mainprocess(input,output):
             output.send( r )
 
     asyncio.run( loop() )
-    UidProxy.shutdown()
+    # UidProxy.shutdown()
     print("MAINPROCESS EXITED")
 
 
