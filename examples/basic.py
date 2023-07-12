@@ -1,5 +1,5 @@
 import os,sys; sys.path.insert(0,os.path.dirname(os.path.dirname(__file__)))
-from htagweb.manager import Manager
+from htagweb.manager_old import Manager
 import contextlib
 
 from audioop import mul

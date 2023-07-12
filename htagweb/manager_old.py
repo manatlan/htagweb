@@ -11,7 +11,7 @@ import asyncio
 import multiprocessing,threading
 import logging
 
-from .uidprocess import UidProcess
+from .uidprocess import Users
 
 logger = logging.getLogger(__name__)
 
@@ -22,11 +22,13 @@ def mainprocess(input,output):
         return f"hello {msg}"
 
     async def ht_create(uid,session,fqn,js,init_params=None,renew=False):
-        p=UidProcess(uid,session)
+        p=Users.use(uid)
+        p.session = session
         return p.ht_create(fqn,js,init_params,renew)
 
     async def ht_interact(uid,session,fqn,data):
-        p=UidProcess(uid,session)
+        p=Users.use(uid)
+        p.session = session
         return p.ht_interact(fqn,data)
 
     methods=locals()
@@ -45,14 +47,12 @@ def mainprocess(input,output):
             output.send( r )
 
     asyncio.run( loop() )
-    # UidProxy.shutdown()
+    Users.kill()
     print("MAINPROCESS EXITED")
 
 
 class Manager:
     _p=multiprocessing.Manager().dict()
-    SESSIONS={} #multiprocessing.Manager().dict()
-
 
     def __init__(self):
         if not Manager._p:
@@ -71,7 +71,6 @@ class Manager:
             self.pp["input"].send( ("quit",([],{}) ))
             self.pp=None
             Manager._p={}
-            Manager.SESSIONS={}
 
     def __getattr__(self,action:str):
         def _(*a,**k):

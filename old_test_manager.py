@@ -2,15 +2,8 @@ import pytest
 import asyncio
 from htag import Tag
 from requests import Session
-from htagweb.manager import Manager
+from htagweb.manager_old import Manager
 
-
-# class App(Tag.body):
-#     def init(self):
-#         self.b=Tag.Button("say hello",_onclick=self.bind.doit() )
-#         self+=self.b
-#     def doit(self):
-#         self+="hello"
 
 
 @pytest.mark.asyncio
@@ -36,7 +29,9 @@ async def test_htag_ok():
     uid="u1"
 
     try:
-        x=m.ht_create(uid,ses,"test_uidprocess.App","//jscom")
+        fqn="test_hr.App"
+
+        x=m.ht_create(uid,ses,fqn,"//jscom")
         assert isinstance(x,str)
         assert "//jscom" in x
         assert "function action(" in x
@@ -44,7 +39,7 @@ async def test_htag_ok():
         assert ">42</cpt>" in x
 
         data=dict(id="ut",method="doit",args=(),kargs={})
-        x=m.ht_interact(uid,ses,"test_uidprocess.App", data)
+        x=m.ht_interact(uid,ses,fqn, data)
         assert isinstance(x,dict)
         assert "update" in x
         ll=list(x["update"].items())

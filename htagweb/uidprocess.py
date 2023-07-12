@@ -63,7 +63,6 @@ def mainprocess(uid,timeout, input,output):
             """ interact with hrenderer instance """
             self.session["ht_interact"]="here"
             hr=hts[fqn]
-            hr.session = self.session
 
             #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\ to simplify ut
             if data["id"]=="ut":
@@ -73,19 +72,6 @@ def mainprocess(uid,timeout, input,output):
             x = await hr.interact(data['id'],data['method'],data['args'],data['kargs'],data.get('event') )
 
             self.session = hr.session
-            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
-            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
-            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
-            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
-            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
-            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
-            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
-            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
-            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
-            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
-            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
-            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
-            print(">>>>>>>>>>>>>>>",hr.session,flush=True,file=sys.stdout)
             return x
 
     async def loop():
@@ -123,7 +109,8 @@ class UidProcess:
 
     def __getattr__(self,action:str):
         def _(*a,**k):
-            cses = clone(self.session)
+            cses = clone(self.session)  #TODO really needed ?!?
+            # cses = self.session
             try:
                 self.input.send( (cses,action,(a,k)))
             except Exception as e:
@@ -143,9 +130,34 @@ class UidProcess:
         return _
 
 
+class Users:
+    _users = {}
+
+    @classmethod
+    def use(cls,uid):
+        if uid not in cls._users:
+            cls._users[uid] = UidProcess( uid, {} )
+        return cls._users[uid]
+
+    @classmethod
+    def kill(cls):
+        for key,up in cls._users.items():
+            up.quit()
+
+    @classmethod
+    def all(cls):
+        return list(cls._users.keys())
+
 if __name__=="__main__":
-    ses=dict(a=42)
-    u=UidProcess("u1",ses)
-    u.ping("hello")
-    print(ses)
-    u.quit()
+    u1=Users.use("u1")
+    print( u1.session )
+    u1.ping("jjj")
+    print( u1.session )
+
+    u2=Users.use("u2")
+    print( u2.session )
+    u2.ping("jjj")
+    print( u2.session )
+
+
+    Users.kill()

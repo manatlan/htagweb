@@ -1,40 +1,31 @@
 import pytest
 import asyncio
 from htag import Tag
-from htagweb.uidprocess import UidProcess as UidProxy
-
-
-class App(Tag.body):
-    def init(self):
-        self.b=Tag.Button("say hello",_onclick=self.bind.doit() )
-        self+=self.b
-        self+=Tag.cpt(self.session['cpt'])
-        self.session['created']=True
-    def doit(self):
-        self+="hello"
-        self.session['cpt']+=1
-        self.session['interacted']=True
-
+from htagweb.uidprocess import UidProcess,Users
 
 
 @pytest.mark.asyncio
 async def test_bad_interop_unknown_method():
-    p1=UidProxy("u1",{})
+    p1=UidProcess("u1",{})
     r = p1.unknown(42) # >> Process u1: error ''unknown''
     assert isinstance(r,Exception)
 
 @pytest.mark.asyncio
 async def test_bad_interop_bad_signature():
-    p1=UidProxy("u1",{})
+    p1=UidProcess("u1",{})
     r=p1.ping() # >> Process u1: error 'ping() missing 1 required positional argument: 'msg''
     assert isinstance(r,Exception)
 
 
 @pytest.mark.asyncio
 async def test_ok_ping():
-    p1=UidProxy("u1",{})
+
+    ses=dict(a=42)
+
+    p1=UidProcess("u1",ses)
     r=p1.ping("manatlan")
     assert r == "hello manatlan"
+    assert "ping" in ses
     p1.quit()
 
 
@@ -43,9 +34,9 @@ async def test_htag_ok():
 
     ses=dict(cpt=42)
 
-    p1=UidProxy("u1",ses)
+    p1=UidProcess("u1",ses)
     try:
-        fqn = "test_uidprocess.App"
+        fqn = "test_hr.App"
 
         x= p1.ht_create(fqn,"//jscom")
         assert isinstance(x,str)
@@ -56,18 +47,21 @@ async def test_htag_ok():
         assert ses["created"]
         assert ses["cpt"]==42,ses
 
+        assert id(ses)==id(p1.session)
+
         data=dict(id="ut",method="doit",args=(),kargs={})
         x=p1.ht_interact(fqn, data)
         assert isinstance(x,dict)
         assert "update" in x
         ll=list(x["update"].items())
         assert len(ll) == 1 # one update
-        id,content = ll[0]
-        assert isinstance( id, int) and id
+        ido,content = ll[0]
+        assert isinstance( ido, int) and ido
         assert isinstance( content, str) and content
         assert "hello" in content
 
         # assert the cpt var was incremented after interaction
+        assert id(ses)==id(p1.session)
         assert ses["cpt"]==43,p1.session
         assert ses["interacted"],ses
 
@@ -77,7 +71,7 @@ async def test_htag_ok():
 
 @pytest.mark.asyncio
 async def test_com_after_quit():
-    p1=UidProxy("u1",{})
+    p1=UidProcess("u1",{})
     p1.ping("x")
     p1.quit()
 
@@ -90,7 +84,7 @@ async def test_com_after_quit():
 
 @pytest.mark.asyncio
 async def test_com_after_timeout_death():
-    p1=UidProxy("u1",{},0.5)
+    p1=UidProcess("u1",{},0.5)
     p1.ping("x")
 
     await asyncio.sleep(1)
@@ -100,11 +94,29 @@ async def test_com_after_timeout_death():
     assert isinstance(r,Exception)
 
 
+@pytest.mark.asyncio
+async def test_users():
+    try:
+        u1=Users.use("u1")
+        assert "ping" not in u1.session
+        u1.ping("jjj")
+        assert "ping" in u1.session
+
+        u2=Users.use("u2")
+        assert "ping" not in u2.session
+        u2.ping("jjj")
+        assert "ping" in u2.session
+
+    finally:
+        Users.kill()
+
 
 if __name__=="__main__":
-    # asyncio.run( test_bad_interop_unknown_method() )
-    # asyncio.run( test_bad_interop_bad_signature() )
-    # asyncio.run( test_ok_ping() )
-    # asyncio.run( test_htag_ok() )
-    # asyncio.run( test_com_after_quit() )
+    asyncio.run( test_bad_interop_unknown_method() )
+    asyncio.run( test_bad_interop_bad_signature() )
+    asyncio.run( test_ok_ping() )
+    asyncio.run( test_htag_ok() )
+    asyncio.run( test_com_after_quit() )
     asyncio.run( test_com_after_timeout_death() )
+
+    asyncio.run( test_users() )

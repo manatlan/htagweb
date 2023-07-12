@@ -1,6 +1,7 @@
 from htag import Tag
 from htag.render import HRenderer
 import asyncio
+import pytest
 
 class App(Tag.body):
     def init(self):
@@ -9,10 +10,11 @@ class App(Tag.body):
         self+=Tag.cpt(self.session['cpt'])
         self.session['created']=True
     def doit(self):
-        self+="hello"
         self.session['cpt']+=1
         self.session['interacted']=True
+        self+="hello" #+Tag.cpt2(self.session['cpt'])
 
+@pytest.mark.asyncio
 async def test_hr():
     ses=dict(cpt=1)
     hr=HRenderer( App ,"//",session = ses)

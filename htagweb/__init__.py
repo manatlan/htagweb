@@ -40,7 +40,7 @@ from starlette.requests import HTTPConnection
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 #=-=-=-=-=-=-
-from .manager import Manager
+from .uidprocess import Users
 from .crypto import decrypt,encrypt,JSCRYPTO
 #=-=-=-=-=-=-
 
@@ -48,16 +48,15 @@ logger = logging.getLogger(__name__)
 #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
 
 
-MANAGER:Manager = None
 
 @contextlib.asynccontextmanager
 async def lifespan(app):
-    global MANAGER
-    MANAGER=Manager()     # only one will run !
+    # global MANAGER
+    # MANAGER=Manager()     # only one will run !
 
     yield
 
-    MANAGER.shutdown()
+    # MANAGER.shutdown()
 
 class WebServerSession:  # ASGI Middleware, for starlette
     def __init__(
@@ -82,18 +81,12 @@ class WebServerSession:  # ASGI Middleware, for starlette
 
         if self.session_cookie in connection.cookies:
             uid = connection.cookies[self.session_cookie]
-            if uid not in MANAGER.SESSIONS:
-                # when the browser is open, it can reuse the cookie
-                #but session is empty, so we create an empty one
-                logging.warn("WebServerSession, reusing cookie without session")
-                MANAGER.SESSIONS[uid] = {}
         else:
             uid=str(uuid.uuid4())
-            MANAGER.SESSIONS[uid] = {}
 
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
         scope["uid"] = uid
-        scope["session"] = MANAGER.SESSIONS[uid]
+        scope["session"] = Users.use(uid).session
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         print("****CURRENT SESSION",uid,scope["session"])
@@ -161,7 +154,9 @@ class WebBase(Starlette):
 
     async def interact(self,uid:str,session:dict,fqn:str,query:str) -> str:
         data = self._str2dict( query )
-        actions = MANAGER.ht_interact(uid,session,fqn,data)
+        user=Users.use(uid)
+        user.session = session
+        actions = user.ht_interact(uid,fqn,data)
 
         if isinstance(actions,dict):
             return self._dict2str( actions )
@@ -184,7 +179,9 @@ async function dict2str(d) { return JSON.stringify(d); }
             """+js
 
         init_params = commons.url2ak( str(request.url) )
-        html = MANAGER.ht_create(uid,request.session,fqn, fjs, init_params, renew=renew)
+        user=Users.use(uid)
+        user.session = request.session
+        html = user.ht_create(uid,fqn, fjs, init_params, renew=renew)
         return html
 
     def _dict2str(self,dico:dict) -> str:

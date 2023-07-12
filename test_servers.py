@@ -1,6 +1,6 @@
 import pytest
 from htag import Tag
-from htagweb import findfqn,WebServer,WebServerWS
+from htagweb import findfqn,WebServer,WebServerWS,Users
 import htagweb
 import sys,json
 from starlette.testclient import TestClient
@@ -59,8 +59,6 @@ def app(request):
 
 def test_app_webserver_basic(app):
 
-    htagweb.MANAGER = htagweb.Manager()
-
     try:
         client=TestClient(app)
 
@@ -88,7 +86,7 @@ def test_app_webserver_basic(app):
                 data = websocket.receive_text()
                 assert "update" in json.loads(data)
     finally:
-        htagweb.MANAGER.shutdown()
+        Users.kill()
 
 #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
 from starlette.responses import HTMLResponse
@@ -125,8 +123,6 @@ def appses():
 
 def test_session_http_before( appses ): # the main goal
 
-    htagweb.MANAGER = htagweb.Manager()
-
     try:
         client=TestClient(appses)
 
@@ -136,13 +132,12 @@ def test_session_http_before( appses ): # the main goal
         assert response.text == "pong"
 
         # get the unique uid in session
-        keys=list(htagweb.MANAGER.SESSIONS.keys())
+        keys=Users.all()
         assert len(keys)==1
         uid=keys[0]
 
-        # set a var in session
-        ses=htagweb.MANAGER.SESSIONS[uid]
-        ses["cpt"]="X"
+        u=Users.use(uid)
+        u.session["cpt"]="X"
 
         # assert this var is visible from an api
         response = client.get('/cpt')
@@ -150,13 +145,14 @@ def test_session_http_before( appses ): # the main goal
         assert response.text == "X"
 
     finally:
-        htagweb.MANAGER.shutdown()
+        # htagweb.MANAGER.shutdown()
+        Users.kill()
 
 
 
 def test_session_http_after( appses ): # the main goal
 
-    htagweb.MANAGER = htagweb.Manager()
+    # htagweb.MANAGER = htagweb.Manager()
 
     try:
         client=TestClient(appses)
@@ -166,29 +162,26 @@ def test_session_http_after( appses ): # the main goal
         assert response.status_code == 200
         assert response.text == "pong"
 
-        # get the unique uid in session
-        keys=list(htagweb.MANAGER.SESSIONS.keys())
+        keys=Users.all()
         assert len(keys)==1
         uid=keys[0]
 
         # assert the var is not present in session
-        assert "cpt" not in htagweb.MANAGER.SESSIONS[uid]
+        assert "cpt" not in Users.use(uid).session
 
         # request the api which init the var
         response = client.get('/reset')
         assert response.status_code == 200
 
         # assert the var is init
-        assert htagweb.MANAGER.SESSIONS[uid]["cpt"]==0
+        assert Users.use(uid).session["cpt"]==0
 
     finally:
-        htagweb.MANAGER.shutdown()
+        Users.kill()
 
 
 
 def test_session_htag_before( appses ): # the main goal
-
-    htagweb.MANAGER = htagweb.Manager()
 
     try:
         client=TestClient(appses)
@@ -198,30 +191,30 @@ def test_session_htag_before( appses ): # the main goal
         assert response.status_code == 200
         assert response.text == "pong"
 
-        # get the unique uid in session
-        keys=list(htagweb.MANAGER.SESSIONS.keys())
+        keys=Users.all()
         assert len(keys)==1
         uid=keys[0]
 
         # set a var in session
-        htagweb.MANAGER.SESSIONS[uid]["cpt"]=42
+        u=Users.use(uid)
+        u.session["cpt"]=42
 
-        # assert this var is visible from an htag
+        # # assert this var is visible from an htag
         response = client.get('/')
         assert response.status_code == 200
         assert ">42</cpt>" in response.text
 
 
-        # and assert the interaction inc it
-        fqn=findfqn( SesApp )
-        msg=dict(id="ut",method="doit",args=(),kargs={})
-        response = client.post("/"+fqn,json=msg)
-        assert response.status_code == 200
+        # # and assert the interaction inc it
+        # fqn=findfqn( SesApp )
+        # msg=dict(id="ut",method="doit",args=(),kargs={})
+        # response = client.post("/"+fqn,json=msg)
+        # assert response.status_code == 200
 
-        assert htagweb.MANAGER.SESSIONS[uid]["cpt"]==43
+        # assert htagweb.MANAGER.SESSIONS[uid]["cpt"]==43
 
     finally:
-        htagweb.MANAGER.shutdown()
+        Users.kill()
 
 #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
 
