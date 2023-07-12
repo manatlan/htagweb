@@ -2,7 +2,9 @@ import pytest
 import asyncio
 from htag import Tag
 from requests import Session
-from htagweb.manager_old import Manager
+
+
+from htagweb.manager import Manager
 
 
 
@@ -10,14 +12,11 @@ from htagweb.manager_old import Manager
 async def test_the_base():
 
     c=Manager()
-    c=Manager() # no effect
-    c=Manager() # no effect
-    c=Manager() # no effect
-    r=c.ping("bob")
+    await asyncio.sleep(0.1)
+
+    r=await c.ping("bob")
     assert r=="hello bob"
-    c.shutdown()
-    c.shutdown() # no effect
-    c.shutdown() # no effect
+    await c.stop()
 
 @pytest.mark.asyncio
 async def test_htag_ok():
@@ -26,12 +25,14 @@ async def test_htag_ok():
 
 
     m=Manager()
+    await asyncio.sleep(0.5)
     uid="u1"
-
     try:
         fqn="test_hr.App"
 
-        x=m.ht_create(uid,ses,fqn,"//jscom")
+        await m.setsession(uid,ses)
+
+        x=await m.ht_create(uid,fqn,"//jscom")
         assert isinstance(x,str)
         assert "//jscom" in x
         assert "function action(" in x
@@ -39,7 +40,7 @@ async def test_htag_ok():
         assert ">42</cpt>" in x
 
         data=dict(id="ut",method="doit",args=(),kargs={})
-        x=m.ht_interact(uid,ses,fqn, data)
+        x=await m.ht_interact(uid,fqn, data)
         assert isinstance(x,dict)
         assert "update" in x
         ll=list(x["update"].items())
@@ -49,10 +50,11 @@ async def test_htag_ok():
         assert isinstance( content, str) and content
 
         # assert the cpt var was incremented after interaction
-        assert ses["cpt"]==43
+        async with m.session(uid) as s:
+            assert s["cpt"]==43
 
     finally:
-        m.shutdown()
+        await m.stop()
 
 
 if __name__=="__main__":

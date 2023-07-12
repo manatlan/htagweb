@@ -1,6 +1,6 @@
 import pytest
 from htag import Tag
-from htagweb import findfqn,WebServer,WebServerWS,Users
+from htagweb import findfqn,WebServer,WebServerWS
 import htagweb
 import sys,json
 from starlette.testclient import TestClient

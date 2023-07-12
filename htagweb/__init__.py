@@ -40,7 +40,7 @@ from starlette.requests import HTTPConnection
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 #=-=-=-=-=-=-
-from .uidprocess import Users
+from .manager import Manager
 from .crypto import decrypt,encrypt,JSCRYPTO
 #=-=-=-=-=-=-
 
@@ -49,14 +49,20 @@ logger = logging.getLogger(__name__)
 
 
 
+
 @contextlib.asynccontextmanager
-async def lifespan(app):
-    # global MANAGER
-    # MANAGER=Manager()     # only one will run !
+async def htagweb_life(app):
+    app.state.manager = Manager()
+    try:
+        # tente un ping
+        #~ x=await app.state.manager.ping()
+        #~ print("recept",x)
+        # print("WORKER",os.getpid(),"started")
+        yield
+        # print("WORKER",os.getpid(), "stopped")
 
-    yield
-
-    # MANAGER.shutdown()
+    finally:
+        await app.state.manager.stop()
 
 class WebServerSession:  # ASGI Middleware, for starlette
     def __init__(
@@ -136,7 +142,7 @@ class WebBase(Starlette):
         # self.crypt="test"   # or None
         self.crypt=None
 
-        Starlette.__init__(self,debug=True, lifespan=lifespan,routes=routes,middleware=[Middleware(WebServerSession)])
+        Starlette.__init__(self,debug=True, lifespan=htagweb_life,routes=routes,middleware=[Middleware(WebServerSession)])
 
         if obj:
             async def handleHome(request):
