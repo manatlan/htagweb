@@ -92,7 +92,7 @@ class WebServerSession:  # ASGI Middleware, for starlette
 
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
         scope["uid"] = uid
-        scope["session"] = Users.use(uid).session
+        scope["session"] = await self.app.state.manager.getsession(uid)
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         print("****CURRENT SESSION",uid,scope["session"])

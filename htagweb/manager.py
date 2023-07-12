@@ -39,6 +39,8 @@ async def manager_server(reader, writer):
         return f"hello {msg}"
     def killall():
         Users.kill()
+    def all():
+        return Users.all()
 
     methods=locals()
 
