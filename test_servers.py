@@ -199,19 +199,19 @@ def test_session_htag_before( appses ): # the main goal
         u=Users.use(uid)
         u.session["cpt"]=42
 
-        # # assert this var is visible from an htag
+        # assert this var is visible from an htag
         response = client.get('/')
         assert response.status_code == 200
         assert ">42</cpt>" in response.text
 
 
-        # # and assert the interaction inc it
-        # fqn=findfqn( SesApp )
-        # msg=dict(id="ut",method="doit",args=(),kargs={})
-        # response = client.post("/"+fqn,json=msg)
-        # assert response.status_code == 200
+        # and assert the interaction inc it
+        fqn=findfqn( SesApp )
+        msg=dict(id="ut",method="doit",args=(),kargs={})
+        response = client.post("/"+fqn,json=msg)
+        assert response.status_code == 200
 
-        # assert htagweb.MANAGER.SESSIONS[uid]["cpt"]==43
+        assert Users.use(uid).session["cpt"]==43
 
     finally:
         Users.kill()
