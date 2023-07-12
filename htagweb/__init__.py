@@ -156,7 +156,7 @@ class WebBase(Starlette):
         data = self._str2dict( query )
         user=Users.use(uid)
         user.session = session
-        actions = user.ht_interact(uid,fqn,data)
+        actions = user.ht_interact(fqn,data)
 
         if isinstance(actions,dict):
             return self._dict2str( actions )
@@ -181,7 +181,7 @@ async function dict2str(d) { return JSON.stringify(d); }
         init_params = commons.url2ak( str(request.url) )
         user=Users.use(uid)
         user.session = request.session
-        html = user.ht_create(uid,fqn, fjs, init_params, renew=renew)
+        html = user.ht_create(fqn, fjs, init_params, renew=renew)
         return html
 
     def _dict2str(self,dico:dict) -> str:
