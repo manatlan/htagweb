@@ -1,7 +1,6 @@
-import pytest,asyncio
+import pytest
 from htag import Tag
 from htagweb import findfqn,WebServer,WebServerWS,Users
-import htagweb
 import sys,json
 from starlette.testclient import TestClient
 
@@ -145,7 +144,7 @@ def test_users_sessions( appses ):
         #####################################################
         U2.get("/set?cpt=Y")
 
-        # the real session is modified        
+        # the real session is modified
         assert U2.session["cpt"]=="Y"
 
         # verify on http too
@@ -158,7 +157,7 @@ def test_users_sessions( appses ):
         #####################################################
         U2.get("/set?cpt=42")
 
-        # the real session is modified        
+        # the real session is modified
         assert U2.session["cpt"]=="42"
 
         # assert this var is visible from an htag
@@ -172,7 +171,7 @@ def test_users_sessions( appses ):
         response = U2.post("/"+fqn, dico)
         assert response.status_code == 200
 
-        # the real session is modified        
+        # the real session is modified
         assert U2.session["cpt"]==43
 
         # verify on http too

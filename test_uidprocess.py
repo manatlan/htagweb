@@ -1,6 +1,5 @@
 import pytest
 import asyncio
-from htag import Tag
 from htagweb.uidprocess import UidProcess,Users
 
 def test_bad_interop_unknown_method():

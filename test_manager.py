@@ -1,8 +1,4 @@
 import pytest
-import asyncio
-from htag import Tag
-from requests import Session
-
 
 from htagweb.manager import Manager
 from htagweb.uidprocess import Users
