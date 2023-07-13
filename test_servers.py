@@ -58,10 +58,7 @@ def app(request):
         return app
 
 def test_app_webserver_basic(app):
-
-    try:
-        client=TestClient(app)
-
+    with TestClient(app) as client:
         response = client.get('/')
         assert response.status_code == 200
         assert "hello nobody" in response.text
@@ -85,8 +82,6 @@ def test_app_webserver_basic(app):
                 websocket.send_text( json.dumps(msg) )
                 data = websocket.receive_text()
                 assert "update" in json.loads(data)
-    finally:
-        Users.kill()
 
 #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
 from starlette.responses import HTMLResponse
@@ -120,16 +115,12 @@ def appses():
     app.add_route("/reset",  resetcpt)
     app.add_route("/inc",  inccpt)
 
-    app.state.fake=True
     return app
 
 @pytest.mark.asyncio
 async def test_session_http_before( appses ): # the main goal
 
-    appses.state.manager = htagweb.Manager()
-    await asyncio.sleep(0.1)
-    try:
-        client=TestClient(appses)
+    with TestClient(appses) as client:
 
         # create a first exchange, to get the unique uid
         response = client.get('/ping')
@@ -141,68 +132,61 @@ async def test_session_http_before( appses ): # the main goal
         assert len(keys)==1
         uid=keys[0]
 
-        # u=Users.use(uid)
-        # u.session["cpt"]="X"
+        async with appses.state.manager.session(uid) as ses:
+            ses["cpt"]="X"
 
-        # # assert this var is visible from an api
-        # response = client.get('/cpt')
-        # assert response.status_code == 200
-        # assert response.text == "X"
-
-    finally:
-        await appses.state.manager.stop()
+        # assert this var is visible from an api
+        response = client.get('/cpt')
+        assert response.status_code == 200
+        assert response.text == "X"
 
 
 
-def test_session_http_after( appses ): # the main goal
+@pytest.mark.asyncio
+async def test_session_http_after( appses ): # the main goal
 
-    # htagweb.MANAGER = htagweb.Manager()
+    with TestClient(appses) as client:
+        # create a first exchange, to get the unique uid
+        response = client.get('/ping')
+        assert response.status_code == 200
+        assert response.text == "pong"
 
-    try:
-        client=TestClient(appses)
+        # get the unique uid in session
+        keys=await appses.state.manager.all()
+        assert len(keys)==1
+        uid=keys[0]
 
-        # # create a first exchange, to get the unique uid
-        # response = client.get('/ping')
-        # assert response.status_code == 200
-        # assert response.text == "pong"
+        assert "cpt" not in await appses.state.manager.getsession(uid)
 
-        # keys=Users.all()
-        # assert len(keys)==1
-        # uid=keys[0]
-
-        # # assert the var is not present in session
-        # assert "cpt" not in Users.use(uid).session
-
-        # # request the api which init the var
-        # response = client.get('/reset')
-        # assert response.status_code == 200
+        # request the api which init the var
+        response = client.get('/reset')
+        assert response.status_code == 200
 
         # # assert the var is init
-        # assert Users.use(uid).session["cpt"]==0
-
-    finally:
-        # Users.kill()
-        pass
+        ses=await appses.state.manager.getsession(uid)
+        assert ses["cpt"]==0
 
 
 
-def test_session_htag_before( appses ): # the main goal
 
-    try:
-        client=TestClient(appses)
+@pytest.mark.asyncio
+async def test_session_htag_before( appses ): # the main goal
+
+    with TestClient(appses) as client:
 
         # create a first exchange, to get the unique uid
         response = client.get('/ping')
         assert response.status_code == 200
         assert response.text == "pong"
 
-        keys=Users.all()
+        # get the unique uid in session
+        keys=await appses.state.manager.all()
         assert len(keys)==1
         uid=keys[0]
 
-        # set a var in session
-        u=Users.use(uid)
-        u.session["cpt"]=42
+        # # set a var in session
+        async with appses.state.manager.session(uid) as ses:
+            ses["cpt"]=42
 
         # assert this var is visible from an htag
         response = client.get('/')
@@ -216,10 +200,11 @@ def test_session_htag_before( appses ): # the main goal
         response = client.post("/"+fqn,json=msg)
         assert response.status_code == 200
 
-        assert Users.use(uid).session["cpt"]==43
+        # # assert the var is now 43
+        ses=await appses.state.manager.getsession(uid)
+        assert ses["cpt"]==43
 
-    finally:
-        Users.kill()
+
 
 #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
 
@@ -227,6 +212,7 @@ def test_session_htag_before( appses ): # the main goal
 if __name__=="__main__":
     test_fqn()
     # test_session_base()
-    # test_app_webserver_basic()
+    # test_app_webserver_basic( app() )
     # test_session_basic( appses() )
     # test_session_base( appses() )
+    # asyncio.run( test_session_http_before( appses()) )

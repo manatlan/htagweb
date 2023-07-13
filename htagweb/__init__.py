@@ -52,17 +52,12 @@ logger = logging.getLogger(__name__)
 
 @contextlib.asynccontextmanager
 async def htagweb_life(app):
+    print("Run at startup!")
     app.state.manager = Manager()
-    try:
-        # tente un ping
-        #~ x=await app.state.manager.ping()
-        #~ print("recept",x)
-        # print("WORKER",os.getpid(),"started")
-        yield
-        # print("WORKER",os.getpid(), "stopped")
+    yield
+    print("Run on shutdown!")
+    await app.state.manager.stop()
 
-    finally:
-        await app.state.manager.stop()
 
 class WebServerSession:  # ASGI Middleware, for starlette
     def __init__(
@@ -90,9 +85,11 @@ class WebServerSession:  # ASGI Middleware, for starlette
         else:
             uid=str(uuid.uuid4())
 
+
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
         scope["uid"] = uid
-        scope["session"] = await self.app.state.manager.getsession(uid)
+        m=Manager() #CLIENT SIDE
+        scope["session"] = await m.getsession(uid)
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         print("****CURRENT SESSION",uid,scope["session"])
@@ -144,6 +141,18 @@ class WebBase(Starlette):
 
         Starlette.__init__(self,debug=True, lifespan=htagweb_life,routes=routes,middleware=[Middleware(WebServerSession)])
 
+
+        # async def _startManager():
+        #     self.state.manager = Manager()
+        # async def _stopManager():
+        #     await self.state.manager.stop()
+
+        # Starlette.__init__(self,debug=True, on_startup=[_startManager,],on_shutdown=[_stopManager],routes=routes)
+
+
+        # Starlette.__init__(self,debug=True, lifespan=lifespan,routes=routes)
+        # Starlette.add_middleware(self,WebServerSession )
+
         if obj:
             async def handleHome(request):
                 return await self.serve(request,obj)
@@ -158,11 +167,12 @@ class WebBase(Starlette):
         uvicorn.run(self, host=host, port=port)
 
 
-    async def interact(self,uid:str,session:dict,fqn:str,query:str) -> str:
+    async def interact(self,uid:str,fqn:str,query:str) -> str:
         data = self._str2dict( query )
-        user=Users.use(uid)
-        user.session = session
-        actions = user.ht_interact(fqn,data)
+        actions = await self.state.manager.ht_interact(uid,fqn,data)
+        # user=Users.use(uid)
+        # user.session = session
+        # actions = user.ht_interact(fqn,data)
 
         if isinstance(actions,dict):
             return self._dict2str( actions )
@@ -185,9 +195,10 @@ async function dict2str(d) { return JSON.stringify(d); }
             """+js
 
         init_params = commons.url2ak( str(request.url) )
-        user=Users.use(uid)
-        user.session = request.session
-        html = user.ht_create(fqn, fjs, init_params, renew=renew)
+        # user=Users.use(uid)
+        # user.session = request.session
+        # html = user.ht_create(fqn, fjs, init_params, renew=renew)
+        html = await request.app.state.manager.ht_create(uid, fqn, fjs, init_params, renew=renew)
         return html
 
     def _dict2str(self,dico:dict) -> str:
@@ -239,7 +250,7 @@ window.addEventListener('DOMContentLoaded', start );
         fqn=request.path_params.get('fqn',None)
 
         query=await request.body()
-        response = await self.interact(uid,request.session, fqn, query.decode() )
+        response = await self.interact(uid, fqn, query.decode() )
         return PlainTextResponse( response )
 
 
@@ -260,7 +271,7 @@ class WebServerWS(WebBase):
                 uid=websocket.scope["uid"]    # WebServerSession made that possible
                 fqn=websocket.query_params['fqn']
 
-                response = await self.interact(uid, websocket.session, fqn, query )
+                response = await self.interact(uid, fqn, query )
                 await websocket.send_text( response )
 
         WebBase.__init__(self,obj,timeout,[WebSocketRoute("/ws", WsInteract)] )
