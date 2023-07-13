@@ -17,16 +17,6 @@ async def manager_server(reader, writer):
     except ImportError:
         from uidprocess import Users
 
-    def getsession(uid):
-        p=Users.use(uid)
-        x=p.session
-        print("GETSESSION",x)
-        return x
-    def setsession(uid,session):
-        print("SETSESSION",session)
-        p=Users.use(uid)
-        p.session.clear()
-        p.session.update(session)
     def ht_create(uid, fqn,js,init_params=None,renew=False): # -> str
         p=Users.use(uid)
         html = p.ht_create(fqn,js,init_params=init_params,renew=renew)
@@ -34,11 +24,15 @@ async def manager_server(reader, writer):
     def ht_interact(uid, fqn,data): # -> dict
         p=Users.use(uid)
         actions = p.ht_interact(fqn,data)
-        return actions
+        if isinstance(actions,dict):
+            return actions
+        else:
+            return ""   # code for dead session js/side
     def ping(msg):
         return f"hello {msg}"
     def killall():
-        Users.kill()
+        Users.killall()
+        return True
     def all():
         return Users.all()
 
@@ -73,13 +67,40 @@ async def manager_server(reader, writer):
 class Manager:
     def __init__(self,port=17788):
         self.port=port
-        # use tcp server (on port) to be able to have just an unique source of truth
-        self._task = asyncio.create_task( asyncio.start_server( manager_server, '127.0.0.1', self.port) )
-        asyncio.ensure_future( self._task )
+        self._srv=None
+
+    def is_server(self):
+        return self._srv!=None
+
+    async def __aenter__(self):
+        await self.start()
+        return self
+
+    async def __aexit__(self, *args):
+        await self.stop()
+
+    async def start(self):
+        """ start server part """
+        if self._srv==None:
+            try:
+                self._srv = await asyncio.start_server( manager_server, '127.0.0.1', self.port)
+                return True
+            except Exception as e:
+                self._srv=None
+                return False
+        else:
+            raise Exception("Already started")
 
     async def stop(self):
-        await self.killall()
-        self._task.cancel()
+        if self._srv:
+            try:
+                await self.killall()
+            except:
+                pass
+            await asyncio.sleep(0.1)
+            self._srv.close()
+            await self._srv.wait_closed()
+            self._srv=None
 
     def __getattr__(self,name:str):
         async def _(*a,**k):
@@ -99,27 +120,10 @@ class Manager:
             return reponse
         return _
 
-    def session(self,uid):
-        class sm:
-            def __init__(this, uid):
-                this.uid=uid
-
-            async def __aenter__(this):
-                d = await self.getsession( this.uid )
-                this._d=d
-                return d
-
-            async def __aexit__(this, *args):
-                await self.setsession( this.uid, this._d )
-
-        return sm(uid)
-
 
 if __name__=="__main__":
     async def main():
-        m=Manager()
-        await asyncio.sleep(0.1)
-        x=await m.ping("bob")
-        print(x)
-        await m.stop()
+        async with Manager() as m:
+            x=await m.ping("bob")
+            print(x)
     asyncio.run( main() )

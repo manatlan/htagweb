@@ -13,29 +13,27 @@ import json
 import logging,importlib
 import traceback
 from htag.render import HRenderer
+from shared_memory_dict import SharedMemoryDict
 
 logging.basicConfig(format='[%(levelname)-5s] %(name)s: %(message)s',level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
-def mainprocess(uid,timeout, input,output):
-    print("Process Start",uid)
+def mainprocess(uid,session,timeout, input,output):
+    print("Process Start",uid,flush=True)
 
-    hts={}
+    HTS={}
 
-    class SesHT:
-        def __init__(self,session):
-            self.session = session
-
+    class Actions:
         async def ping(self, msg):
-            self.session["ping"]="here"
+            session["ping"]="here"
             return f"hello {msg}"
 
         #==========================================================
         async def ht_create(self, fqn,js,init_params=None,renew=False):        # -> str
         #==========================================================
             """ HRenderer creator """
-            self.session["ht_create"]="here"
+            session["ht_create"]="here"
             if init_params is None : init_params=((),{})
 
             #--------------------------- fqn -> module, name
@@ -45,15 +43,15 @@ def mainprocess(uid,timeout, input,output):
             #---------------------------
             htClass = getattr(module,name)
 
-            hr=hts.get(fqn)
+            hr=HTS.get(fqn)
             if renew or (hr is None) or str(init_params)!=str(hr.init):
                 ##HRenderer(tagClass: type, js:str, exit_callback:Optional[Callable]=None, init= ((),{}), fullerror=False, statics=[], session=None ):
                 hr=HRenderer( htClass,
                         js=js,
-                        session=self.session,
+                        session=session,
                         init= init_params,
                 )
-                hts[fqn] = hr
+                HTS[fqn] = hr
             return str(hr)
 
 
@@ -61,8 +59,8 @@ def mainprocess(uid,timeout, input,output):
         async def ht_interact(self,fqn,data): # -> dict
         #==========================================================
             """ interact with hrenderer instance """
-            self.session["ht_interact"]="here"
-            hr=hts[fqn]
+            session["ht_interact"]="here"
+            hr=HTS[fqn]
 
             #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\ to simplify ut
             if data["id"]=="ut":
@@ -71,62 +69,62 @@ def mainprocess(uid,timeout, input,output):
 
             x = await hr.interact(data['id'],data['method'],data['args'],data['kargs'],data.get('event') )
 
-            self.session = hr.session
             return x
 
     async def loop():
         while input.poll(timeout=timeout):
-            session,action,(a,k) = input.recv()
+            action,(a,k) = input.recv()
             if action=="quit":
                 break
 
-            ss=SesHT(session)
-
+            ss=Actions()
             method=getattr(ss,action)
-            r=await method(*a,**k)
+            try:
+                r=await method(*a,**k)
+            except Exception as e:
+                r=e
 
-            output.send( (ss.session,r) )
+            output.send( r )
 
     asyncio.run( loop() )
-    print("Process Stop",uid)
-
-clone = lambda x: json.loads(json.dumps(x))
+    print("Process Stop",uid,flush=True)
 
 class UidProcess:
 
-    def __init__(self,uid:str,session:dict,timeout=600):
-        self.session = session
+    def __init__(self,uid:str,timeout=600):
+        self.uid = uid
+        self.session = SharedMemoryDict(name=self.uid, size=10024)   #TODO: fix number
+
         qs,qr=multiprocessing.Pipe()
         rs,rr=multiprocessing.Pipe()
         self.input=qs
         self.output=rr
 
-        ps = multiprocessing.Process(target=mainprocess, args=[uid,timeout,qr,rs])
-        ps.start()
+        self._ps = multiprocessing.Process(target=mainprocess, args=[uid,self.session,timeout,qr,rs])
+        self._ps.start()
 
     def quit(self):
-        self.input.send( ({},"quit",([],{}) ))
+        if self._ps and self._ps.is_alive():
+            self.input.send( ("quit",([],{}) ))
+            self.session.shm.close()
+            self.session.shm.unlink()
+            del self.session
+            self._ps.join()
+            self._ps=None
 
     def __getattr__(self,action:str):
         def _(*a,**k):
-            cses = clone(self.session)  #TODO really needed ?!?
-            # cses = self.session
             try:
-                self.input.send( (cses,action,(a,k)))
+                self.input.send( (action,(a,k)))
             except Exception as e:
                 return e
 
             try:
-                cses,o= self.output.recv()
+                o= self.output.recv()
             except Exception as e:
                 return e
 
-            if isinstance(o,Exception):
-                return o
-            else:
-                self.session.update(cses)
-
-                return o
+            return o   # return object or exception
         return _
 
 
@@ -136,11 +134,15 @@ class Users:
     @classmethod
     def use(cls,uid):
         if uid not in cls._users:
-            cls._users[uid] = UidProcess( uid, {} )
+            cls._users[uid] = UidProcess( uid )
         return cls._users[uid]
 
     @classmethod
-    def kill(cls):
+    def get(cls,uid):
+        return cls._users[uid]
+
+    @classmethod
+    def killall(cls):
         for key,up in cls._users.items():
             up.quit()
 
@@ -150,14 +152,12 @@ class Users:
 
 if __name__=="__main__":
     u1=Users.use("u1")
-    print( u1.session )
     u1.ping("jjj")
     print( u1.session )
 
     u2=Users.use("u2")
-    print( u2.session )
     u2.ping("jjj")
     print( u2.session )
 
 
-    Users.kill()
+    Users.killall()

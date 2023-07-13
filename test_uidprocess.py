@@ -3,38 +3,32 @@ import asyncio
 from htag import Tag
 from htagweb.uidprocess import UidProcess,Users
 
-
-@pytest.mark.asyncio
-async def test_bad_interop_unknown_method():
-    p1=UidProcess("u1",{})
-    r = p1.unknown(42) # >> Process u1: error ''unknown''
+def test_bad_interop_unknown_method():
+    p1=UidProcess("u1")
+    r = p1.unknown(42) # >> error ''unknown''
     assert isinstance(r,Exception)
+    p1.quit()
 
-@pytest.mark.asyncio
-async def test_bad_interop_bad_signature():
-    p1=UidProcess("u1",{})
-    r=p1.ping() # >> Process u1: error 'ping() missing 1 required positional argument: 'msg''
+def test_bad_interop_bad_signature():
+    p1=UidProcess("u1")
+    r=p1.ping() #  missing 1 required positional argument: 'msg''
     assert isinstance(r,Exception)
-
-
-@pytest.mark.asyncio
-async def test_ok_ping():
-
-    ses=dict(a=42)
-
-    p1=UidProcess("u1",ses)
-    r=p1.ping("manatlan")
-    assert r == "hello manatlan"
-    assert "ping" in ses
     p1.quit()
 
 
-@pytest.mark.asyncio
-async def test_htag_ok():
+def test_ok_ping():
 
-    ses=dict(cpt=42)
+    p1=UidProcess("u1")
+    r=p1.ping("manatlan")
+    assert r == "hello manatlan"
+    assert "ping" in p1.session
+    p1.quit()
 
-    p1=UidProcess("u1",ses)
+
+def test_htag_ok():
+
+    p1=UidProcess("u1")
+    p1.session["cpt"]=42
     try:
         fqn = "test_hr.App"
 
@@ -44,10 +38,9 @@ async def test_htag_ok():
         assert "function action(" in x
         assert ">say hello</Button>" in x
         assert ">42</cpt>" in x
-        assert ses["created"]
-        assert ses["cpt"]==42,ses
+        assert p1.session["created"]
+        assert p1.session["cpt"]==42
 
-        assert id(ses)==id(p1.session)
 
         data=dict(id="ut",method="doit",args=(),kargs={})
         x=p1.ht_interact(fqn, data)
@@ -61,9 +54,8 @@ async def test_htag_ok():
         assert "hello" in content
 
         # assert the cpt var was incremented after interaction
-        assert id(ses)==id(p1.session)
-        assert ses["cpt"]==43,p1.session
-        assert ses["interacted"],ses
+        assert p1.session["cpt"]==43
+        assert p1.session["interacted"]
 
     finally:
         p1.quit()
@@ -84,7 +76,7 @@ async def test_com_after_quit():
 
 @pytest.mark.asyncio
 async def test_com_after_timeout_death():
-    p1=UidProcess("u1",{},0.5)
+    p1=UidProcess("u1",0.5)
     p1.ping("x")
 
     await asyncio.sleep(1)
@@ -94,21 +86,28 @@ async def test_com_after_timeout_death():
     assert isinstance(r,Exception)
 
 
-@pytest.mark.asyncio
-async def test_users():
+def test_users():
     try:
-        u1=Users.use("u1")
+        u1=Users.use("us1")
         assert "ping" not in u1.session
         u1.ping("jjj")
         assert "ping" in u1.session
 
-        u2=Users.use("u2")
+        u2=Users.use("us2")
         assert "ping" not in u2.session
         u2.ping("jjj")
         assert "ping" in u2.session
 
+        assert Users.get("us2")
+
+        assert "us1" in Users.all()
+        assert "us2" in Users.all()
     finally:
-        Users.kill()
+        Users.killall()
+
+def test_user_get():
+    with pytest.raises( KeyError ):
+        assert Users.get("fdsfdsds") is None
 
 
 if __name__=="__main__":

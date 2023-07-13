@@ -22,10 +22,11 @@ WebServer & WebServerWS
 - TODO: parano mode (aes encryption in exchanges)
 """
 import uvicorn,multiprocessing
-import json
+import json,os
 from types import ModuleType
 import uuid,logging
 import contextlib
+from shared_memory_dict import SharedMemoryDict
 
 from htag import Tag
 from htag.runners import commons
@@ -41,22 +42,26 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 #=-=-=-=-=-=-
 from .manager import Manager
+from .uidprocess import Users
 from .crypto import decrypt,encrypt,JSCRYPTO
 #=-=-=-=-=-=-
 
 logger = logging.getLogger(__name__)
 #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
 
+# python3 -m pytest --cov-report html --cov=htagweb .
 
 
 
 @contextlib.asynccontextmanager
 async def htagweb_life(app):
-    print("Run at startup!")
-    app.state.manager = Manager()
-    yield
-    print("Run on shutdown!")
-    await app.state.manager.stop()
+    async with Manager() as m:
+        app.state.manager = m
+        pid=os.getpid()
+        logger.info("Startup [%s] %s",pid,m.is_server() and "***MANAGER RUNNED***" or "")
+        yield
+        logger.info("Stopping [%s]",pid)
+        Users.killall()
 
 
 class WebServerSession:  # ASGI Middleware, for starlette
@@ -85,14 +90,12 @@ class WebServerSession:  # ASGI Middleware, for starlette
         else:
             uid=str(uuid.uuid4())
 
-
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
         scope["uid"] = uid
-        m=Manager() #CLIENT SIDE
-        scope["session"] = await m.getsession(uid)
+        scope["session"] = Users.use(uid).session   # CREATE a session if uid not known
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-        print("****CURRENT SESSION",uid,scope["session"])
+        logger.debug("request for %s, scope=%s",uid,scope)
 
         async def send_wrapper(message: Message) -> None:
             if message["type"] == "http.response.start":
@@ -170,10 +173,6 @@ class WebBase(Starlette):
     async def interact(self,uid:str,fqn:str,query:str) -> str:
         data = self._str2dict( query )
         actions = await self.state.manager.ht_interact(uid,fqn,data)
-        # user=Users.use(uid)
-        # user.session = session
-        # actions = user.ht_interact(fqn,data)
-
         if isinstance(actions,dict):
             return self._dict2str( actions )
         else:
@@ -195,9 +194,6 @@ async function dict2str(d) { return JSON.stringify(d); }
             """+js
 
         init_params = commons.url2ak( str(request.url) )
-        # user=Users.use(uid)
-        # user.session = request.session
-        # html = user.ht_create(fqn, fjs, init_params, renew=renew)
         html = await request.app.state.manager.ht_create(uid, fqn, fjs, init_params, renew=renew)
         return html
 

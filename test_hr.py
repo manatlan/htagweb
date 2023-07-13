@@ -10,7 +10,7 @@ class App(Tag.body):
         self+=Tag.cpt(self.session['cpt'])
         self.session['created']=True
     def doit(self):
-        self.session['cpt']+=1
+        self.session['cpt']=int(self.session['cpt'])+1
         self.session['interacted']=True
         self+="hello" #+Tag.cpt2(self.session['cpt'])
 

@@ -18,9 +18,10 @@ Theses are a lot robust and IRL tested.
  * based on [starlette](https://pypi.org/project/starlette/)
  * compatible with **uvloop** !!!
  * compatible with multiple gunicorn webworkers !!!
+ * works on gnu/linux or windows !
  * Each user has its own process (for session, and htag app)
  * real starlette session available (in htag instance, and starlette request)
- * compatible with oauth2 authents ( [authlib](https://pypi.org/project/Authlib/) )
+ * compatible with oauth2 authent ( [authlib](https://pypi.org/project/Authlib/) )
  * real process managments (interactions timeout, process expirations, ...)
  * **NOT READY YET** parano mode (can aes encrypt all communications between client & server ... to avoid mitm'proxies)
 
@@ -36,8 +37,7 @@ The concepts are the same :
 
 ## Roadmap / futur
 
-- graceful shutdown of the manager
-- replace starlette by fastapi ;-)
+- ? replace starlette by fastapi ?
 - better logging !!!!
 - more parameters (session size, etc ...)
 - parano mode

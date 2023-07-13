@@ -1,6 +1,6 @@
 import pytest,asyncio
 from htag import Tag
-from htagweb import findfqn,WebServer,WebServerWS
+from htagweb import findfqn,WebServer,WebServerWS,Users
 import htagweb
 import sys,json
 from starlette.testclient import TestClient
@@ -14,9 +14,20 @@ class App(Tag.body):
         self+=self.b
     def doit(self):
         self+="hello"
-
-
 class Nimp: pass
+
+class User: # helper
+    def __init__(self,client,uid):
+        self._client=client
+        self.uid=uid
+    def get(self,path):
+        return self._client.get(path,headers={"cookie":"session=%s" % self.uid})
+    def post(self,path,dico):
+        return self._client.post(path,headers={"cookie":"session=%s" % self.uid},json=dico)
+    @property
+    def session(self):
+        return Users.get(self.uid).session
+
 
 def test_fqn():
     with pytest.raises( Exception ):
@@ -57,7 +68,7 @@ def app(request):
         app.add_route("/", handlePath )
         return app
 
-def test_app_webserver_basic(app):
+def test_basics_webserver_and_webserverws(app):
     with TestClient(app) as client:
         response = client.get('/')
         assert response.status_code == 200
@@ -84,135 +95,120 @@ def test_app_webserver_basic(app):
                 assert "update" in json.loads(data)
 
 #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
-from starlette.responses import HTMLResponse
+# new way
+#/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
 
-class SesApp(Tag.body):
-    def init(self,p="nobody"):
-        self.b=Tag.Button("say hello",_onclick=self.bind.doit() )
-        self+=self.b+Tag.cpt( self.session["cpt"] )
-    def doit(self):
-        self.session["cpt"]+=1
+from starlette.responses import HTMLResponse,JSONResponse
 
 @pytest.fixture
 def appses():
     app=WebServer()
     async def handlePath(request):
-        return await request.app.serve(request, SesApp)
-    async def getcpt(request):
-        return HTMLResponse( f"{request.session['cpt']}" )
-    async def resetcpt(request):
-        request.session["cpt"]=0
+        return await request.app.serve(request, "test_hr.App")
+    async def set(request):
+        for k,v in request.query_params.items():
+            request.session[k]=v
         return HTMLResponse( "ok" )
-    async def inccpt(request):
-        request.session["cpt"]+=1
-        return HTMLResponse( "ok" )
-    async def ping(request):
-        return HTMLResponse( "pong" )
+    async def info(request):
+        d=dict(uid=request['uid'],session=dict(request['session']))
+        return JSONResponse( d )
 
     app.add_route("/", handlePath )
-    app.add_route("/ping", ping )
-    app.add_route("/cpt",  getcpt)
-    app.add_route("/reset",  resetcpt)
-    app.add_route("/inc",  inccpt)
+    app.add_route("/set",  set)
+    app.add_route("/info",  info)
 
     return app
 
-@pytest.mark.asyncio
-async def test_session_http_before( appses ): # the main goal
-
+def test_users_sessions( appses ):
     with TestClient(appses) as client:
+        U1=User(client,"user1")
+        U2=User(client,"user2")
 
-        # create a first exchange, to get the unique uid
-        response = client.get('/ping')
-        assert response.status_code == 200
-        assert response.text == "pong"
+        info= U1.get("/info").json()
+        assert info["uid"]==U1.uid
+        assert info["session"]=={}
 
-        # get the unique uid in session
-        keys=await appses.state.manager.all()
-        assert len(keys)==1
-        uid=keys[0]
+        info= U2.get("/info").json()
+        assert info["uid"]==U2.uid
+        assert info["session"]=={}
 
-        async with appses.state.manager.session(uid) as ses:
-            ses["cpt"]="X"
+        #####################################################
+        ## CHANGE SESSION BEFORE REQUEST
+        #####################################################
+        U2.session["cpt"]="X"
 
-        # assert this var is visible from an api
-        response = client.get('/cpt')
-        assert response.status_code == 200
-        assert response.text == "X"
+        info= U2.get("/info").json()
+        assert info["session"]["cpt"]=="X"
 
+        #####################################################
+        ## CHANGE SESSION AFTER REQUEST
+        #####################################################
+        U2.get("/set?cpt=Y")
 
+        # the real session is modified        
+        assert U2.session["cpt"]=="Y"
 
-@pytest.mark.asyncio
-async def test_session_http_after( appses ): # the main goal
-
-    with TestClient(appses) as client:
-        # create a first exchange, to get the unique uid
-        response = client.get('/ping')
-        assert response.status_code == 200
-        assert response.text == "pong"
-
-        # get the unique uid in session
-        keys=await appses.state.manager.all()
-        assert len(keys)==1
-        uid=keys[0]
-
-        assert "cpt" not in await appses.state.manager.getsession(uid)
-
-        # request the api which init the var
-        response = client.get('/reset')
-        assert response.status_code == 200
-
-        # # assert the var is init
-        ses=await appses.state.manager.getsession(uid)
-        assert ses["cpt"]==0
+        # verify on http too
+        info= U2.get("/info?2").json()
+        assert info["session"]["cpt"] == "Y"
 
 
+        #####################################################
+        ## CHANGE SESSION BEFORE HTAG APP
+        #####################################################
+        U2.get("/set?cpt=42")
 
-
-@pytest.mark.asyncio
-async def test_session_htag_before( appses ): # the main goal
-
-    with TestClient(appses) as client:
-
-        # create a first exchange, to get the unique uid
-        response = client.get('/ping')
-        assert response.status_code == 200
-        assert response.text == "pong"
-
-        # get the unique uid in session
-        keys=await appses.state.manager.all()
-        assert len(keys)==1
-        uid=keys[0]
-
-        # # set a var in session
-        async with appses.state.manager.session(uid) as ses:
-            ses["cpt"]=42
+        # the real session is modified        
+        assert U2.session["cpt"]=="42"
 
         # assert this var is visible from an htag
-        response = client.get('/')
+        response = U2.get('/')
         assert response.status_code == 200
         assert ">42</cpt>" in response.text
 
-
         # and assert the interaction inc it
-        fqn=findfqn( SesApp )
-        msg=dict(id="ut",method="doit",args=(),kargs={})
-        response = client.post("/"+fqn,json=msg)
+        fqn="test_hr.App"
+        dico=dict(id="ut",method="doit",args=(),kargs={})
+        response = U2.post("/"+fqn, dico)
         assert response.status_code == 200
 
-        # # assert the var is now 43
-        ses=await appses.state.manager.getsession(uid)
-        assert ses["cpt"]==43
+        # the real session is modified        
+        assert U2.session["cpt"]==43
+
+        # verify on http too
+        info= U2.get("/info?2").json()
+        assert info["session"]["cpt"] == 43
 
 
+        #####################################################
+        # stupid test
+        #####################################################
+        # ensure u1 session is not modified
+        info= U1.get("/info").json()
+        assert info["session"]=={}
 
-#/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+
+def test_bad_htag( appses ):
+
+    with TestClient(appses) as client:
+        U1=User(client,"user1")
+
+        # try to post an interaction on an non instancied htag app
+        fqn="test_hr.App"
+        dico=dict(id="ut",method="doit",args=(),kargs={})
+        response = U1.post("/"+fqn, dico)
+        assert response.status_code == 200
+        assert response.text == ""
+
+def test_ensure_uid_is_created_on_1st_http( appses ):
+
+    with TestClient(appses) as client:
+        x=client.get("/info")
+        uid = x.json()['uid']
+
+        assert Users.get(uid).session == {}
+        assert uid in str(x.cookies)
 
 
 if __name__=="__main__":
     test_fqn()
-    # test_session_base()
-    # test_app_webserver_basic( app() )
-    # test_session_basic( appses() )
-    # test_session_base( appses() )
-    # asyncio.run( test_session_http_before( appses()) )

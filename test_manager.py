@@ -5,32 +5,50 @@ from requests import Session
 
 
 from htagweb.manager import Manager
+from htagweb.uidprocess import Users
 
+# #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+# # Override the pytest-asyncio event_loop fixture to make it session scoped. This is required in order to enable
+# # async test fixtures with a session scope. More info: https://github.com/pytest-dev/pytest-asyncio/issues/68
+# @pytest.fixture(scope="session")
+# def event_loop(request):
+#     loop = asyncio.get_event_loop_policy().new_event_loop()
+#     yield loop
+#     loop.close()
+# #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
 
 
 @pytest.mark.asyncio
 async def test_the_base():
 
-    c=Manager()
-    await asyncio.sleep(0.1)
+    m=Manager()
+    try:
+        assert await m.start()
 
-    r=await c.ping("bob")
-    assert r=="hello bob"
-    await c.stop()
+        with pytest.raises( Exception ):
+            assert await m.start()          # can't start a 2nd ;-)
+
+        r=await m.ping("bob")
+        assert r=="hello bob"
+    finally:
+        await m.stop()
+
+
+@pytest.mark.asyncio
+async def test_the_base_base():
+    async with Manager() as m:
+        r=await m.ping("bob")
+        assert r=="hello bob"
+
+
 
 @pytest.mark.asyncio
 async def test_htag_ok():
-
-    ses=dict(cpt=42)
-
-
-    m=Manager()
-    await asyncio.sleep(0.5)
-    uid="u1"
-    try:
+    async with Manager() as m:
+        uid="u1"
         fqn="test_hr.App"
 
-        await m.setsession(uid,ses)
+        Users.use(uid).session["cpt"]=42        # create a session !!!
 
         x=await m.ht_create(uid,fqn,"//jscom")
         assert isinstance(x,str)
@@ -50,13 +68,9 @@ async def test_htag_ok():
         assert isinstance( content, str) and content
 
         # assert the cpt var was incremented after interaction
-        async with m.session(uid) as s:
-            assert s["cpt"]==43
-
-    finally:
-        await m.stop()
-
+        assert Users.get(uid).session["cpt"]==43
 
 if __name__=="__main__":
     # asyncio.run( test_the_base() )
-    asyncio.run( test_htag_ok() )
+    # asyncio.run( test_htag_ok() )
+    pass
