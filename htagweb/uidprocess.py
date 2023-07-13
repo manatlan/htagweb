@@ -69,17 +69,19 @@ def mainprocess(uid,session,timeout, input,output):
     async def loop():
         while input.poll(timeout=timeout):
             action,(a,k) = input.recv()
-            if action=="quit":
-                break
-
-            ss=Actions()
-            method=getattr(ss,action)
             try:
-                r=await method(*a,**k)
-            except Exception as e:
-                r=e
+                if action=="_quit_":
+                    r="_quit_"
+                    break
 
-            output.send( r )
+                ss=Actions()
+                method=getattr(ss,action)
+                try:
+                    r=await method(*a,**k)
+                except Exception as e:
+                    r=e
+            finally:
+                output.send( r )
 
     asyncio.run( loop() )
     logger.info("Process ended for %s",uid)
@@ -100,7 +102,7 @@ class UidProcess:
 
     def quit(self):
         if self._ps and self._ps.is_alive():
-            self.input.send( ("quit",([],{}) ))
+            self._quit_()
             self.session.shm.close()
             self.session.shm.unlink()
             del self.session
