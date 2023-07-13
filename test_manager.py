@@ -1,126 +1,76 @@
 import pytest
-import re
 import asyncio
-from datetime import datetime
-
-from htagweb.manager import Manager,AppProcess,AppProcessException,shm
-
-
-#=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
 from htag import Tag
-class Appz(Tag.div):
-    def do(self):
-        self+= "hello"
-
-class Nimp: pass
-
-class AppKo(Tag.div):
-    def init(self):
-        self+= 42/0
-
-#=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+from requests import Session
 
 
-@pytest.mark.asyncio
-async def test_AppProcess():
+from htagweb.manager import Manager
+from htagweb.uidprocess import Users
 
-    a=AppProcess("u1","test_manager.Appz",( [], {}),js="/*js*/",appkey="apppkkkk")
-    assert a.is_alive()
-
-    # get the html (first render)
-    html=await a.render()
-
-    # ensure hello is not here
-    assert ">hello<" not in html
-
-    # find the @id of the instance tag
-    id=int(re.findall( 'body id="(\d+)"',html )[0])
-
-    # invoke the "do" method
-    actions=await a.interact( dict(id=id,method="do",args=[],kargs={}) )
-
-    # ensure an update action
-    assert ">hello<" in actions["update"][id]
-
-    # ensure the full redering is good
-    assert ">hello<" in await a.render()
-
-    # force quit
-    a.quit()
-
-    # and wait before testing is not alive anymore
-    await asyncio.sleep(0.1)
-    assert not a.is_alive()
-
-    print("test_AppProcess ok")
+# #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+# # Override the pytest-asyncio event_loop fixture to make it session scoped. This is required in order to enable
+# # async test fixtures with a session scope. More info: https://github.com/pytest-dev/pytest-asyncio/issues/68
+# @pytest.fixture(scope="session")
+# def event_loop(request):
+#     loop = asyncio.get_event_loop_policy().new_event_loop()
+#     yield loop
+#     loop.close()
+# #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
 
 
 @pytest.mark.asyncio
-async def test_AppProcess_ko():
+async def test_the_base():
 
-    # test a class with bug during init process
-    app=AppProcess("u1","test_manager.AppKo",( [], {}),js="/*js*/",appkey="apppkkkk")
-    # will print the stacktrace on stdout ;-(
-    # (exception is bypassed, and render a html error page ;-( )
-    # so we need to force quit the process
-    app.quit()
+    m=Manager()
+    try:
+        assert await m.start()
 
-    # test unknown fqn
-    with pytest.raises( AppProcessException ):
-        AppProcess("u1","__NIMP__.NIMP",( [], {}),js="/*js*/",appkey="apppkkkk")
+        with pytest.raises( Exception ):
+            assert await m.start()          # can't start a 2nd ;-)
 
-    # test an existing class, but not htag one
-    with pytest.raises( AppProcessException ):
-        AppProcess("u1","test_manager.Nimp",( [], {}),js="/*js*/",appkey="apppkkkk")
+        r=await m.ping("bob")
+        assert r=="hello bob"
+    finally:
+        await m.stop()
+
+
+@pytest.mark.asyncio
+async def test_the_base_base():
+    async with Manager() as m:
+        r=await m.ping("bob")
+        assert r=="hello bob"
 
 
 
 @pytest.mark.asyncio
-async def test_manager():
-    uid,fqn="u1","test_manager.Appz"
-    m=Manager(17777)
+async def test_htag_ok():
+    async with Manager() as m:
+        uid="u1"
+        fqn="test_hr.App"
 
-    #!!!!!!!!!!!!!!!!!!!!!!!!!!! register request for uid
-    scope={}
-    scope["uid"] = uid
-    scope["session"] = shm.session(uid) # create a smd
+        Users.use(uid).session["cpt"]=42        # create a session !!!
 
-    # declare session
-    glob=shm.wses()
-    glob[uid]=datetime.now()
-    #!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        x=await m.ht_create(uid,fqn,"//jscom")
+        assert isinstance(x,str)
+        assert "//jscom" in x
+        assert "function action(" in x
+        assert ">say hello</Button>" in x
+        assert ">42</cpt>" in x
 
+        data=dict(id="ut",method="doit",args=(),kargs={})
+        x=await m.ht_interact(uid,fqn, data)
+        assert isinstance(x,dict)
+        assert "update" in x
+        ll=list(x["update"].items())
+        assert len(ll) == 1 # one update
+        id,content = ll[0]
+        assert isinstance( id, int) and id
+        assert isinstance( content, str) and content
 
-    h=await m.ht_render(uid,fqn,( [], {}), js="/*js*/")
-
-    u=m.users.get_user(uid)
-    app=u.get_app(fqn)
-    assert app.is_alive()
-    hh=await app.render()
-
-    assert hh==h
-
-    await asyncio.sleep(2)
-    m.seskeeper(1) # kill user'sessions older than 1 sec ;-)
-
-    await asyncio.sleep(0.1) # wait a little bit
-
-    # user should be destroyed
-    assert not m.users.get_user(uid)
-    # and its apps too.
-    assert not app.is_alive()
-
-
+        # assert the cpt var was incremented after interaction
+        assert Users.get(uid).session["cpt"]==43
 
 if __name__=="__main__":
-
-    import logging
-    logging.basicConfig(format='[%(levelname)-5s] %(name)s: %(message)s',level=logging.DEBUG)
-
-    asyncio.run( test_AppProcess() )
-    asyncio.run( test_AppProcess_ko() )
-    asyncio.run( test_manager() )
-
-    print("ok")
-
+    # asyncio.run( test_the_base() )
+    # asyncio.run( test_htag_ok() )
+    pass

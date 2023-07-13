@@ -9,57 +9,59 @@
 
 __version__ = "0.0.0" # auto updated
 
-try:
-    import uvloop
-    raise Exception("htagweb is not compatible with uvloop, yet")
-except ImportError:
-    pass
-
 """
 WebServer & WebServerWS
 ~~~~~~~~~~~~~~~~~~~~~~~~
 - new versions of oldest WebHTTP & WebWS (nearly compatibles)
-- concept of an htag app application server (manager), which communicate with child process, with queue (web workers communicate with the manager using tcp socket)
-- Htag App runned in its own process, per user (real isolation!)
-- htag app can exit with .exit() (process killed)
+- concept of an htag app application server (manager), which communicate with child process, with queue
+- Htag Apps runned in a process, per user (real isolation!)
 - when session expire (after inactivity timeout), child process are destroyed
-- real shared session by user (really isolated!)
-- works with multiple uvicorn webworkers
+- works with multiple uvicorn webworkers, and uvloop
 - WebServerWS use ws/wss sockets to interact (instead of http/post)
 - 30s timeout for interactions/render times
-- parano mode (aes encryption in exchanges)
+- TODO: parano mode (aes encryption in exchanges)
 """
-import uvicorn
+import uvicorn,multiprocessing
+import json,os
+from types import ModuleType
+import uuid,logging
+import contextlib
+from shared_memory_dict import SharedMemoryDict
 
 from htag import Tag
-from htag.render import HRenderer
 from htag.runners import commons
 
 from starlette.applications import Starlette
-from starlette.responses import HTMLResponse,JSONResponse,PlainTextResponse
+from starlette.responses import HTMLResponse,PlainTextResponse
 from starlette.routing import Route,WebSocketRoute
 from starlette.endpoints import WebSocketEndpoint
-
-#=-=-=-=-=-=-
-from . import shm
-from .manager import Manager
-from .crypto import decrypt,encrypt,JSCRYPTO
-#=-=-=-=-=-=-
-
-import os
-import json
-import asyncio,pickle
-from types import ModuleType
-from datetime import datetime
-
-#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
-import json
-import sys
-import uuid
-
+from starlette.middleware import Middleware
 from starlette.datastructures import MutableHeaders
 from starlette.requests import HTTPConnection
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
+
+#=-=-=-=-=-=-
+from .manager import Manager
+from .uidprocess import Users
+from .crypto import decrypt,encrypt,JSCRYPTO
+#=-=-=-=-=-=-
+
+logger = logging.getLogger(__name__)
+#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
+
+# python3 -m pytest --cov-report html --cov=htagweb .
+
+
+
+@contextlib.asynccontextmanager
+async def htagweb_life(app):
+    async with Manager() as m:
+        app.state.manager = m
+        pid=os.getpid()
+        logger.info("Startup [%s] %s",pid,m.is_server() and "***MANAGER RUNNED***" or "")
+        yield
+        logger.info("Stopping [%s]",pid)
+        Users.killall()
 
 
 class WebServerSession:  # ASGI Middleware, for starlette
@@ -90,12 +92,10 @@ class WebServerSession:  # ASGI Middleware, for starlette
 
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
         scope["uid"] = uid
-        scope["session"] = shm.session(uid) # create a smd
-
-        # declare session
-        glob=shm.wses()
-        glob[uid]=datetime.now()
+        scope["session"] = Users.use(uid).session   # CREATE a session if uid not known
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+        logger.debug("request for %s, scope=%s",uid,scope)
 
         async def send_wrapper(message: Message) -> None:
             if message["type"] == "http.response.start":
@@ -112,42 +112,6 @@ class WebServerSession:  # ASGI Middleware, for starlette
             await send(message)
 
         await self.app(scope, receive, send_wrapper)
-
-#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
-def startManager(port,timeout): #sec (timeout session)
-    try:
-        Manager(port).run(timeout)
-        print("Manager started!")
-    except Exception as e:
-        print("Manager can't started (already running?)")
-#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
-
-
-class ManagerClient:
-    def __init__(self,port):
-        self.port=port
-
-    def __getattr__(self,name:str):
-        async def _(*a,**k):
-            reader, writer = await asyncio.open_connection("127.0.0.1", self.port)
-
-            question = pickle.dumps( (name,a,k) )
-            # logger.debug('Sending data of size: %s',len(question))
-            writer.write(question)
-
-            await writer.drain()
-            writer.write_eof()
-
-            data = await reader.read()
-            # logger.debug('recept data of size: %s',len(data))
-            reponse = pickle.loads( data )
-            if isinstance(reponse,Exception):
-                raise reponse
-
-            writer.close()
-            await writer.wait_closed()
-            return reponse
-        return _
 
 
 
@@ -171,31 +135,31 @@ def findfqn(x) -> str:
 
     return tagClass.__module__+"."+tagClass.__qualname__
 
+
 class WebBase(Starlette):
 
     def __init__(self,obj=None,timeout=5*60, routes=None):
         # self.crypt="test"   # or None
         self.crypt=None
 
-        port=27777 # manager server port
-        self.manager = ManagerClient(port)
+        Starlette.__init__(self,debug=True, lifespan=htagweb_life,routes=routes,middleware=[Middleware(WebServerSession)])
 
-        async def _startManager():
-            import multiprocessing
-            p = multiprocessing.Process(target=startManager,args=(port,timeout,),name="ManagerServer")
-            p.start()
 
-        async def _stopManager():
-            await self.manager.shutdown()
+        # async def _startManager():
+        #     self.state.manager = Manager()
+        # async def _stopManager():
+        #     await self.state.manager.stop()
 
-        Starlette.__init__(self,debug=True, on_startup=[_startManager,],on_shutdown=[_stopManager],routes=routes)
+        # Starlette.__init__(self,debug=True, on_startup=[_startManager,],on_shutdown=[_stopManager],routes=routes)
+
+
+        # Starlette.__init__(self,debug=True, lifespan=lifespan,routes=routes)
+        # Starlette.add_middleware(self,WebServerSession )
 
         if obj:
             async def handleHome(request):
                 return await self.serve(request,obj)
             self.add_route( '/', handleHome )
-
-        Starlette.add_middleware(self,WebServerSession )
 
 
     def run(self, host="0.0.0.0", port=8000, openBrowser=False):   # localhost, by default !!
@@ -208,7 +172,7 @@ class WebBase(Starlette):
 
     async def interact(self,uid:str,fqn:str,query:str) -> str:
         data = self._str2dict( query )
-        actions = await self.manager.ht_interact(uid, fqn, data )
+        actions = await self.state.manager.ht_interact(uid,fqn,data)
         if isinstance(actions,dict):
             return self._dict2str( actions )
         else:
@@ -230,8 +194,7 @@ async function dict2str(d) { return JSON.stringify(d); }
             """+js
 
         init_params = commons.url2ak( str(request.url) )
-        html = await self.manager.ht_render(uid,fqn,init_params, fjs, renew )
-
+        html = await request.app.state.manager.ht_create(uid, fqn, fjs, init_params, renew=renew)
         return html
 
     def _dict2str(self,dico:dict) -> str:
@@ -256,6 +219,7 @@ class WebServer(WebBase):
 
     async def serve(self,request, obj, renew=False ) -> HTMLResponse:
         # assert obj is correct type
+
         uid=request.scope["uid"]    # WebServerSession made that possible
         fqn=findfqn(obj)
 
@@ -297,7 +261,6 @@ class WebServerWS(WebBase):
         self.wss=wss
 
         class WsInteract(WebSocketEndpoint):
-            # encoding = "json"
             encoding = "text"
 
             async def on_receive(this, websocket, query:str):
@@ -337,5 +300,4 @@ ws.onmessage = async function(e) {
 )
         html = await self.render(request,uid,fqn, js,renew )
         return HTMLResponse( html )
-
 

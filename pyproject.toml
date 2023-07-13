@@ -23,7 +23,7 @@ htag = ">= 0.9.44"
 starlette = ">= 0.21.0"
 uvicorn = ">= 0.22.0"
 pycryptodomex = ">= 3.0.0"
-shared_memory_dict = ">= 0.7.2"
+shared_memory_dict = ">= 0.7.2"         # need py ^3.8
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.0"
