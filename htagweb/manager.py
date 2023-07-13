@@ -82,11 +82,15 @@ class Manager:
     async def start(self):
         """ start server part """
         if self._srv==None:
-            self._srv = await asyncio.start_server( manager_server, '127.0.0.1', self.port)
-            return True
+            try:
+                self._srv = await asyncio.start_server( manager_server, '127.0.0.1', self.port)
+                return True
+            except:
+                self._srv=None
+                return False
         else:
             raise Exception("Already started")
-
+            
     async def stop(self):
         if self._srv:
             try:
