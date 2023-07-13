@@ -6,21 +6,16 @@
 #
 # https://github.com/manatlan/htag
 # #############################################################################
-import asyncio,sys
+import asyncio
 import multiprocessing
-import threading
-import json
 import logging,importlib
-import traceback
 from htag.render import HRenderer
 from shared_memory_dict import SharedMemoryDict
-
-logging.basicConfig(format='[%(levelname)-5s] %(name)s: %(message)s',level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
 def mainprocess(uid,session,timeout, input,output):
-    print("Process Start",uid,flush=True)
+    logger.info("Process Start for %s",uid)
 
     HTS={}
 
@@ -87,7 +82,7 @@ def mainprocess(uid,session,timeout, input,output):
             output.send( r )
 
     asyncio.run( loop() )
-    print("Process Stop",uid,flush=True)
+    logger.info("Process ended for %s",uid)
 
 class UidProcess:
 

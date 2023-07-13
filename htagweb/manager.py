@@ -18,11 +18,11 @@ async def manager_server(reader, writer):
         from uidprocess import Users
 
     def ht_create(uid, fqn,js,init_params=None,renew=False): # -> str
-        p=Users.use(uid)
+        p=Users.use(uid)    # create a user if needed
         html = p.ht_create(fqn,js,init_params=init_params,renew=renew)
         return html
     def ht_interact(uid, fqn,data): # -> dict
-        p=Users.use(uid)
+        p=Users.use(uid)    # create a user if needed
         actions = p.ht_interact(fqn,data)
         if isinstance(actions,dict):
             return actions
@@ -82,12 +82,8 @@ class Manager:
     async def start(self):
         """ start server part """
         if self._srv==None:
-            try:
-                self._srv = await asyncio.start_server( manager_server, '127.0.0.1', self.port)
-                return True
-            except Exception as e:
-                self._srv=None
-                return False
+            self._srv = await asyncio.start_server( manager_server, '127.0.0.1', self.port)
+            return True
         else:
             raise Exception("Already started")
 

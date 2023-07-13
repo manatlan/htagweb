@@ -12,7 +12,7 @@ class App(Tag.body):
     def doit(self):
         self.session['cpt']=int(self.session['cpt'])+1
         self.session['interacted']=True
-        self+="hello" #+Tag.cpt2(self.session['cpt'])
+        self+="hello" +Tag.cpt2(self.session['cpt'])
 
 @pytest.mark.asyncio
 async def test_hr():

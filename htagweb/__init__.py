@@ -21,12 +21,11 @@ WebServer & WebServerWS
 - 30s timeout for interactions/render times
 - TODO: parano mode (aes encryption in exchanges)
 """
-import uvicorn,multiprocessing
+import uvicorn
 import json,os
 from types import ModuleType
 import uuid,logging
 import contextlib
-from shared_memory_dict import SharedMemoryDict
 
 from htag import Tag
 from htag.runners import commons
@@ -61,7 +60,6 @@ async def htagweb_life(app):
         logger.info("Startup [%s] %s",pid,m.is_server() and "***MANAGER RUNNED***" or "")
         yield
         logger.info("Stopping [%s]",pid)
-        Users.killall()
 
 
 class WebServerSession:  # ASGI Middleware, for starlette
@@ -88,7 +86,7 @@ class WebServerSession:  # ASGI Middleware, for starlette
         if self.session_cookie in connection.cookies:
             uid = connection.cookies[self.session_cookie]
         else:
-            uid=str(uuid.uuid4())
+            uid = str(uuid.uuid4())
 
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
         scope["uid"] = uid
@@ -143,18 +141,6 @@ class WebBase(Starlette):
         self.crypt=None
 
         Starlette.__init__(self,debug=True, lifespan=htagweb_life,routes=routes,middleware=[Middleware(WebServerSession)])
-
-
-        # async def _startManager():
-        #     self.state.manager = Manager()
-        # async def _stopManager():
-        #     await self.state.manager.stop()
-
-        # Starlette.__init__(self,debug=True, on_startup=[_startManager,],on_shutdown=[_stopManager],routes=routes)
-
-
-        # Starlette.__init__(self,debug=True, lifespan=lifespan,routes=routes)
-        # Starlette.add_middleware(self,WebServerSession )
 
         if obj:
             async def handleHome(request):
