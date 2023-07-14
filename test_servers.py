@@ -208,6 +208,31 @@ def test_ensure_uid_is_created_on_1st_http( appses ):
         assert Users.get(uid).session == {}
         assert uid in str(x.cookies)
 
+def test_stress(appses):
+    import random
+    with TestClient(appses) as client:
+        for i in range(1000):
+            ll=[User(client,"wstress%s"%i) for i in range( 1+int(i/100))]
+            one=random.choice(ll)
+
+            x=random.choice([1,2])
+            if x==1:
+                r=one.get("/info").json()
+                print(i,r)
+            else:
+                Users.use(one.uid).session["cpt"]=14
+
+                response = one.get('/?renew=%s'%i)  # force recreate
+                assert response.status_code == 200
+
+                # x=await m.ht_create(one.uid,fqn,"//jscom")
+                # assert isinstance(x,str)
+
+                # data=dict(id="ut",method="doit",args=(),kargs={})
+                # x=await m.ht_interact(one.uid, fqn, data)
+                # assert isinstance(x,dict),x
+                # assert "update" in x
+                print(i)
 
 if __name__=="__main__":
     test_fqn()

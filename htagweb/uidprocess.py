@@ -100,8 +100,11 @@ class UidProcess:
         self._ps = multiprocessing.Process(target=mainprocess, args=[uid,self.session,timeout,qr,rs])
         self._ps.start()
 
+    def is_alive(self):
+        return self._ps and self._ps.is_alive()
+
     def quit(self):
-        if self._ps and self._ps.is_alive():
+        if self.is_alive():
             self._quit_()
             self.session.shm.close()
             self.session.shm.unlink()
@@ -130,8 +133,15 @@ class Users:
 
     @classmethod
     def use(cls,uid):
-        if uid not in cls._users:
+        if uid in cls._users:
+            ps=cls._users[uid]
+            if ps.is_alive():
+                cls._users[uid] = ps
+            else:
+                cls._users[uid] = UidProcess( uid )
+        else:
             cls._users[uid] = UidProcess( uid )
+
         return cls._users[uid]
 
     @classmethod
@@ -145,6 +155,8 @@ class Users:
 
     @classmethod
     def all(cls):
+        #TODO: currently it returns all users which have existed (during gunicorn session)
+        #TODO: it could test if they are alive or not ?!
         return list(cls._users.keys())
 
 if __name__=="__main__":

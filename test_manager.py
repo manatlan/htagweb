@@ -1,4 +1,4 @@
-import pytest
+import pytest,asyncio
 
 from htagweb.manager import Manager
 from htagweb.uidprocess import Users
@@ -134,8 +134,31 @@ async def test_htag_bad_bug_interact():
         # assert we got the user in memory
         assert uid in await m.all()
 
+@pytest.mark.asyncio
+async def test_stress():
+    import random
+    async with Manager() as m:
+        for i in range(1000):
+            ll=[Users.use("mstress%s"%i) for i in range( 1+int(i/100))]
+            one=random.choice(ll)
+            one.session["cpt"]=79
+
+            x=random.choice([1,2])
+            if x==1:
+                r=await m.ping( one.uid )
+                print(i,r)
+            else:
+                fqn = "test_hr.App"
+                x=await m.ht_create(one.uid,fqn,"//jscom")
+                assert isinstance(x,str)
+
+                data=dict(id="ut",method="doit",args=(),kargs={})
+                x=await m.ht_interact(one.uid, fqn, data)
+                assert isinstance(x,dict),x
+                assert "update" in x
+                print(i,x)
 
 if __name__=="__main__":
     # asyncio.run( test_the_base() )
     # asyncio.run( test_htag_ok() )
-    pass
+    asyncio.run( test_stress() )
