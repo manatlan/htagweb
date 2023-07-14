@@ -35,6 +35,10 @@ The concepts are the same :
  - All user processes are destroyed, after an inactivity timeout (not like in desktop mode, to preserve healthy of the webserver)
  - the "session" live as long as the server live (may not be a problem on many hosting service (where they shutdown the server after inactivities))
 
+## architecture
+
+Here is a rapid [map](https://www.tldraw.com/s/v2_c_0z8CUdwoKgrIjBa29yeO7?viewport=228%2C-15%2C1920%2C976&page=page%3AlnBx9GrxTdcdrdgOk-s83) ;-)
+
 ## Roadmap / futur
 
 - ? replace starlette by fastapi ?
