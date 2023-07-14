@@ -21,8 +21,13 @@ async def test_the_base():
     try:
         assert await m.start()
 
+        # trying to double start is a bug ;-)
         with pytest.raises( Exception ):
             assert await m.start()          # can't start a 2nd ;-)
+
+        # assert that a second manager can't start the server part (IRL)
+        mm=Manager()
+        assert not await mm.start()
 
         r=await m.ping("bob")
         assert r=="hello bob"
