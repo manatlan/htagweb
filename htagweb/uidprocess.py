@@ -31,16 +31,19 @@ def mainprocess(uid,session,timeout, input,output):
             session["ht_create"]="here"
             if init_params is None : init_params=((),{})
 
-            #--------------------------- fqn -> module, name
-            names = fqn.split(".")
-            modulename,name=".".join(names[:-1]), names[-1]
-            module=importlib.import_module(modulename)
-            #---------------------------
-            htClass = getattr(module,name)
-
             hr=HTS.get(fqn)
             if renew or (hr is None) or str(init_params)!=str(hr.init):
                 ##HRenderer(tagClass: type, js:str, exit_callback:Optional[Callable]=None, init= ((),{}), fullerror=False, statics=[], session=None ):
+
+                #--------------------------- fqn -> module, name
+                names = fqn.split(".")
+                modulename,name=".".join(names[:-1]), names[-1]
+                module=importlib.import_module(modulename)
+                module=importlib.reload(module)
+                #---------------------------
+                htClass = getattr(module,name)
+
+
                 hr=HRenderer( htClass,
                         js=js,
                         session=session,
