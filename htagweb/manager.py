@@ -67,10 +67,10 @@ async def manager_server(reader, writer):
 class Manager:
     def __init__(self,port=17788):
         self.port=port
-        self._srv=None
+        self._task=None
 
     def is_server(self):
-        return self._srv!=None
+        return self._task!=None
 
     async def __aenter__(self):
         await self.start()
@@ -81,26 +81,27 @@ class Manager:
 
     async def start(self):
         """ start server part """
-        if self._srv==None:
+        if self._task==None:
             try:
-                self._srv = await asyncio.start_server( manager_server, '127.0.0.1', self.port)
+                self._server = asyncio.start_server( manager_server, '127.0.0.1', self.port)
+                self._task=await asyncio.create_task( self._server )
                 return True
             except:
-                self._srv=None
+                self._task=None
                 return False
         else:
             raise Exception("Already started")
-            
+
     async def stop(self):
-        if self._srv:
+        if self._task:
             try:
                 await self.killall()
             except:
                 pass
             await asyncio.sleep(0.1)
-            self._srv.close()
-            await self._srv.wait_closed()
-            self._srv=None
+            self._task.close()
+            await self._task.wait_closed()
+            self._task=None
 
     def __getattr__(self,name:str):
         async def _(*a,**k):
