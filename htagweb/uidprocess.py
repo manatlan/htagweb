@@ -6,7 +6,7 @@
 #
 # https://github.com/manatlan/htag
 # #############################################################################
-import asyncio
+import asyncio,sys
 import multiprocessing
 import logging,importlib
 from htag.render import HRenderer
@@ -38,8 +38,16 @@ def mainprocess(uid,session,timeout, input,output):
                 #--------------------------- fqn -> module, name
                 names = fqn.split(".")
                 modulename,name=".".join(names[:-1]), names[-1]
-                module=importlib.import_module(modulename)
-                module=importlib.reload(module)
+                if modulename in sys.modules:
+                    module=sys.modules[modulename]
+                    try:
+                        module=importlib.reload( module )
+                    except ModuleNotFoundError:
+                        """ can't be (really) reloaded if the component is in the 
+                        same module as the instance htag server"""
+                        pass
+                else:
+                    module=importlib.import_module(modulename)
                 #---------------------------
                 htClass = getattr(module,name)
 
