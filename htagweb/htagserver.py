@@ -66,26 +66,36 @@ from . import crypto
 logger = logging.getLogger(__name__)
 ####################################################
 class IndexApp(Tag.div):
+    statics="""
+    * {font-family: sans-serif;}
+    .file,.folder {margin-left:8px}
+    .file *,.folder * {text-decoration: none}
+    .folder * {font-weight:800}
+    """
     imports=[]
 
     def init(self,path="."):
-        assert ".." not in path
-        assert not path.strip().startswith("/")
-        assert not path.strip().startswith("\\")
+        if path.strip().startswith( ("/","\\" )) or ".." in path:
+            self += "?!"
+        else:
+            olist=Tag.div()
 
-        olist=Tag.div()
+            folders=[]
+            files=[]
+            for i in os.listdir(path):
+                if i.startswith( (".","_") ): continue
+                if os.path.isdir( os.path.join(path,i) ):
+                    folders.append( (i,os.path.join(path,i)) )
+                elif i.lower().endswith(".py"):
+                    files.append( (i, f"{path.replace(os.sep,'.')}.{i[:-3]}".strip(".")))
 
-        for i in os.listdir(path):
-            if os.path.isdir( os.path.join(path,i) ):
-                fp=os.path.join(path,i)
-                olist+= Tag.li( Tag.a( Tag.b(f"[{i}]"),_href="?path="+fp ))
-        for i in os.listdir(path):
-            if i.lower().endswith(".py"):
-                fp=f"{path.replace(os.sep,'.')}.{i[:-3]}".strip(".")
-                olist+= Tag.li( Tag.A(i,_href=fp))
+            for i,fp in sorted(folders):
+                olist+= Tag.div( Tag.a( f"📂 {i}",_href="?"+fp ), _class="folder")
+            for i,fp in sorted(files):
+                olist+= Tag.div( Tag.a(i,_href=fp), _class="file")
 
-        self+= Tag.h3(f"Folder {path}")
-        self+= olist
+            self+= Tag.h3(f"Folder {path}")
+            self+= olist
 
 ####################################################
 
