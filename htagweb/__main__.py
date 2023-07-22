@@ -7,11 +7,9 @@
 # https://github.com/manatlan/htagweb
 # #############################################################################
 
-from .webbase import WebServer
-from .webbase import WebServerWS
+import uvicorn
+from . import HtagServer
 
-from .htagserver import HtagServer  # a completly different beast.
-
-__all__= ["WebServer","WebServerWS","HtagServer"]
-
-__version__ = "0.0.0" # auto updated
+app=HtagServer(debug=True,ssl=False)
+if __name__=="__main__":
+    uvicorn.run(app)

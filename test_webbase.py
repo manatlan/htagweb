@@ -1,6 +1,7 @@
 import pytest
 from htag import Tag
-from htagweb import findfqn,WebServer,WebServerWS,Users
+from htagweb import WebServer,WebServerWS
+from htagweb.webbase import findfqn, Users
 import sys,json
 from starlette.testclient import TestClient
 
@@ -42,8 +43,8 @@ def test_fqn():
         findfqn(sys)
 
     assert findfqn("mod.name") == "mod.name"
-    assert findfqn(MyTag) in ["__main__.MyTag","test_servers.MyTag"]
-    assert findfqn(sys.modules[__name__]) in ["__main__.App","test_servers.App"]
+    assert findfqn(MyTag) in ["__main__.MyTag","test_webbase.MyTag"]
+    assert findfqn(sys.modules[__name__]) in ["__main__.App","test_webbase.App"]
 
 @pytest.fixture( params=["wh_solo","wh_served","ws_solo","ws_served"] )
 def app(request):

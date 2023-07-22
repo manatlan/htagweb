@@ -4,7 +4,7 @@
 #
 # MIT licence
 #
-# https://github.com/manatlan/htag
+# https://github.com/manatlan/htagweb
 # #############################################################################
 import asyncio
 import logging,pickle

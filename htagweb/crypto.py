@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+# #############################################################################
+# Copyright (C) 2023 manatlan manatlan[at]gmail(dot)com
+#
+# MIT licence
+#
+# https://github.com/manatlan/htagweb
+# #############################################################################
 from Cryptodome.Cipher import AES # pip3 install pycryptodomex
 import hashlib
 import base64,os

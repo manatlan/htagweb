@@ -4,7 +4,7 @@
 #
 # MIT licence
 #
-# https://github.com/manatlan/htag
+# https://github.com/manatlan/htagweb
 # #############################################################################
 import asyncio,sys
 import multiprocessing
@@ -43,7 +43,7 @@ def mainprocess(uid,session,timeout, input,output):
                     try:
                         module=importlib.reload( module )
                     except ModuleNotFoundError:
-                        """ can't be (really) reloaded if the component is in the 
+                        """ can't be (really) reloaded if the component is in the
                         same module as the instance htag server"""
                         pass
                 else:
