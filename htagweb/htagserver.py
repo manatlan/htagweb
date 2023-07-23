@@ -276,6 +276,7 @@ class HtagServer(Starlette):
             jsparano = ""
             jsparano += "\nasync function _read_(x) {return x}\n"
             jsparano += "\nasync function _write_(x) {return x}\n"
+        #TODO: consider https://developer.chrome.com/blog/removing-document-write/
         bootstrapHtmlPage="""<!DOCTYPE html>
             <html>
               <head>

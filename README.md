@@ -87,3 +87,16 @@ See a more advanced example in [examples folder](https://github.com/manatlan/hta
 ```bash
 python3 examples/main.py
 ```
+
+# htagweb.HtagServer
+
+This is a new beast, which is available in this module, and __it's COMPLETLY different from ALL others htag runners__.
+See it like an "htag server", very useful during development phase. In console, type :
+
+```bash
+$ python3 -m htagweb
+```
+
+It will run a solid http/ws, with all htag/web features, and you can browse htag's apps in an html page.
+
+It's not the official way to expose htag's apps on the web. But I'm currently exploring that (because it's a lot lot simpler ;-)
