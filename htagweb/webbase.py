@@ -115,7 +115,7 @@ class WebServerSession:  # ASGI Middleware, for starlette
 
 def findfqn(x) -> str:
     if isinstance(x,str):
-        if "." not in x:
+        if ("." not in x) and (":" not in x):
             raise Exception(f"'{x}' is not a 'full qualified name' (expected 'module.name') of an App (htag.Tag class)")
         return x    # /!\ x is a fqn /!\ DANGEROUS /!\
     elif isinstance(x, ModuleType):

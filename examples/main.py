@@ -19,6 +19,7 @@ async def handlePath(request):
         h=f"""
         {os.getpid()}
         <li><a href="/a1">a1</a> : app without session
+        <li><a href="/a12">a12</a> : app without session
         <li><a href="/a2">a2</a> : app with session (not renewed)
         <li><a href="/a22">a22</a> : app with session (renewed at each refresh)
         <li><a href="/k1">k1</a> : App with bug in init
@@ -27,6 +28,8 @@ async def handlePath(request):
         return HTMLResponse(h)
     elif p=="a1":
         return await app.serve(request, "app1.App")
+    elif p=="a12":
+        return await app.serve(request, "app1:App")
     elif p=="a2":
         return await app.serve(request, app2.App )
     elif p=="a22":
