@@ -167,6 +167,12 @@ def getClass(fqn:str) -> type:
     klass= getattr(module,name)
     if not ( inspect.isclass(klass) and issubclass(klass,Tag) ):
         raise Exception(f"'{fqn}' is not a htag.Tag subclass")
+
+    if not hasattr(klass,"imports"):
+        # if klass doesn't declare its imports
+        # we prefer to set them empty
+        # to avoid clutering
+        klass.imports=[]
     return klass
 
 class HRSocket(WebSocketEndpoint):
