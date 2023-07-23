@@ -36,8 +36,11 @@ def mainprocess(uid,session,timeout, input,output):
                 ##HRenderer(tagClass: type, js:str, exit_callback:Optional[Callable]=None, init= ((),{}), fullerror=False, statics=[], session=None ):
 
                 #--------------------------- fqn -> module, name
-                names = fqn.split(".")
-                modulename,name=".".join(names[:-1]), names[-1]
+                if ":" in fqn:
+                    modulename,name = fqn.split(":",1)
+                else:
+                    names = fqn.split(".")
+                    modulename,name=".".join(names[:-1]), names[-1]
                 if modulename in sys.modules:
                     module=sys.modules[modulename]
                     try:
