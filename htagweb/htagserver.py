@@ -44,6 +44,7 @@ import json
 import uuid
 import inspect
 import logging
+import uvicorn
 import importlib
 
 from starlette.applications import Starlette
@@ -210,10 +211,14 @@ console.log("started")
         self.hr=None
 
         if not path:
-            try:
-                klass=getClass("index:App")
-            except Exception as e:
-                klass=IndexApp
+            if websocket.app.index:
+                # there is a main htag'class for '/'
+                klass=websocket.app.index
+            else:
+                try:
+                    klass=getClass("index:App")
+                except Exception as e:
+                    klass=IndexApp
         else:
             try:
                 if ":" in path:
@@ -250,7 +255,8 @@ console.log("started")
         del self.hr
 
 class HtagServer(Starlette):
-    def __init__(self,debug:bool=True,ssl:bool=False,session_size:int=10240,parano:bool=False):
+    def __init__(self,obj:"htag.Tag class or fqn"=None, debug:bool=True,ssl:bool=False,session_size:int=10240,parano:bool=False):
+        self.index = obj
         self.ssl=ssl
         self.parano = str(uuid.uuid4()) if parano else None
         Starlette.__init__( self,
@@ -302,4 +308,14 @@ class HtagServer(Starlette):
 
         return HTMLResponse( bootstrapHtmlPage )
 
+    def add_route(self,*a,**k):
+        """ insert route at the beginning ;-) """
+        super().add_route(*a,**k)
+        self.router.routes.insert(0, self.router.routes.pop() )
 
+    def run(self, host="0.0.0.0", port=8000, openBrowser=False):   # localhost, by default !!
+        if openBrowser:
+            import webbrowser
+            webbrowser.open_new_tab(f"http://localhost:{port}")
+
+        uvicorn.run(self, host=host, port=port)
