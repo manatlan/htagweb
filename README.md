@@ -96,14 +96,14 @@ See it like an "htag server", very useful during development phase. In console, 
 ```bash
 $ python3 -m htagweb
 ```
-htagweb will look for an "index:App" (a file `index.py` (wich contains a htag.Tag sublcass 'App').), and if it can't found it : expose its own htag app to let user browse pythons files in the browser (`/!\`)
+htagweb will look for an "index:App" (a file `index.py` (wich contains a htag.Tag subclass 'App').), and if it can't found it : expose its own htag app to let user browse pythons files in the browser (`/!\`)
 
 or
 
 ```bash
 $ python3 -m htagweb main:App
 ```
-if you want to point the "/" (home path) to a file `main.py` (wich contains a htag.Tag sublcass 'App').
+if you want to point the "/" (home path) to a file `main.py` (wich contains a htag.Tag subclass 'App').
 
 
 It will run a solid http/ws, with all htag/web features (and compatible with uvicorn/webworkers), and you can browse htag's apps in an html page.
