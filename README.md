@@ -96,7 +96,17 @@ See it like an "htag server", very useful during development phase. In console, 
 ```bash
 $ python3 -m htagweb
 ```
+htagweb will look for an "index:App" (a file `index.py` (wich contains a htag.Tag sublcass 'App').), and if it can't found it : expose its own htag app to let user browse pythons files in the browser (`/!\`)
 
-It will run a solid http/ws, with all htag/web features, and you can browse htag's apps in an html page.
+or
 
-It's not the official way to expose htag's apps on the web. But I'm currently exploring that (because it's a lot lot simpler ;-)
+```bash
+$ python3 -m htagweb main:App
+```
+if you want to point the "/" (home path) to a file `main.py` (wich contains a htag.Tag sublcass 'App').
+
+
+It will run a solid http/ws, with all htag/web features (and compatible with uvicorn/webworkers), and you can browse htag's apps in an html page.
+
+It's not the official way to expose htag's apps on the web. But I'm currently exploring that (because it's a lot lot simpler ;-).
+Like ANY OTHERS htag runners : the live of a Htag's app is between the websocket open and the websocket close. So if you refresh the page : it will always rebuild all. Others runners avoid this, and make a lot of magics (on web side) to keep the same instance running for the same user.
