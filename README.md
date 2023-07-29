@@ -110,3 +110,5 @@ It will run a solid http/ws, with all htag/web features (and compatible with uvi
 
 It's not the official way to expose htag's apps on the web. But I'm currently exploring that (because it's a lot lot simpler ;-).
 Like ANY OTHERS htag runners : the live of a Htag's app is between the websocket open and the websocket close. So if you refresh the page : it will always rebuild all. Others runners avoid this, and make a lot of magics (on web side) to keep the same instance running for the same user.
+
+BTW, it's the only "web runner", with WebWS, which works with the new [Tag.update](https://manatlan.github.io/htag/tag_update/) feature !
