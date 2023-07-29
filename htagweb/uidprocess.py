@@ -28,7 +28,6 @@ def mainprocess(uid,session,timeout, input,output):
         async def ht_create(self, fqn,js,init_params=None,renew=False):        # -> str
         #==========================================================
             """ HRenderer creator """
-            session["ht_create"]="here"
             if init_params is None : init_params=((),{})
 
             hr=HTS.get(fqn)
@@ -68,7 +67,6 @@ def mainprocess(uid,session,timeout, input,output):
         async def ht_interact(self,fqn,data): # -> dict
         #==========================================================
             """ interact with hrenderer instance """
-            session["ht_interact"]="here"
             hr=HTS[fqn]
 
             #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\ to simplify ut
