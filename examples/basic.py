@@ -1,5 +1,15 @@
 import os,sys; sys.path.insert(0,r"..")
 
+"""
+this is not a htagweb example !!!!
+this is not a htagweb example !!!!
+this is not a htagweb example !!!!
+this is not a htagweb example !!!!
+this is not a htagweb example !!!!
+
+this is for my own tests ;-)
+"""
+
 import contextlib,json
 
 from starlette.applications import Starlette
