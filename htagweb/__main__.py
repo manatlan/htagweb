@@ -9,7 +9,14 @@
 
 import uvicorn
 from . import HtagServer
+import sys
 
-app=HtagServer(debug=True,ssl=False)
 if __name__=="__main__":
+    if len(sys.argv)==1:
+        app=HtagServer(None, debug=True,ssl=False)
+    elif len(sys.argv)==2:
+        app=HtagServer(sys.argv[1], debug=True,ssl=False)
+    else:
+        print("bad call (only one paremeter is possible (a fqn, ex: 'main:App'))")
+        sys.exit(-1)
     uvicorn.run(app)

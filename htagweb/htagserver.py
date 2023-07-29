@@ -213,7 +213,14 @@ console.log("started")
         if not path:
             if websocket.app.index:
                 # there is a main htag'class for '/'
-                klass=websocket.app.index
+                if isinstance(websocket.app.index,str):
+                    path=websocket.app.index
+                    if ":" in path:
+                        klass=getClass(path)
+                    else:
+                        klass=getClass(path+":App")
+                else:
+                    klass=websocket.app.index
             else:
                 try:
                     klass=getClass("index:App")
