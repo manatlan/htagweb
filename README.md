@@ -112,3 +112,12 @@ It's not the official way to expose htag's apps on the web. But I'm currently ex
 Like ANY OTHERS htag runners : the live of a Htag's app is between the websocket open and the websocket close. So if you refresh the page : it will always rebuild all. Others runners avoid this, and make a lot of magics (on web side) to keep the same instance running for the same user.
 
 BTW, it's the only "web runner", with WebWS, which works with the new [Tag.update](https://manatlan.github.io/htag/tag_update/) feature !
+
+# htagweb.AppServer
+
+A new runner ;-) ... fully compatible with WebServer/WebServerWS/WebHTTP/WebWS ... but using same concepts as "HtagServer".
+
+Except: tags should use "self.root.state" to maintain a state (because F5 will destroy/recreate instances)
+
+TODO: doc will come later ... for tests only, now ;-)
+

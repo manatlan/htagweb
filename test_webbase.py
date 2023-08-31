@@ -1,6 +1,6 @@
 import pytest
 from htag import Tag
-from htagweb import WebServer,WebServerWS
+from htagweb import WebServer,WebServerWS,AppServer
 from htagweb.webbase import findfqn, Users
 import sys,json
 from starlette.testclient import TestClient
@@ -46,13 +46,16 @@ def test_fqn():
     assert findfqn(MyTag) in ["__main__.MyTag","test_webbase.MyTag"]
     assert findfqn(sys.modules[__name__]) in ["__main__.App","test_webbase.App"]
 
-@pytest.fixture( params=["wh_solo","wh_served","ws_solo","ws_served"] )
+@pytest.fixture( params=["wh_solo","wh_served","ws_solo","ws_served"] ) #TODO: add "as_solo","as_served"
 def app(request):
     if request.param=="wh_solo":
         return WebServer( App )
 
     elif request.param=="ws_solo":
         return WebServerWS( App )
+
+    elif request.param=="as_solo":
+        return AppServer( App )     #TODO: should rewrite ws access
 
     elif request.param=="wh_served":
         app=WebServer()
@@ -63,6 +66,13 @@ def app(request):
 
     elif request.param=="ws_served":
         app=WebServerWS()
+        async def handlePath(request):
+            return await request.app.serve(request, App)
+        app.add_route("/", handlePath )
+        return app
+
+    elif request.param=="as_served":
+        app=AppServer()         #TODO: should rewrite ws access
         async def handlePath(request):
             return await request.app.serve(request, App)
         app.add_route("/", handlePath )

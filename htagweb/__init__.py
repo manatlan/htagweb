@@ -10,8 +10,9 @@
 from .webbase import WebServer
 from .webbase import WebServerWS
 
+from .appserver import AppServer  # a completly different beast, but compatible with ^^
 from .htagserver import HtagServer  # a completly different beast.
 
-__all__= ["WebServer","WebServerWS","HtagServer"]
+__all__= ["WebServer","WebServerWS","AppServer", "HtagServer"]
 
 __version__ = "0.0.0" # auto updated
