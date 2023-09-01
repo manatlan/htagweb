@@ -56,16 +56,12 @@ from .htagserver import WebServerSession,getClass
 from .webbase import findfqn
 
 
-def fqn2hr(fqn:str,js:str,init,session):
-    if ":" in fqn:
-        # no ambiguity
-        klass=getClass(fqn)
-    else:
-        if fqn.endswith(".App"):
-            # ensure compat (module.App -> module:App)
-            klass=getClass(fqn[:-4]+":App")
-        else:
-            klass=getClass(fqn+":App")
+def fqn2hr(fqn:str,js:str,init,session): # fqn is a "full qualified name", full !
+    if ":" not in fqn:
+        # replace last "." by ":"
+        fqn="".join( reversed("".join(reversed(fqn)).replace(".",":",1)))
+
+    klass=getClass(fqn)
 
     return HRenderer( klass, js, init=init, session = session)
 
@@ -144,7 +140,7 @@ class AppServer(Starlette):
             self.add_route( '/', handleHome )
 
     async def serve(self, request, obj, **NONUSED ) -> HTMLResponse:
-        fqn=findfqn(obj,":")
+        fqn=findfqn(obj)
         protocol = "wss" if self.ssl else "ws"
         if self.parano:
             jsparano = crypto.JSCRYPTO
