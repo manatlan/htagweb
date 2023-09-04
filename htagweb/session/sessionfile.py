@@ -9,9 +9,6 @@
 
 import os,pickle
 
-def create(uid):
-    return SessionFile(uid)
-
 class SessionFile: # default
     """ mimic a dict (with minimal methods), unique source of truth on FS"""
     def __init__(self,uid:str):
@@ -42,3 +39,6 @@ class SessionFile: # default
     def clear(self):
         self._d.clear()
         os.unlink(self._file)
+
+def create(uid) -> SessionFile:
+    return SessionFile(uid)

@@ -1,6 +1,6 @@
 import pytest
 from htag import Tag
-from htagweb import HtagServer
+from htagweb import HtagServer,AppServer
 import sys,json
 from starlette.testclient import TestClient
 
@@ -40,13 +40,35 @@ def test_a_full_fqn():
             assert html.startswith("<!DOCTYPE html>")
 
             #TODO: continue here
-            # following exchanges will be json <-> json
+            #following exchanges will be json <-> json
             # msg=dict(id="ut",method="doit",args=(),kargs={})
             # websocket.send_text( json.dumps(msg) )
 
             # dico = json.loads(websocket.receive_text())
             # assert "update" in dico
 
+def test_appserver():
+    app=AppServer( "test_hr:App")
+    with TestClient(app) as client:
+        response = client.get('/')
+
+        # assert that get bootstrap page
+        assert response.status_code == 200
+        assert "document.write(html)" in response.text
+
+        with client.websocket_connect('/_/test_hr.App') as websocket:
+
+            # assert 1st connect send back the full html page
+            html = websocket.receive_text()
+            assert html.startswith("<!DOCTYPE html>")
+
+            #TODO: continue here
+            #following exchanges will be json <-> json
+            # msg=dict(id="ut",method="doit",args=(),kargs={})
+            # websocket.send_text( json.dumps(msg) )
+
+            # dico = json.loads(websocket.receive_text())
+            # assert "update" in dico
 
 def test_a_light_fqn():
     app=HtagServer()
