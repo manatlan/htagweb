@@ -13,7 +13,9 @@ def test_basic():
         assert response.status_code == 200
         assert "document.write(html)" in response.text
 
-        with client.websocket_connect('/_WS_/') as websocket:
+        print(response.text)
+
+        with client.websocket_connect('/_/htagweb.htagserver.IndexApp') as websocket:
 
             # assert 1st connect send back the full html page
             html = websocket.receive_text()
@@ -23,13 +25,13 @@ def test_basic():
 def test_a_full_fqn():
     app=HtagServer()
     with TestClient(app) as client:
-        response = client.get('/test_hr:App')
+        response = client.get('/test_hr.App')
 
         # assert that get bootstrap page
         assert response.status_code == 200
         assert "document.write(html)" in response.text
 
-        with client.websocket_connect('/_WS_/test_hr:App') as websocket:
+        with client.websocket_connect('/_/test_hr.App') as websocket:
 
             # assert 1st connect send back the full html page
             html = websocket.receive_text()
@@ -52,7 +54,7 @@ def test_a_light_fqn():
         assert response.status_code == 200
         assert "document.write(html)" in response.text
 
-        with client.websocket_connect('/_WS_/test_hr') as websocket:
+        with client.websocket_connect('/_/test_hr') as websocket:
 
             # assert 1st connect send back the full html page
             html = websocket.receive_text()
@@ -71,3 +73,6 @@ def test_parano():
         assert "encrypt" in response.text
 
         # the rest will be encrypted ;-)
+
+if __name__=="__main__":
+    test_basic()

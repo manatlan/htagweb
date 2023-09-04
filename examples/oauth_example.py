@@ -1,7 +1,7 @@
-import os,sys; sys.path.insert(0,r"..")
+import os,sys; sys.path.insert(0,os.path.realpath(os.path.dirname(os.path.dirname(__file__))))
 
 from htag import Tag
-from htagweb import WebServer,WebServerWS,HtagServer
+from htagweb import AppServer
 from authlib.integrations.starlette_client import OAuth
 from starlette.responses import Response,RedirectResponse
 import time
@@ -48,16 +48,16 @@ async def oauth_request_action(request):
 
 
 class TagOAuth(Tag.span):
-    def init(self,session):
+    def init(self,state):
         self["class"]="TagOAuth"
-        self.session = session
+        self._rootstate = state
         self.title=Tag.span()
         self.btn = Tag.button(_onclick=self.onclick)
 
     @property
     def user(self): # -> dict or empty dict
         """ just expose a property to easily access to the user from session """
-        return self.session.get(OAUTH_SESSION_NAME,{})
+        return self._rootstate.get(OAUTH_SESSION_NAME,{})
 
     def render(self): # dynamic rendering
         self+= self.title + self.btn
@@ -80,7 +80,7 @@ class App(Tag.body):
         .TagOAuth {float:right;border:1px solid black;border-radius:10px;padding:10px}
     """
     def init(self):
-        self.oa = TagOAuth(self.session)
+        self.oa = TagOAuth(self.state)
 
     def render(self):  # dynamic rendering
         self += self.oa
@@ -89,9 +89,7 @@ class App(Tag.body):
 #=========================================
 
 # IT WORKS FOR THE 3 runners of htagweb ;-) (should work with old webhttp/webws runners from htag too)
-app=HtagServer(App)
-# app=WebServer(App)
-# app=WebServerWS(App)
+app=AppServer(App)
 
 app.add_route("/oauth_{action}", oauth_request_action )
 

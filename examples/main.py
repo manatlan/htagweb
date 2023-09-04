@@ -1,5 +1,6 @@
-import os,sys; sys.path.insert(0,"..")
-from htagweb import WebServer,WebServerWS
+import os,sys; sys.path.insert(0,os.path.realpath(os.path.dirname(os.path.dirname(__file__))))
+
+from htagweb import AppServer
 from starlette.responses import HTMLResponse
 
 import app1
@@ -42,7 +43,7 @@ async def handlePath(request):
         return HTMLResponse("404",404)
 
 
-app=WebServer()
+app=AppServer()
 app.add_route("/{path:path}", handlePath )
 
 if __name__=="__main__":
