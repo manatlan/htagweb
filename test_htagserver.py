@@ -21,6 +21,8 @@ def test_basic():
             html = websocket.receive_text()
             assert html.startswith("<!DOCTYPE html>")
 
+            #TODO: continue here
+
 
 def test_a_full_fqn():
     app=HtagServer()
@@ -37,8 +39,9 @@ def test_a_full_fqn():
             html = websocket.receive_text()
             assert html.startswith("<!DOCTYPE html>")
 
+            #TODO: continue here
             # following exchanges will be json <-> json
-            # msg=dict(id=0,method="doit",args=(),kargs={})
+            # msg=dict(id="ut",method="doit",args=(),kargs={})
             # websocket.send_text( json.dumps(msg) )
 
             # dico = json.loads(websocket.receive_text())
@@ -54,12 +57,13 @@ def test_a_light_fqn():
         assert response.status_code == 200
         assert "document.write(html)" in response.text
 
-        with client.websocket_connect('/_/test_hr') as websocket:
+        with client.websocket_connect('/_/test_hr.App') as websocket:
 
             # assert 1st connect send back the full html page
             html = websocket.receive_text()
             assert html.startswith("<!DOCTYPE html>")
 
+            #TODO: continue here
 
 def test_parano():
     app=HtagServer(parano=True)
@@ -76,3 +80,4 @@ def test_parano():
 
 if __name__=="__main__":
     test_basic()
+    test_a_full_fqn()

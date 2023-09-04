@@ -41,5 +41,4 @@ class SessionFile: # default
 
     def clear(self):
         self._d.clear()
-        with open(self._file,"wb+") as fid:
-            pickle.dump(self._d,fid)
+        os.unlink(self._file)

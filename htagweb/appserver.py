@@ -216,6 +216,12 @@ console.log("started")
             data = crypto.decrypt(data.encode(),websocket.app.parano).decode()
 
         data=json.loads(data)
+
+        #=================================== for UT only
+        if data["id"]=="ut":
+            data["id"]=id(self.hr.tag)
+        #===================================
+
         actions = await self.hr.interact(data["id"],data["method"],data["args"],data["kargs"],data.get("event"))
         await self._sendback( websocket, json.dumps(actions) )
 

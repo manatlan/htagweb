@@ -7,12 +7,12 @@ class App(Tag.body):
     def init(self):
         self.b=Tag.Button("say hello",_onclick=self.bind.doit() )
         self+=self.b
-        self+=Tag.cpt(self.session['cpt'])
-        self.session['created']=True
+        self+=Tag.cpt(self.state['cpt'])
+        self.state['created']=True
     def doit(self):
-        self.session['cpt']=int(self.session['cpt'])+1
-        self.session['interacted']=True
-        self+="hello" +Tag.cpt2(self.session['cpt'])
+        self.state['cpt']=int(self.state['cpt'])+1
+        self.state['interacted']=True
+        self+="hello" +Tag.cpt2(self.state['cpt'])
 
 @pytest.mark.asyncio
 async def test_hr():
