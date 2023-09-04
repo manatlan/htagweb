@@ -13,7 +13,7 @@ def create(uid):
     return SessionFile(uid)
 
 class SessionFile: # default
-    """ mimic a dict (with minimal methods), unique source of truth"""
+    """ mimic a dict (with minimal methods), unique source of truth on FS"""
     def __init__(self,uid:str):
         self._uid=uid
         self._file=f"uid_{uid}.ses"
