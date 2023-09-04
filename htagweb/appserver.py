@@ -59,38 +59,7 @@ logger = logging.getLogger(__name__)
 ####################################################
 from types import ModuleType
 
-class SessionFile: # default
-    """ mimic a dict (with minimal methods), unique source of truth"""
-    def __init__(self,uid:str):
-        self._uid=uid
-        self._file=f"uid_{uid}.ses"
-
-        if os.path.isfile(self._file):
-            with open(self._file,"rb+") as fid:
-                self._d=pickle.load(fid)
-        else:
-            self._d={}
-
-    def items(self):
-        return self._d.items()
-
-    def get(self,k:str,default=None):
-        return self._d.get(k,default)
-
-    def __getitem__(self,k:str):
-        return self._d[k]
-
-    def __setitem__(self,k:str,v):
-        self._d[k]=v
-
-        with open(self._file,"wb+") as fid:
-            pickle.dump(self._d,fid)
-
-    def clear(self):
-        self._d.clear()
-        with open(self._file,"wb+") as fid:
-            pickle.dump(self._d,fid)
-
+from . import session
 
 def findfqn(x) -> str:
     if isinstance(x,str):
@@ -254,11 +223,11 @@ console.log("started")
         del self.hr
 
 class AppServer(Starlette):
-    def __init__(self,obj:"htag.Tag class|fqn|None"=None, debug:bool=True,ssl:bool=False,parano:bool=False,sesprovider=None):
+    def __init__(self,obj:"htag.Tag class|fqn|None"=None, debug:bool=True,ssl:bool=False,parano:bool=False,sesprovider:"htagweb.session|None"=None):
         self.ssl=ssl
         self.parano = str(uuid.uuid4()) if parano else None
         if sesprovider is None:
-            sesprovider = lambda uid: SessionFile(uid)
+            sesprovider = session.createFile
         Starlette.__init__( self,
             debug=debug,
             routes=[WebSocketRoute("/_/{fqn}", HRSocket)],
