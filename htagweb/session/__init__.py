@@ -7,7 +7,8 @@
 # https://github.com/manatlan/htagweb
 # #############################################################################
 
-from .sessionfile import create as createFile
+from .file import create as createFile
 from .shm import create as createShm
+from .memory import create as createMem
 
-__all__= ["createFile","createShm"]
+__all__= ["createFile","createShm","createMem"]
