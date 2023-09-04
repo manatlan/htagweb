@@ -4,7 +4,7 @@ from htagweb import HtagServer,AppServer
 import sys,json
 from starlette.testclient import TestClient
 
-def test_basic():
+def test_HtagServer_index():
     app=HtagServer()
     with TestClient(app) as client:
         response = client.get('/')
@@ -21,14 +21,12 @@ def test_basic():
             html = websocket.receive_text()
             assert html.startswith("<!DOCTYPE html>")
 
-            #TODO: continue here
+            # here is the IndexApp browser
 
 
-def test_a_full_fqn():
-    app=HtagServer()
-    with TestClient(app) as client:
-        response = client.get('/test_hr.App')
+def test_HtagServer_instanciates_htagapps():
 
+    def do_tests():
         # assert that get bootstrap page
         assert response.status_code == 200
         assert "document.write(html)" in response.text
@@ -39,16 +37,25 @@ def test_a_full_fqn():
             html = websocket.receive_text()
             assert html.startswith("<!DOCTYPE html>")
 
-            #TODO: continue here
             #following exchanges will be json <-> json
-            # msg=dict(id="ut",method="doit",args=(),kargs={})
-            # websocket.send_text( json.dumps(msg) )
+            msg=dict(id="ut",method="doit",args=(),kargs={})
+            websocket.send_text( json.dumps(msg) )
 
-            # dico = json.loads(websocket.receive_text())
-            # assert "update" in dico
+            dico = json.loads(websocket.receive_text())
+            assert "update" in dico
+
+    app=HtagServer()
+    with TestClient(app) as client:
+        response = client.get('/test_hr.App')
+        do_tests()
+        response = client.get('/test_hr:App')
+        do_tests()
+        response = client.get('/test_hr')
+        do_tests()
+
 
 def test_appserver():
-    app=AppServer( "test_hr:App")
+    app=AppServer( "test_hr:App" )
     with TestClient(app) as client:
         response = client.get('/')
 
@@ -62,30 +69,14 @@ def test_appserver():
             html = websocket.receive_text()
             assert html.startswith("<!DOCTYPE html>")
 
-            #TODO: continue here
-            #following exchanges will be json <-> json
-            # msg=dict(id="ut",method="doit",args=(),kargs={})
-            # websocket.send_text( json.dumps(msg) )
+            # #following exchanges will be json <-> json
+            msg=dict(id="ut",method="doit",args=(),kargs={})
+            websocket.send_text( json.dumps(msg) )
 
-            # dico = json.loads(websocket.receive_text())
-            # assert "update" in dico
+            dico = json.loads(websocket.receive_text())
+            assert "update" in dico
 
-def test_a_light_fqn():
-    app=HtagServer()
-    with TestClient(app) as client:
-        response = client.get('/test_hr')
 
-        # assert that get bootstrap page
-        assert response.status_code == 200
-        assert "document.write(html)" in response.text
-
-        with client.websocket_connect('/_/test_hr.App') as websocket:
-
-            # assert 1st connect send back the full html page
-            html = websocket.receive_text()
-            assert html.startswith("<!DOCTYPE html>")
-
-            #TODO: continue here
 
 def test_parano():
     app=HtagServer(parano=True)
@@ -101,5 +92,6 @@ def test_parano():
         # the rest will be encrypted ;-)
 
 if __name__=="__main__":
-    test_basic()
-    test_a_full_fqn()
+    # test_basic()
+    # test_a_full_fqn()
+    test_appserver()
