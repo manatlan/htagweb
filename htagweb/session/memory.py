@@ -17,31 +17,34 @@ class SessionMemory:
         assert isinstance(value,dict)
         self.SESSIONS[uid]=value
 
-
 class SessionMem:
     def __init__(self,server,uid:str):
-        self._s=o
+        self._s=server
         self._uid=uid
-        self._d=self._s.get(uid)
+
+    def _load(self) -> dict:
+        return self._s.get(self._uid)
+    def _save(self,d:dict):
+        self._s.set( self._uid , d)
 
     def items(self):
-        return self._d.items()
+        return self._load().items()
 
     def get(self,k:str,default=None):
-        return self._d.get(k,default)
+        return self._load().get(k,default)
 
     def __getitem__(self,k:str):
-        return self._d[k]
+        return self._load()[k]
 
     def __setitem__(self,k:str,v):
-        self._d[k]=v
-        self._s.set( self._uid , self._d)
+        d=self._load()
+        d[k]=v
+        self._save(d)
 
     def clear(self):
-        self._d.clear()
-        self._s.set( self._uid , {})
+        self._save({})
 
-su=None
+su=None #NOT TOP ;-)
 def create(uid) -> SessionMem:
     global su
     su = ServeUnique( SessionMemory, port=19999 )
