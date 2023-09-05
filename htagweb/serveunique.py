@@ -13,7 +13,7 @@ from typing import Callable
 
 logger = logging.getLogger(__name__)
 
-class ServeUnique: #TODO: rename to ProxySingleton
+class ServeUnique: #TODO: rename to ProxyServerSingleton
     """ create a task, in current loop, to run a unique server (ip:port) which
         will expose methods of 'klass' in self (so exposed methods are async!).
 
