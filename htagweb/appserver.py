@@ -108,7 +108,7 @@ def getClass(fqn_norm:str) -> type:
 
 
 class WebServerSession:  # ASGI Middleware, for starlette
-    def __init__(self, app:ASGIApp, https_only:bool = False, sesprovider:"method(uid)"=None ) -> None:
+    def __init__(self, app:ASGIApp, https_only:bool = False, sesprovider:"async method(uid)"=None ) -> None:
         self.app = app
         self.session_cookie = "session"
         self.max_age = 0
@@ -132,7 +132,7 @@ class WebServerSession:  # ASGI Middleware, for starlette
 
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
         scope["uid"]     = uid
-        scope["session"] = self.cbsesprovider(uid)
+        scope["session"] = await self.cbsesprovider(uid)
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         logger.debug("request for %s, scope=%s",uid,scope)

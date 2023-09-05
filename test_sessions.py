@@ -1,27 +1,29 @@
 import pytest,asyncio
 from htagweb.sessions import createFile, createShm, createMem
 
-def test_sessions_basics():
-    for method in [createFile, createShm]:
+@pytest.mark.asyncio
+async def test_sessions_basics():
+    # for method in [createFile, createShm, createMem ]:
+    for method in [createFile, createShm ]:
 
-        state = method("uid")
+        session = await method("uid")
         try:
-            nb=state.get("nb",0)
-            nb+=1
-            state["nb"]=nb
-            assert state["nb"]==1
+            session["nb"]=session.get("nb",0) + 1
+
+            # ensure persistance is present
+            session = await method("uid")
+            assert session["nb"]==1
         finally:
-            state.clear()
+            session.clear()
 
-# def test_sessions_memory():
-#     async def test():
-#         state = createMem("uid")
-#         try:
-#             nb=state.get("nb",0)
-#             nb+=1
-#             state["nb"]=nb
-#             assert state["nb"]==1
-#         finally:
-#             state.clear()
+@pytest.mark.asyncio
+async def test_sessions_memory():
+    session = await createMem("uid")
+    session["nb"]=session.get("nb",0) + 1
 
-#     asyncio.run(test())
+    # ensure persistance is present
+    session = await createMem("uid")
+    assert session["nb"]==1
+
+if __name__=="__main__":
+    asyncio.run( test_sessions_memory() )
