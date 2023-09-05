@@ -30,13 +30,13 @@ class SessionMem: # proxy between app and ServerUnique
     def items(self):
         return self._load().items()
 
-    def get(self,k:str,default=None):
+    def get(self,k:str,default=None):       # could be inplemented in SessionMem
         return self._load().get(k,default)
 
-    def __getitem__(self,k:str):
+    def __getitem__(self,k:str):            # could be inplemented in SessionMem
         return self._load()[k]
 
-    def __setitem__(self,k:str,v):
+    def __setitem__(self,k:str,v):          # could be inplemented in SessionMem
         d=self._load()
         d[k]=v
         self._save(d)
