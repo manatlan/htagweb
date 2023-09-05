@@ -8,7 +8,7 @@
 # #############################################################################
 from ..serverunique import ServerUnique
 
-class SessionMemory:
+class SessionMemory: # unique source of truth handled by ServerUnique
     def __init__(self):
         self.SESSIONS={}
     def get(self,uid:str):
@@ -17,15 +17,15 @@ class SessionMemory:
         assert isinstance(value,dict)
         self.SESSIONS[uid]=value
 
-class SessionMem:
-    def __init__(self,server,uid:str):
-        self._s=server
+class SessionMem: # proxy between app and ServerUnique
+    def __init__(self,su:ServerUnique,uid:str):
+        self._su=su
         self._uid=uid
 
     def _load(self) -> dict:
-        return self._s.get(self._uid)
+        return self._su.get( self._uid )
     def _save(self,d:dict):
-        self._s.set( self._uid , d)
+        self._su.set( self._uid , d )
 
     def items(self):
         return self._load().items()
@@ -48,5 +48,5 @@ su=None #NOT TOP ;-)
 def create(uid) -> SessionMem:
     global su
     su = ServeUnique( SessionMemory, port=19999 )
-    su.start()
+    su.start() # ensure one is running
     return SessionMem(su, uid)
