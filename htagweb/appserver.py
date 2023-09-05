@@ -59,7 +59,7 @@ logger = logging.getLogger(__name__)
 ####################################################
 from types import ModuleType
 
-from . import session
+from . import sessions
 
 def findfqn(x) -> str:
     if isinstance(x,str):
@@ -233,7 +233,7 @@ class AppServer(Starlette):
         self.ssl=ssl
         self.parano = str(uuid.uuid4()) if parano else None
         if sesprovider is None:
-            sesprovider = session.createFile
+            sesprovider = sessions.createFile
         Starlette.__init__( self,
             debug=debug,
             routes=[WebSocketRoute("/_/{fqn}", HRSocket)],

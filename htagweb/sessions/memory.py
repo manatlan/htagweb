@@ -6,7 +6,7 @@
 #
 # https://github.com/manatlan/htagweb
 # #############################################################################
-from ..serverunique import ServerUnique
+from ..proxysingleton import ProxySingleton
 
 class SessionMemory: # unique source of truth handled by ServerUnique
     def __init__(self):
@@ -18,7 +18,7 @@ class SessionMemory: # unique source of truth handled by ServerUnique
         self.SESSIONS[uid]=value
 
 class SessionMem: # proxy between app and ServerUnique
-    def __init__(self,su:ServerUnique,uid:str):
+    def __init__(self,su:ProxySingleton,uid:str):
         self._su=su
         self._uid=uid
 
@@ -47,6 +47,5 @@ class SessionMem: # proxy between app and ServerUnique
 su=None #NOT TOP ;-)
 def create(uid) -> SessionMem:
     global su
-    su = ServeUnique( SessionMemory, port=19999 )
-    su.start() # ensure one is running
+    su = ProxySingleton( SessionMemory, port=19999 )
     return SessionMem(su, uid)
