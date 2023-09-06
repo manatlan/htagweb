@@ -21,6 +21,16 @@ from typing import Callable
 
 logger = logging.getLogger(__name__)
 
+#/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+from concurrent.futures import ThreadPoolExecutor
+
+def async2sync(coro):
+    sideloop = asyncio.new_event_loop()
+    with ThreadPoolExecutor(max_workers=1) as exe:
+        r=exe.submit(sideloop.run_until_complete, coro )
+        return r.result()
+#/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+
 class ProxySingleton:
     """ create a task, in current loop, to run a unique server (ip:port) which
         will expose methods of 'klass' in self (so exposed methods are async!).
