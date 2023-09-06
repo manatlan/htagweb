@@ -86,11 +86,16 @@ class ProxySingleton:
             return asyncio.start_server( serve, self._host, self._port)
 
         def callback(task):
-            error=task.exception()
+            try:
+                error=task.exception()
+            except asyncio.exceptions.CancelledError as e:
+                error=e
             if not error:
                 logger.info("ProxySingleton: %s started on %s:%s !",klass.__name__,self._host,self._port)
             elif isinstance(error,OSError):
                 logger.warning("ProxySingleton: %s reuse %s:%s !",klass.__name__,self._host,self._port)
+            elif isinstance(error, asyncio.exceptions.CancelledError):
+                logger.warning("ProxySingleton: %s cancelled !",klass.__name__)
             else:
                 raise error
 
