@@ -9,6 +9,5 @@
 
 from .file import create as createFile
 from .shm import create as createShm
-from .memory import create as createMem
 
-__all__= ["createFile","createShm","createMem"]
+__all__= ["createFile","createShm"]

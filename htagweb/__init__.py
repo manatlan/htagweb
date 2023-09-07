@@ -9,7 +9,7 @@
 
 from .appserver import AppServer  # a completly different beast, but compatible with ^^
 from .htagserver import HtagServer  # a completly different beast.
-from .proxysingleton import ProxySingleton
+from .usot import Usot
 
 __all__= ["AppServer"]
 

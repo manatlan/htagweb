@@ -1,71 +1,71 @@
 import pytest,asyncio
 import logging
 
-from htagweb import ProxySingleton
+# from htagweb import ProxySingleton
 
-class SessionMemory:
-    def __init__(self):
-        self.SESSIONS={}
-    def get(self,uid:str):
-        return self.SESSIONS.get(uid,{})
-    def set(self,uid:str,value:dict):
-        assert isinstance(value,dict)
-        self.SESSIONS[uid]=value
+# class SessionMemory:
+#     def __init__(self):
+#         self.SESSIONS={}
+#     def get(self,uid:str):
+#         return self.SESSIONS.get(uid,{})
+#     def set(self,uid:str,value:dict):
+#         assert isinstance(value,dict)
+#         self.SESSIONS[uid]=value
 
-class BuggedObject:
-    def testko(self):
-        return 42/0 # runtime error ;-)
-    def testok(self):
-        return 42
+# class BuggedObject:
+#     def testko(self):
+#         return 42/0 # runtime error ;-)
+#     def testok(self):
+#         return 42
 
-class ObjectTest:
-    async def test(self):
-        await asyncio.sleep(0.1)
-        return 42
-    def testsize(self,buf):
-        return buf
+# class ObjectTest:
+#     async def test(self):
+#         await asyncio.sleep(0.1)
+#         return 42
+#     def testsize(self,buf):
+#         return buf
 
-def f(klass,port):
-    async def loop():
-        px = ProxySingleton( klass, port=port )
-        d=await px.get("uid")
-        d["nb"]+=1
-        await px.set("uid",d)
+# def f(klass,port):
+#     async def loop():
+#         px = ProxySingleton( klass, port=port )
+#         d=await px.get("uid")
+#         d["nb"]+=1
+#         await px.set("uid",d)
 
-    asyncio.run(loop())
-
-
-@pytest.mark.asyncio
-async def test_base():
-    m=ProxySingleton( SessionMemory, port=19999 )
-    assert await m.get("uid1") == {}
-    await m.set("uid1", dict(a=42))
-    assert await m.get("uid1") == dict(a=42)
-
-    m2=ProxySingleton( SessionMemory, port=19999 )
-    assert await m2.get("uid1") == dict(a=42)
-
-    m2=ProxySingleton( SessionMemory, port=19999 )
-    assert await m2.get("uid1") == dict(a=42)
-
-    assert await m.get("uid1") == dict(a=42)
+#     asyncio.run(loop())
 
 
-@pytest.mark.asyncio
-async def test_compatibility_in_multiprocessing():
-    # ensure is compatible in different process
-    import multiprocessing
+# @pytest.mark.asyncio
+# async def test_base():
+#     m=ProxySingleton( SessionMemory, port=19999 )
+#     assert await m.get("uid1") == {}
+#     await m.set("uid1", dict(a=42))
+#     assert await m.get("uid1") == dict(a=42)
 
-    m=ProxySingleton( SessionMemory, port=19999 )
-    await m.set("uid",dict(nb=0))
+#     m2=ProxySingleton( SessionMemory, port=19999 )
+#     assert await m2.get("uid1") == dict(a=42)
 
-    p=multiprocessing.Process(target=f,args=(SessionMemory,19999,))
-    p.start()
-    while p.is_alive():
-        await asyncio.sleep(0.2)
+#     m2=ProxySingleton( SessionMemory, port=19999 )
+#     assert await m2.get("uid1") == dict(a=42)
 
-    xx=await m.get("uid")
-    assert {"nb":1} == xx
+#     assert await m.get("uid1") == dict(a=42)
+
+
+# @pytest.mark.asyncio
+# async def test_compatibility_in_multiprocessing():
+#     # ensure is compatible in different process
+#     import multiprocessing
+
+#     m=ProxySingleton( SessionMemory, port=19999 )
+#     await m.set("uid",dict(nb=0))
+
+#     p=multiprocessing.Process(target=f,args=(SessionMemory,19999,))
+#     p.start()
+#     while p.is_alive():
+#         await asyncio.sleep(0.2)
+
+#     xx=await m.get("uid")
+#     assert {"nb":1} == xx
 
 # @pytest.mark.asyncio
 # async def test_classical_use():
