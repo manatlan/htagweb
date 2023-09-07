@@ -38,7 +38,8 @@ class SessionFile: # default
 
     def clear(self):
         self._d.clear()
-        os.unlink(self._file)
+        if os.path.isfile(self._file):
+            os.unlink(self._file)
 
 async def create(uid) -> SessionFile:
     return SessionFile(uid)

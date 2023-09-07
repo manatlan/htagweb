@@ -1,10 +1,9 @@
 import pytest,asyncio
-from htagweb.sessions import createFile, createShm
+from htagweb.sessions import createFile, createShm, createMem
 
 @pytest.mark.asyncio
 async def test_sessions_basics():
-    # for method in [createFile, createShm, createMem ]:
-    for method in [createFile, createShm ]:
+    for method in [createFile, createShm, createMem ]:
 
         session = await method("uid")
         try:
@@ -13,21 +12,16 @@ async def test_sessions_basics():
             # ensure persistance is present
             session = await method("uid")
             assert session["nb"]==1
+
+            assert len(session.items())>0
+            session.clear()
+
+            session = await method("uid")
+            assert len(session.items())==0
+
         finally:
             session.clear()
 
-# @pytest.mark.asyncio
-# async def test_sessions_memory():
-
-#     session = await createMem("uid")
-#     session["nb"]=session.get("nb",0) + 1
-
-#     await asyncio.sleep(1)
-#     # ensure persistance is present
-#     session = await createMem("uid")
-
-#     assert session["nb"]==1
-#     await asyncio.sleep(1)
 
 if __name__=="__main__":
     import logging,multiprocessing,threading

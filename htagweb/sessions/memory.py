@@ -6,13 +6,13 @@
 #
 # https://github.com/manatlan/htagweb
 # #############################################################################
-from ..proxysingleton import ProxySingleton
-import asyncio
+from ..usot import Usot
+
 
 class SessionMem: # proxy between app and ServerUnique
-    def __init__(self,dico:dict):
+    def __init__(self,uid,dico:dict):
+        self._uid=uid
         self._dico=dico
-        # self._save=cb
 
     def items(self):
         return self._dico.items()
@@ -25,11 +25,11 @@ class SessionMem: # proxy between app and ServerUnique
 
     def __setitem__(self,k:str,v):          # could be inplemented in SessionMem
         self._dico[k]=v
-        # asyncio.create_task( self._save(self._dico ))
+        PX.clientsync.set( self._uid, self._dico)
 
     def clear(self):
         self._dico.clear()
-        # asyncio.create_task( self._save( {}))
+        PX.clientsync.set( self._uid, {})
 
     def __repr__(self):
         return f"<SessionMem {self._dico}>"
@@ -39,13 +39,14 @@ class SessionMemory: # unique source of truth handled by ServerUnique
     def __init__(self):
         self.SESSIONS={}
     def get(self,uid:str) -> SessionMem:
-        if not uid in self.SESSIONS:
-            self.SESSIONS[uid] = SessionMem( {} )
-        return self.SESSIONS[uid]
+        if uid not in self.SESSIONS:
+            self.SESSIONS[uid] = {}
+        return SessionMem( self, uid, self.SESSIONS[uid] )
+    def set(self,uid:str,dico):
+        self.SESSIONS[uid] = dico
 
+PX=Usot( SessionMemory, port=19999 )
+PX.start()                                              #<- so it's ALWAYS runned as task (on ip:port)
 
-su=None #NOT TOP ;-)
 async def create(uid) -> SessionMem:
-    global su
-    su = ProxySingleton( SessionMemory, port=19999 )
-    return await su.get( uid )
+    return await PX.clientsync.get( uid )
