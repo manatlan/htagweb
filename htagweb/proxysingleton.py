@@ -126,6 +126,18 @@ class ProxySingleton:
                 return reponse
         return _
 
+    def AEFFF(self):
+        import socket
+        
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((self._host,self._port))
+            s.sendall(pickle.dumps( (name,a,k) ))
+            reponse = pickle.loads( s.recv(1024) )
+            if isinstance(reponse,Exception):
+                raise reponse
+            else:
+                return reponse        
+
     def __repr__(self):
         return f"<ProxySingleton '{self._klass}()' on {self._host}:{self._port} ({self.is_server() and 'server' or 'client|notStarted'})>"
 
