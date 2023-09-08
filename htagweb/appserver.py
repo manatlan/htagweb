@@ -229,7 +229,7 @@ console.log("started")
         del self.hr
 
 class AppServer(Starlette):
-    def __init__(self,obj:"htag.Tag class|fqn|None"=None, debug:bool=True,ssl:bool=False,parano:bool=False,sesprovider:"htagweb.session|None"=None):
+    def __init__(self,obj:"htag.Tag class|fqn|None"=None, debug:bool=True,ssl:bool=False,parano:bool=False,sesprovider:"htagweb.sessions.create*|None"=None):
         self.ssl=ssl
         self.parano = str(uuid.uuid4()) if parano else None
         if sesprovider is None:

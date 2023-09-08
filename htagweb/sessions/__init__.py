@@ -7,20 +7,20 @@
 # https://github.com/manatlan/htagweb
 # #############################################################################
 
-def createFile(uid):
+async def createFile(uid):
     from . import file
-    file.create(uid)
+    return await file.create(uid)
 
-def createFilePersistent(uid): # <- persistent after server reboot
+async def createFilePersistent(uid): # <- persistent after server reboot
     from . import file
-    file.create(uid,True)
+    return await file.create(uid,True)
 
-def createShm(uid):
+async def createShm(uid):
     from . import shm
-    shm.create(uid)
+    return await shm.create(uid)
 
-def createMem(uid):
+async def createMem(uid):
     from . import memory
-    memory.create(uid)
+    return await memory.create(uid)
 
 __all__= ["createFile","createFilePersistent","createShm","createMem"]

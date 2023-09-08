@@ -46,7 +46,9 @@ class SessionMemory: # unique source of truth handled by ServerUnique
         self.SESSIONS[uid] = dico
 
 PX=Usot( SessionMemory, port=19999 )
-PX.start()                                              #<- so it's ALWAYS runned as task (on ip:port)
+
+def startServer():
+    PX.start()
 
 async def create(uid) -> ServerMemDict:
     return await PX.clientsync.get( uid )

@@ -20,7 +20,7 @@ This thing is AppServer, but with 2 majors behaviour
 
 import os
 
-from starlette.responses import HTMLResponse
+from starlette.responses import HTMLResponse,Response
 
 from htag import Tag
 from .appserver import AppServer,getClass
@@ -76,6 +76,9 @@ class HtagServer(AppServer):
         try:
             klass=getClass(fqn_norm)
         except:
-            klass=getClass(fqn+":App")
+            try:
+                klass=getClass(fqn+":App")
+            except ModuleNotFoundError:
+                return HTMLResponse("Not Found (%s)" % fqn,404,media_type="text/plain")
 
         return await self.serve(request,klass)
