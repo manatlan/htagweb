@@ -6,7 +6,7 @@
     <img src="https://badge.fury.io/py/htagweb.svg?x" alt="Package version">
 </a>
 
-This "htagweb" module is the official way to expose htag's apps on the web. 
+This "htagweb" module is the official way to expose htag's apps on the web.
 
 **Important note**
 On the web, the server can handle many clients : so, it's not possible to handle each tag instances per user. SO there are 1 limitation compared to classical htag runners which comes with htag.
@@ -29,6 +29,14 @@ So developping a htag app which work the same on desktop and on the web, should 
  * 'parano mode' (can aes encrypt all communications between client & server ... to avoid mitm'proxies on ws exchanges)
 
 ## Roadmap / futur
+
+priority :
+
+ - ci/cd test python>3.7 with shared_memory_dict
+ - unittests on sessions.memory (won't work now)
+ - better unittests on usot
+
+futur:
 
  - ? replace starlette by fastapi ?
  - the double rendering (double init creation) is not ideal. But great for SEO bots. Perhaps I could find a better way (and let only one rendering, but how ?!) ?!
