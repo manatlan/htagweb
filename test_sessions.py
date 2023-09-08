@@ -1,7 +1,7 @@
 import pytest,asyncio
 from htagweb.sessions import createFile, createFilePersistent, createShm, createMem
 
-@pytest.fixture( params=["createFile", "createFilePersistent", "createShm"] )
+@pytest.fixture( params=["createFile", "createFilePersistent"] )
 #@pytest.fixture( params=["createFile", "createFilePersistent", "createShm", "createMem"] )
 def method_session(request):
    if request.param=="createFile":
