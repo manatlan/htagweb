@@ -9,7 +9,7 @@
 from ..usot import Usot
 
 
-class ServerDict: # proxy between app and ServerUnique
+class ServerMemDict: # proxy between app and ServerUnique
     def __init__(self,uid,dico:dict):
         self._uid=uid
         self._dico=dico
@@ -38,15 +38,15 @@ class ServerDict: # proxy between app and ServerUnique
 class SessionMemory: # unique source of truth handled by ServerUnique
     def __init__(self):
         self.SESSIONS={}
-    def get(self,uid:str) -> ServerDict:
+    def get(self,uid:str) -> ServerMemDict:
         if uid not in self.SESSIONS:
             self.SESSIONS[uid] = {}
-        return ServerDict( self, uid, self.SESSIONS[uid] )
+        return ServerMemDict( self, uid, self.SESSIONS[uid] )
     def set(self,uid:str,dico):
         self.SESSIONS[uid] = dico
 
 PX=Usot( SessionMemory, port=19999 )
 PX.start()                                              #<- so it's ALWAYS runned as task (on ip:port)
 
-async def create(uid) -> ServerDict:
+async def create(uid) -> ServerMemDict:
     return await PX.clientsync.get( uid )
