@@ -7,8 +7,20 @@
 # https://github.com/manatlan/htagweb
 # #############################################################################
 
-from .file import create as createFile
-from .shm import create as createShm
-from .shm import create as createMem
+def createFile(uid):
+    from . import file
+    file.create(uid)
 
-__all__= ["createFile","createShm","createMem"]
+def createFilePersistent(uid): # <- persistent after server reboot
+    from . import file
+    file.create(uid,True)
+
+def createShm(uid):
+    from . import shm
+    shm.create(uid)
+
+def createMem(uid):
+    from . import memory
+    memory.create(uid)
+
+__all__= ["createFile","createFilePersistent","createShm","createMem"]

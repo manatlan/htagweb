@@ -7,13 +7,18 @@
 # https://github.com/manatlan/htagweb
 # #############################################################################
 
-import os,pickle
+import os,pickle,tempfile
+
 
 class FileDict: # default
-    """ mimic a dict (with minimal methods), unique source of truth on FS"""
-    def __init__(self,uid:str):
+    """ mimic a dict (with minimal methods), unique source of truth, based on FS"""
+    def __init__(self,uid:str,persistent:bool):
         self._uid=uid
-        self._file=f"uid_{uid}.ses"
+        if persistent:
+            name=""
+        else:
+            name=f"{os.getppid()}-"
+        self._file=os.path.join( tempfile.gettempdir(), f"htagweb_{name}{uid}.ses" )
 
         if os.path.isfile(self._file):
             with open(self._file,"rb+") as fid:
@@ -34,12 +39,12 @@ class FileDict: # default
         self._d[k]=v
 
         with open(self._file,"wb+") as fid:
-            pickle.dump(self._d,fid)
+            pickle.dump(self._d,fid, protocol=4)
 
     def clear(self):
         self._d.clear()
         if os.path.isfile(self._file):
             os.unlink(self._file)
 
-async def create(uid) -> FileDict:
-    return FileDict(uid)
+async def create(uid,persistent=False) -> FileDict:
+    return FileDict(uid,persistent)

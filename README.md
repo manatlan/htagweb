@@ -6,25 +6,34 @@
     <img src="https://badge.fury.io/py/htagweb.svg?x" alt="Package version">
 </a>
 
-This "htagweb" module is the official way to expose htag's apps on the web
+This "htagweb" module is the official way to expose htag's apps on the web. 
+
+**Important note**
+On the web, the server can handle many clients : so, it's not possible to handle each tag instances per user. SO there are 1 limitation compared to classical htag runners which comes with htag.
+
+ - ~~there can be only one managed instance of a htag class, per user~~ (it's the case in classical runners too)
+ - and tag instances doesn't live as long as the runner lives (when you hit F5, it will be destroyed/recreated). So, keeping states must be done thru the tag.state / tag.root.state (which is the session of the user).
+
+So developping a htag app which work the same on desktop and on the web, should manage its states in tag.state / tag.root.state ;-)
 
  ## Features
 
  * based on [starlette](https://pypi.org/project/starlette/)
+ * multiple ways to handle sessions (file, mem, etc ...)
  * compatible with **uvloop** !!!
  * compatible with multiple gunicorn/uvicorn/webworkers !!!
- * works on gnu/linux or windows !
- * real starlette session available (in htag instance, and starlette request)
+ * compatible with **tag.update()**
+ * works on gnu/linux, ios or windows !
+ * real starlette session available (in tag.state, and starlette request.session)
  * compatible with oauth2 authent ( [authlib](https://pypi.org/project/Authlib/) )
- * 'parano mode' (can aes encrypt all communications between client & server ... to avoid mitm'proxies)
+ * 'parano mode' (can aes encrypt all communications between client & server ... to avoid mitm'proxies on ws exchanges)
 
 ## Roadmap / futur
 
-- ? replace starlette by fastapi ?
-- better logging !!!!
-- more parameters (session size, etc ...)
-- parano mode
-- perhaps a bi-modal version (use ws, and fallback to http when ws com error)
+ - ? replace starlette by fastapi ?
+ - the double rendering (double init creation) is not ideal. But great for SEO bots. Perhaps I could find a better way (and let only one rendering, but how ?!) ?!
+ - more unittests !!!
+ - better logging !!!
 
 
 ## Examples
@@ -42,7 +51,7 @@ from htagweb import AppServer
 AppServer( App ).run()
 ```
 
-or, with gunicorn (in a `server.py` file):
+or, with gunicorn (in a `server.py` file, as following):
 
 ```python
 from htag import Tag
@@ -69,7 +78,7 @@ python3 examples/main.py
 
 # Standalone module can act as server
 
-TODO: complete here !
+The module can act as "development server", providing a way to quickly run any htag class in a browser. And let you browse current `*.py` files in a browser.
 
 ```bash
 $ python3 -m htagweb

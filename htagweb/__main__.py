@@ -19,4 +19,4 @@ if __name__=="__main__":
     else:
         print("bad call (only one paremeter is possible (a fqn, ex: 'main:App'))")
         sys.exit(-1)
-    uvicorn.run(app)
+    app.run(openBrowser=True)

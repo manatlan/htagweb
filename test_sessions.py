@@ -1,9 +1,9 @@
 import pytest,asyncio
-from htagweb.sessions import createFile, createShm, createMem
+from htagweb.sessions import createFile, createFilePersistent, createShm, createMem
 
 @pytest.mark.asyncio
 async def test_sessions_basics():
-    for method in [createFile, createShm, createMem ]:
+    for method in [createFile, createFilePersistent, createShm, createMem ]:
 
         session = await method("uid")
         try:
