@@ -11,5 +11,5 @@ class App(Tag.div):
 
 # With htagweb.WebServer runner provided by htagweb
 #------------------------------------------------------
-from htagweb import WebServer # or WebServerWS
-WebServer( App ).run(openBrowser=True)
+from htagweb import AppServer
+AppServer( App ).run(openBrowser=True)

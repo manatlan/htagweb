@@ -7,10 +7,7 @@
 # https://github.com/manatlan/htagweb
 # #############################################################################
 
-from .appserver import AppServer  # a completly different beast, but compatible with ^^
-from .htagserver import HtagServer  # a completly different beast.
-from .usot import Usot
-
-__all__= ["AppServer"]
-
-__version__ = "0.0.0" # auto updated
+async def create(uid,size=10240):
+    # need to install "shared_memory_dict" (py>=3.8)
+    from shared_memory_dict import SharedMemoryDict
+    return SharedMemoryDict(name=uid, size=10240)

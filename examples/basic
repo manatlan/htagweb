@@ -1,2 +1,0 @@
-# killall gunicorn -s 9
-gunicorn -w 4 -k uvicorn.workers.UvicornWorker -b localhost:8000 --preload basic:app

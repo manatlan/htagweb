@@ -10,6 +10,13 @@
 # gunicorn -w 4 -k uvicorn.workers.UvicornWorker -b localhost:8000 --preload basic:app
 
 """
+IDEM que htagweb.AppServer
+- mais sans le SHARED MEMORY DICT (donc compat py3.7) ... grace au sesprovider !
+- fichier solo
+- !!! utilise crypto de htagweb !!!
+
+
+
 This thing is completly new different beast, and doesn't work as all classic runners.
 
 It's a runner between "WebHTTP/WebServer" & "HtagServer" : the best of two worlds
@@ -27,11 +34,13 @@ import os
 import sys
 import json
 import uuid
+import pickle
 import inspect
 import logging
 import uvicorn
 import importlib
-
+import contextlib
+from htag import Tag
 from starlette.applications import Starlette
 from starlette.responses import HTMLResponse
 from starlette.applications import Starlette
@@ -42,18 +51,107 @@ from starlette.requests import HTTPConnection
 from starlette.datastructures import MutableHeaders
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from shared_memory_dict import SharedMemoryDict
-
 from htag.render import HRenderer
 from htag.runners import commons
-from . import crypto
+from . import crypto,usot
 
 logger = logging.getLogger(__name__)
 ####################################################
+from types import ModuleType
 
-# reuse some things from htagserver ;-)
-from .htagserver import WebServerSession,getClass
-from .webbase import findfqn
+from . import sessions
+
+def findfqn(x) -> str:
+    if isinstance(x,str):
+        if ("." not in x) and (":" not in x):
+            raise Exception(f"'{x}' is not a 'full qualified name' (expected 'module.name') of an App (htag.Tag class)")
+        return x    # /!\ x is a fqn /!\ DANGEROUS /!\
+    elif isinstance(x, ModuleType):
+        if hasattr(x,"App"):
+            tagClass=getattr(x,"App")
+            if not issubclass(tagClass,Tag):
+                raise Exception("The 'App' of the module is not inherited from 'htag.Tag class'")
+        else:
+            raise Exception("module should contains a 'App' (htag.Tag class)")
+    elif issubclass(x,Tag):
+        tagClass=x
+    else:
+        raise Exception(f"!!! wtf ({x}) ???")
+
+    return tagClass.__module__+"."+tagClass.__qualname__
+
+def getClass(fqn_norm:str) -> type:
+    assert ":" in fqn_norm
+    #--------------------------- fqn -> module, name
+    modulename,name = fqn_norm.split(":",1)
+    if modulename in sys.modules:
+        module=sys.modules[modulename]
+        try:
+            module=importlib.reload( module )
+        except ModuleNotFoundError:
+            """ can't be (really) reloaded if the component is in the
+            same module as the instance htag server"""
+            pass
+    else:
+        module=importlib.import_module(modulename)
+    #---------------------------
+    klass= getattr(module,name)
+    if not ( inspect.isclass(klass) and issubclass(klass,Tag) ):
+        raise Exception(f"'{fqn_norm}' is not a htag.Tag subclass")
+
+    if not hasattr(klass,"imports"):
+        # if klass doesn't declare its imports
+        # we prefer to set them empty
+        # to avoid clutering
+        klass.imports=[]
+    return klass
+
+
+class WebServerSession:  # ASGI Middleware, for starlette
+    def __init__(self, app:ASGIApp, https_only:bool = False, sesprovider:"async method(uid)"=None ) -> None:
+        self.app = app
+        self.session_cookie = "session"
+        self.max_age = 0
+        self.path = "/"
+        self.security_flags = "httponly; samesite=lax"
+        if https_only:  # Secure flag can be used with HTTPS only
+            self.security_flags += "; secure"
+        self.cbsesprovider=sesprovider
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] not in ("http", "websocket"):  # pragma: no cover
+            await self.app(scope, receive, send)
+            return
+
+        connection = HTTPConnection(scope)
+
+        if self.session_cookie in connection.cookies:
+            uid = connection.cookies[self.session_cookie]
+        else:
+            uid = str(uuid.uuid4())
+
+        #!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        scope["uid"]     = uid
+        scope["session"] = await self.cbsesprovider(uid)
+        #!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+        logger.debug("request for %s, scope=%s",uid,scope)
+
+        async def send_wrapper(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                # send it back, in all cases
+                headers = MutableHeaders(scope=message)
+                header_value = "{session_cookie}={data}; path={path}; {max_age}{security_flags}".format(  # noqa E501
+                    session_cookie=self.session_cookie,
+                    data=uid,
+                    path=self.path,
+                    max_age=f"Max-Age={self.max_age}; " if self.max_age else "",
+                    security_flags=self.security_flags,
+                )
+                headers.append("Set-Cookie", header_value)
+            await send(message)
+
+        await self.app(scope, receive, send_wrapper)
 
 
 def fqn2hr(fqn:str,js:str,init,session): # fqn is a "full qualified name", full !
@@ -118,6 +216,12 @@ console.log("started")
             data = crypto.decrypt(data.encode(),websocket.app.parano).decode()
 
         data=json.loads(data)
+
+        #=================================== for UT only
+        if data["id"]=="ut":
+            data["id"]=id(self.hr.tag)
+        #===================================
+
         actions = await self.hr.interact(data["id"],data["method"],data["args"],data["kargs"],data.get("event"))
         await self._sendback( websocket, json.dumps(actions) )
 
@@ -125,13 +229,15 @@ console.log("started")
         del self.hr
 
 class AppServer(Starlette):
-    def __init__(self,obj:"htag.Tag class|fqn|None"=None, debug:bool=True,ssl:bool=False,session_size:int=10240,parano:bool=False):
+    def __init__(self,obj:"htag.Tag class|fqn|None"=None, debug:bool=True,ssl:bool=False,parano:bool=False,sesprovider:"htagweb.sessions.create*|None"=None):
         self.ssl=ssl
         self.parano = str(uuid.uuid4()) if parano else None
+        if sesprovider is None:
+            sesprovider = sessions.createFile
         Starlette.__init__( self,
             debug=debug,
             routes=[WebSocketRoute("/_/{fqn}", HRSocket)],
-            middleware=[Middleware(WebServerSession,https_only=ssl,session_size=session_size)],
+            middleware=[Middleware(WebServerSession,https_only=ssl,sesprovider=sesprovider)],
         )
 
         if obj:
@@ -139,7 +245,7 @@ class AppServer(Starlette):
                 return await self.serve(request,obj)
             self.add_route( '/', handleHome )
 
-    async def serve(self, request, obj, **NONUSED ) -> HTMLResponse:
+    async def serve(self, request, obj ) -> HTMLResponse:
         fqn=findfqn(obj)
         protocol = "wss" if self.ssl else "ws"
         if self.parano:

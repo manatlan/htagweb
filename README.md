@@ -6,46 +6,34 @@
     <img src="https://badge.fury.io/py/htagweb.svg?x" alt="Package version">
 </a>
 
-This "htagweb" module provides two htag's "runners":
+This "htagweb" module is the official way to expose htag's apps on the web. 
 
- * WebServer     : for http only exchanges
- * WebServerWS   : for http/ws exchanges (first rendering is on http)
+**Important note**
+On the web, the server can handle many clients : so, it's not possible to handle each tag instances per user. SO there are 1 limitation compared to classical htag runners which comes with htag.
 
-Theses runners are a lot more complete than the defaults ones (WebHTTP & WebWS, provided nativly with htag)
-If you want to expose your HTag apps on the web : **they are the only real/official solutions**.
-Theses are a lot robust and IRL tested.
+ - ~~there can be only one managed instance of a htag class, per user~~ (it's the case in classical runners too)
+ - and tag instances doesn't live as long as the runner lives (when you hit F5, it will be destroyed/recreated). So, keeping states must be done thru the tag.state / tag.root.state (which is the session of the user).
+
+So developping a htag app which work the same on desktop and on the web, should manage its states in tag.state / tag.root.state ;-)
+
+ ## Features
 
  * based on [starlette](https://pypi.org/project/starlette/)
+ * multiple ways to handle sessions (file, mem, etc ...)
  * compatible with **uvloop** !!!
- * compatible with multiple gunicorn webworkers !!!
- * works on gnu/linux or windows !
- * Each user has its own process (for session, and htag app)
- * real starlette session available (in htag instance, and starlette request)
+ * compatible with multiple gunicorn/uvicorn/webworkers !!!
+ * compatible with **tag.update()**
+ * works on gnu/linux, ios or windows !
+ * real starlette session available (in tag.state, and starlette request.session)
  * compatible with oauth2 authent ( [authlib](https://pypi.org/project/Authlib/) )
- * real process managments (interactions timeout, process expirations, ...)
- * **NOT READY YET** parano mode (can aes encrypt all communications between client & server ... to avoid mitm'proxies)
-
-But be aware : it's production ready (at least, for me). It may not be free of bugs or security holes: USE AT YOUR OWN RISK.
-Htag and this module are youngs, and not widely tested (by experts/hackers). But due to the nature of htag, and theses runners,
-the risk may be minimal (only DoS), stealing datas may not be possible.
-
-The concepts are the same :
-
- - one user can run only one instance of an htag app at one time (like in desktop mode).
- - All user processes are destroyed, after an inactivity timeout (not like in desktop mode, to preserve healthy of the webserver)
- - the "session" live as long as the server live (may not be a problem on many hosting service (where they shutdown the server after inactivities))
-
-## architecture
-
-Here is a rapid [map](https://www.tldraw.com/s/v2_c_0z8CUdwoKgrIjBa29yeO7?viewport=228%2C-15%2C1920%2C976&page=page%3AlnBx9GrxTdcdrdgOk-s83) ;-)
+ * 'parano mode' (can aes encrypt all communications between client & server ... to avoid mitm'proxies on ws exchanges)
 
 ## Roadmap / futur
 
-- ? replace starlette by fastapi ?
-- better logging !!!!
-- more parameters (session size, etc ...)
-- parano mode
-- perhaps a bi-modal version (use ws, and fallback to http when ws com error)
+ - ? replace starlette by fastapi ?
+ - the double rendering (double init creation) is not ideal. But great for SEO bots. Perhaps I could find a better way (and let only one rendering, but how ?!) ?!
+ - more unittests !!!
+ - better logging !!!
 
 
 ## Examples
@@ -59,11 +47,11 @@ class App(Tag.div):
     def init(self):
         self+= "hello world"
 
-from htagweb import WebServer # or WebServerWS
-WebServer( App ).run()
+from htagweb import AppServer
+AppServer( App ).run()
 ```
 
-or, with gunicorn (in a `server.py` file):
+or, with gunicorn (in a `server.py` file, as following):
 
 ```python
 from htag import Tag
@@ -72,8 +60,8 @@ class App(Tag.div):
     def init(self):
         self+= "hello world"
 
-from htagweb import WebServer # or WebServerWS
-app=WebServer( App )
+from htagweb import AppServer
+app=AppServer( App )
 ```
 
 and run server :
@@ -88,10 +76,9 @@ See a more advanced example in [examples folder](https://github.com/manatlan/hta
 python3 examples/main.py
 ```
 
-# htagweb.HtagServer
+# Standalone module can act as server
 
-This is a new beast, which is available in this module, and __it's COMPLETLY different from ALL others htag runners__.
-See it like an "htag server", very useful during development phase. In console, type :
+The module can act as "development server", providing a way to quickly run any htag class in a browser. And let you browse current `*.py` files in a browser.
 
 ```bash
 $ python3 -m htagweb
@@ -104,20 +91,4 @@ or
 $ python3 -m htagweb main:App
 ```
 if you want to point the "/" (home path) to a file `main.py` (wich contains a htag.Tag subclass 'App').
-
-
-It will run a solid http/ws, with all htag/web features (and compatible with uvicorn/webworkers), and you can browse htag's apps in an html page.
-
-It's not the official way to expose htag's apps on the web. But I'm currently exploring that (because it's a lot lot simpler ;-).
-Like ANY OTHERS htag runners : the live of a Htag's app is between the websocket open and the websocket close. So if you refresh the page : it will always rebuild all. Others runners avoid this, and make a lot of magics (on web side) to keep the same instance running for the same user.
-
-BTW, it's the only "web runner", with WebWS, which works with the new [Tag.update](https://manatlan.github.io/htag/tag_update/) feature !
-
-# htagweb.AppServer
-
-A new runner ;-) ... fully compatible with WebServer/WebServerWS/WebHTTP/WebWS ... but using same concepts as "HtagServer".
-
-Except: tags should use "self.root.state" to maintain a state (because F5 will destroy/recreate instances)
-
-TODO: doc will come later ... for tests only, now ;-)
 
