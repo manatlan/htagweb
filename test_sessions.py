@@ -1,27 +1,24 @@
-import pytest,asyncio
+import pytest,asyncio,sys
 from htagweb.sessions import createFile, createFilePersistent, createShm, createMem
 
-@pytest.fixture( params=["createFile", "createFilePersistent"] )
-#@pytest.fixture( params=["createFile", "createFilePersistent", "createShm", "createMem"] )
-def method_session(request):
-   if request.param=="createFile":
-        return createFile
-   elif request.param=="createFilePersistent":
-        return createFilePersistent
-   elif request.param=="createShm":
-        return createShm
-   elif request.param=="createMem":
-        return createMem
+# @pytest.fixture( params=["createFile", "createFilePersistent"] )
+# @pytest.fixture( params=["createFile", "createFilePersistent", "createMem"] )
+# @pytest.fixture( params=["createFile", "createFilePersistent", "createShm", "createMem"] )
+# def method_session(request):
+#    if request.param=="createFile":
+#         return createFile
+#    elif request.param=="createFilePersistent":
+#         return createFilePersistent
+#    elif request.param=="createShm":
+#         return createShm
+#    elif request.param=="createMem":
+        # from htagweb.sessions.memory import startServer
+        # assert asyncio.get_event_loop()
+        # startServer()
+        # return createMem
 
 
-@pytest.mark.asyncio
-async def test_sessions_basics(method_session):
-
-        if method_session == createMem:
-            from htagweb.sessions.memory import startServer
-            startServer()
-
-
+async def session_test(method_session):
         session = await method_session("uid")
         try:
             session["nb"]=session.get("nb",0) + 1
@@ -38,6 +35,33 @@ async def test_sessions_basics(method_session):
 
         finally:
             session.clear()
+
+
+
+@pytest.mark.asyncio
+async def test_sessions_file():
+    await session_test( createFile )
+
+@pytest.mark.asyncio
+async def test_sessions_filepersitent():
+    await session_test( createFilePersistent )
+
+# @pytest.mark.asyncio
+# async def test_sessions_memory():
+#     from htagweb.sessions.memory import startServer,PX
+#     startServer()
+
+#     await session_test( createMem )
+
+
+@pytest.mark.asyncio
+async def test_sessions_shm():
+    try:
+        import shared_memory_dict
+        await session_test( createShm )
+    except:
+        pass
+
 
 
 if __name__=="__main__":

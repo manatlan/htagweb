@@ -221,11 +221,10 @@ if __name__=="__main__":
             #~ test_sync( p.clientsync )        # sync not possible
         finally:
             p.stop()
-        await asyncio.sleep(1.2)    # slowdown to let server start ;-(
 
-    asyncio.run( test_process() )
-    asyncio.run( test_thread() )
-    # asyncio.run( test_task() )
+    # asyncio.run( test_process() )
+    # asyncio.run( test_thread() )
+    asyncio.run( test_task() )
     # asyncio.run( test_task() )
     # asyncio.run( test_thread() )
     # asyncio.run( test_process() )

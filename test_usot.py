@@ -1,16 +1,16 @@
 import pytest,asyncio
 import logging
 
-# from htagweb import ProxySingleton
+from htagweb import Usot
 
-# class SessionMemory:
-#     def __init__(self):
-#         self.SESSIONS={}
-#     def get(self,uid:str):
-#         return self.SESSIONS.get(uid,{})
-#     def set(self,uid:str,value:dict):
-#         assert isinstance(value,dict)
-#         self.SESSIONS[uid]=value
+class SessionMemory:
+    def __init__(self):
+        self.SESSIONS={}
+    def get(self,uid:str):
+        return self.SESSIONS.get(uid,{})
+    def set(self,uid:str,value:dict):
+        assert isinstance(value,dict)
+        self.SESSIONS[uid]=value
 
 # class BuggedObject:
 #     def testko(self):
@@ -115,14 +115,43 @@ import logging
 
 #         assert {"nb":1} == await m.get("uid")
 
+def sync_test(client):
+    client.set("uid1", dict(a=43))
+    assert client.get("uid1") == dict(a=43)
 
+async def async_test(client):
+    await client.set("uid1", dict(a=42))
+    assert await client.get("uid1") == dict(a=42)
+
+
+
+@pytest.mark.asyncio
+async def test_task():
+    print(">>> TASK")
+    p=Usot(SessionMemory,port=19999)
+    p.start()
+    try:
+        await async_test( p.clientasync )
+        ##sync_test( p.clientsync )        # sync not possible
+    finally:
+        p.stop()
+
+# def test_thread():
+#     print(">>> THREAD")
+#     p=Usot(SessionMemory,port=19919)
+#     p.start_thread()
+#     try:
+#         #await async_test( p.clientasync )
+#         sync_test( p.clientsync )
+#     finally:
+#         p.stop()
 
 if __name__=="__main__":
     logging.basicConfig(format='[%(levelname)-5s] %(name)s: %(message)s',level=logging.DEBUG)
 
-    asyncio.run( test_base() )
+    # asyncio.run( test_base() )
     # asyncio.run( test_classical_use() )
     # asyncio.run( test_exception_are_well_managed() )
     # asyncio.run( test_async_methods_on_object() )
     # asyncio.run( test_compatibility_in_inner_thread() )
-    asyncio.run( test_compatibility_in_multiprocessing() )
+    # asyncio.run( test_compatibility_in_multiprocessing() )

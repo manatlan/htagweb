@@ -41,7 +41,7 @@ class SessionMemory: # unique source of truth handled by ServerUnique
     def get(self,uid:str) -> ServerMemDict:
         if uid not in self.SESSIONS:
             self.SESSIONS[uid] = {}
-        return ServerMemDict( self, uid, self.SESSIONS[uid] )
+        return ServerMemDict( uid, self.SESSIONS[uid] )
     def set(self,uid:str,dico):
         self.SESSIONS[uid] = dico
 
@@ -51,4 +51,5 @@ def startServer():
     PX.start()
 
 async def create(uid) -> ServerMemDict:
-    return await PX.clientsync.get( uid )
+    return PX.clientsync.get( uid )
+
