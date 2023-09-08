@@ -9,7 +9,7 @@
 
 import os,pickle
 
-class SessionFile: # default
+class FileDict: # default
     """ mimic a dict (with minimal methods), unique source of truth on FS"""
     def __init__(self,uid:str):
         self._uid=uid
@@ -41,5 +41,5 @@ class SessionFile: # default
         if os.path.isfile(self._file):
             os.unlink(self._file)
 
-async def create(uid) -> SessionFile:
-    return SessionFile(uid)
+async def create(uid) -> FileDict:
+    return FileDict(uid)
