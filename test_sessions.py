@@ -30,16 +30,13 @@ async def test_sessions_file():
 async def test_sessions_filepersitent():
     await session_test( createFilePersistent )
 
-#@pytest.mark.asyncio
 # def test_sessions_memory():
 #     async def doit():
 #         from htagweb.sessions.memory import startServer,PX
-#         # startServer()
-#         PX.start_process()
+#         startServer()
 
 #         await session_test( createMem )
-
-#         PX.stop()
+# @pytest.mark.asyncio
 
 #     asyncio.run( doit())
 
