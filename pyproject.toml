@@ -21,8 +21,8 @@ classifiers = [
 python = "^3.7"
 htag = ">= 0.9.44"
 starlette = ">= 0.21.0"
-"uvicorn[standard]" = ">= 0.22.0"
 pycryptodomex = ">= 3.0.0"
+uvicorn = {version = ">=0.22,<1.0", extras = ["standard"]}
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.0"
