@@ -154,14 +154,14 @@ class WebServerSession:  # ASGI Middleware, for starlette
         await self.app(scope, receive, send_wrapper)
 
 
-def fqn2hr(fqn:str,js:str,init,session): # fqn is a "full qualified name", full !
+def fqn2hr(fqn:str,js:str,init,session,fullerror=False): # fqn is a "full qualified name", full !
     if ":" not in fqn:
         # replace last "." by ":"
         fqn="".join( reversed("".join(reversed(fqn)).replace(".",":",1)))
 
     klass=getClass(fqn)
 
-    return HRenderer( klass, js, init=init, session = session)
+    return HRenderer( klass, js, init=init, session = session, fullerror=fullerror)
 
 class HRSocket(WebSocketEndpoint):
     encoding = "text"
@@ -197,7 +197,7 @@ console.log("started")
 """
 
         try:
-            hr=fqn2hr(fqn,js,commons.url2ak(str(websocket.url)),websocket.session)
+            hr=fqn2hr(fqn,js,commons.url2ak(str(websocket.url)),websocket.session,fullerror=websocket.app.debug)
         except Exception as e:
             await self._sendback( websocket, str(e) )
             await websocket.close()
@@ -296,7 +296,7 @@ class AppServer(Starlette):
 
         # here return a first rendering (only for SEO)
         # the hrenderer is DESTROYED just after
-        hr=fqn2hr(fqn,jsbootstrap,commons.url2ak(str(request.url)),request.session)
+        hr=fqn2hr(fqn,jsbootstrap,commons.url2ak(str(request.url)),request.session, fullerror=self.debug)
 
         return HTMLResponse( str(hr) )
 
