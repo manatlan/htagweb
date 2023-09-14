@@ -262,17 +262,36 @@ class AppServer(Starlette):
         jsbootstrap="""
             %(jsparano)s
             // instanciate the WEBSOCKET
-            var _WS_ = new WebSocket("%(protocol)s://"+location.host+"/_/%(fqn)s"+location.search);
-            _WS_.onmessage = async function(e) {
-                // when connected -> the full HTML page is returned, installed & start'ed !!!
+            let _WS_=null;
+            let retryms=500;
+            
+            function connect() {
+                _WS_= new WebSocket("%(protocol)s://"+location.host+"/_/%(fqn)s"+location.search);
+                _WS_.onopen=function(evt) {
+                    console.log("** WS connected")
+                    retryms=500;
+                    
+                    _WS_.onmessage = async function(e) {
+                        // when connected -> the full HTML page is returned, installed & start'ed !!!
 
-                let html = await _read_(e.data);
-                html = html.replace("<body ","<body onload='start()' ");
+                        let html = await _read_(e.data);
+                        html = html.replace("<body ","<body onload='start()' ");
 
-                document.open();
-                document.write(html);
-                document.close();
-            };
+                        document.open();
+                        document.write(html);
+                        document.close();
+                    };
+                }
+                
+                _WS_.onclose = function(evt) {
+                    console.log("** WS disconnected, retry in (ms):",retryms)
+                    setTimeout( function() {
+                        connect();
+                        retryms=retryms*2;
+                    }, retryms);
+                };
+            }
+            connect();
         """ % locals()
 
         # here return a first rendering (only for SEO)
