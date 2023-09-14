@@ -269,6 +269,7 @@ class AppServer(Starlette):
                 _WS_= new WebSocket("%(protocol)s://"+location.host+"/_/%(fqn)s"+location.search);
                 _WS_.onopen=function(evt) {
                     console.log("** WS connected")
+                    document.body.classList.remove("htagoff");
                     retryms=500;
                     
                     _WS_.onmessage = async function(e) {
@@ -285,6 +286,7 @@ class AppServer(Starlette):
                 
                 _WS_.onclose = function(evt) {
                     console.log("** WS disconnected, retry in (ms):",retryms)
+                    document.body.classList.add("htagoff");
                     setTimeout( function() {
                         connect();
                         retryms=retryms*2;
