@@ -161,7 +161,9 @@ def fqn2hr(fqn:str,js:str,init,session,fullerror=False): # fqn is a "full qualif
 
     klass=getClass(fqn)
 
-    return HRenderer( klass, js, init=init, session = session, fullerror=fullerror)
+    styles=Tag.style("body.htagoff * {cursor:not-allowed !important;}")
+
+    return HRenderer( klass, js, init=init, session = session, fullerror=fullerror, statics=[styles,])
 
 class HRSocket(WebSocketEndpoint):
     encoding = "text"
