@@ -285,12 +285,14 @@ class AppServer(Starlette):
                 }
                 
                 _WS_.onclose = function(evt) {
-                    console.log("** WS disconnected, retry in (ms):",retryms)
+                    console.log("** WS disconnected");
+                    //console.log("** WS disconnected, retry in (ms):",retryms);
                     document.body.classList.add("htagoff");
-                    setTimeout( function() {
-                        connect();
-                        retryms=retryms*2;
-                    }, retryms);
+
+                    //setTimeout( function() {
+                    //    connect();
+                    //    retryms=retryms*2;
+                    //}, retryms);
                 };
             }
             connect();
