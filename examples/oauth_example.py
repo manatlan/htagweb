@@ -60,6 +60,7 @@ class TagOAuth(Tag.span):
         return self._rootstate.get(OAUTH_SESSION_NAME,{})
 
     def render(self): # dynamic rendering
+        self.clear()
         self+= self.title + self.btn
         if self.user:
             self.title.set(self.user['name'])
@@ -83,6 +84,8 @@ class App(Tag.body):
         self.oa = TagOAuth(self.state)
 
     def render(self):  # dynamic rendering
+        self.clear()
+
         self += self.oa
         self += f"You are {self.oa.user.get('name') or 'unknown'}"
 
