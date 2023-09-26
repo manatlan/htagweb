@@ -22,7 +22,7 @@ So developping a htag app which work the same on desktop and on the web, should 
  * multiple ways to handle sessions (file, mem, etc ...)
  * compatible with **uvloop** !!!
  * compatible with multiple gunicorn/uvicorn/webworkers !!!
- * compatible with **tag.update()**
+ * compatible with [tag.update()](https://manatlan.github.io/htag/tag_update/)
  * works on gnu/linux, ios or windows !
  * real starlette session available (in tag.state, and starlette request.session)
  * compatible with oauth2 authent ( [authlib](https://pypi.org/project/Authlib/) )

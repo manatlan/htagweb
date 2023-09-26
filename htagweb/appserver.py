@@ -154,14 +154,16 @@ class WebServerSession:  # ASGI Middleware, for starlette
         await self.app(scope, receive, send_wrapper)
 
 
-def fqn2hr(fqn:str,js:str,init,session): # fqn is a "full qualified name", full !
+def fqn2hr(fqn:str,js:str,init,session,fullerror=False): # fqn is a "full qualified name", full !
     if ":" not in fqn:
         # replace last "." by ":"
         fqn="".join( reversed("".join(reversed(fqn)).replace(".",":",1)))
 
     klass=getClass(fqn)
 
-    return HRenderer( klass, js, init=init, session = session)
+    styles=Tag.style("body.htagoff * {cursor:not-allowed !important;}")
+
+    return HRenderer( klass, js, init=init, session = session, fullerror=fullerror, statics=[styles,])
 
 class HRSocket(WebSocketEndpoint):
     encoding = "text"
@@ -197,7 +199,7 @@ console.log("started")
 """
 
         try:
-            hr=fqn2hr(fqn,js,commons.url2ak(str(websocket.url)),websocket.session)
+            hr=fqn2hr(fqn,js,commons.url2ak(str(websocket.url)),websocket.session,fullerror=websocket.app.debug)
         except Exception as e:
             await self._sendback( websocket, str(e) )
             await websocket.close()
@@ -262,22 +264,45 @@ class AppServer(Starlette):
         jsbootstrap="""
             %(jsparano)s
             // instanciate the WEBSOCKET
-            var _WS_ = new WebSocket("%(protocol)s://"+location.host+"/_/%(fqn)s"+location.search);
-            _WS_.onmessage = async function(e) {
-                // when connected -> the full HTML page is returned, installed & start'ed !!!
+            let _WS_=null;
+            let retryms=500;
+            
+            function connect() {
+                _WS_= new WebSocket("%(protocol)s://"+location.host+"/_/%(fqn)s"+location.search);
+                _WS_.onopen=function(evt) {
+                    console.log("** WS connected")
+                    document.body.classList.remove("htagoff");
+                    retryms=500;
+                    
+                    _WS_.onmessage = async function(e) {
+                        // when connected -> the full HTML page is returned, installed & start'ed !!!
 
-                let html = await _read_(e.data);
-                html = html.replace("<body ","<body onload='start()' ");
+                        let html = await _read_(e.data);
+                        html = html.replace("<body ","<body onload='start()' ");
 
-                document.open();
-                document.write(html);
-                document.close();
-            };
+                        document.open();
+                        document.write(html);
+                        document.close();
+                    };
+                }
+                
+                _WS_.onclose = function(evt) {
+                    console.log("** WS disconnected");
+                    //console.log("** WS disconnected, retry in (ms):",retryms);
+                    document.body.classList.add("htagoff");
+
+                    //setTimeout( function() {
+                    //    connect();
+                    //    retryms=retryms*2;
+                    //}, retryms);
+                };
+            }
+            connect();
         """ % locals()
 
         # here return a first rendering (only for SEO)
         # the hrenderer is DESTROYED just after
-        hr=fqn2hr(fqn,jsbootstrap,commons.url2ak(str(request.url)),request.session)
+        hr=fqn2hr(fqn,jsbootstrap,commons.url2ak(str(request.url)),request.session, fullerror=self.debug)
 
         return HTMLResponse( str(hr) )
 
