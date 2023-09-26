@@ -19,7 +19,7 @@ classifiers = [
 [tool.poetry.dependencies]
 # https://python-poetry.org/docs/dependency-specification/
 python = "^3.7"
-htag = ">= 0.9.44"
+htag = ">= 0.41.0"
 starlette = ">= 0.21.0"
 pycryptodomex = ">= 3.0.0"
 uvicorn = {version = ">=0.22,<1.0", extras = ["standard"]}

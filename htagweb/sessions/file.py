@@ -26,6 +26,12 @@ class FileDict: # default
         else:
             self._d={}
 
+    def __len__(self):
+        return len(self._d.keys())
+
+    def __contains__(self,key):
+        return key in self._d.keys()
+
     def items(self):
         return self._d.items()
 
@@ -35,13 +41,22 @@ class FileDict: # default
     def __getitem__(self,k:str):
         return self._d[k]
 
+    def __delitem__(self,k:str):
+        """ save session """
+        del self._d[k]
+
+        with open(self._file,"wb+") as fid:
+            pickle.dump(self._d,fid, protocol=4)
+
     def __setitem__(self,k:str,v):
+        """ save session """
         self._d[k]=v
 
         with open(self._file,"wb+") as fid:
             pickle.dump(self._d,fid, protocol=4)
 
     def clear(self):
+        """ save session """
         self._d.clear()
         if os.path.isfile(self._file):
             os.unlink(self._file)

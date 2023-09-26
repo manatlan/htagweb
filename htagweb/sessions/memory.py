@@ -14,6 +14,12 @@ class ServerMemDict: # proxy between app and ServerUnique
         self._uid=uid
         self._dico=dico
 
+    def __len__(self):
+        return len(self._dico.keys())
+
+    def __contains__(self,key):
+        return key in self._dico.keys()
+
     def items(self):
         return self._dico.items()
 
@@ -25,6 +31,10 @@ class ServerMemDict: # proxy between app and ServerUnique
 
     def __setitem__(self,k:str,v):          # could be inplemented in SessionMem
         self._dico[k]=v
+        PX.clientsync.set( self._uid, self._dico)
+
+    def __delitem__(self,k:str):
+        del self._dico[k]
         PX.clientsync.set( self._uid, self._dico)
 
     def clear(self):
@@ -44,6 +54,8 @@ class SessionMemory: # unique source of truth handled by ServerUnique
         return ServerMemDict( uid, self.SESSIONS[uid] )
     def set(self,uid:str,dico):
         self.SESSIONS[uid] = dico
+
+
 
 PX=Usot( SessionMemory, port=19999 )
 
