@@ -8,6 +8,10 @@
 
 This "htagweb" module is the official way to expose htag's apps on the web.
 
+**ULTRA IMPORTANT** ;-)
+
+**This module will be completly rewritten (for the 3rd time ;-)). And it will work, like in the past, as others classicals runners (tag instances will live, in separates processes). (state and session will remain too). Just need to test the new branch (it will use redys ;-) )**
+
 **Important note**
 On the web, the server can handle many clients : so, it's not possible to handle each tag instances per user. SO there are 1 limitation compared to classical htag runners which comes with htag.
 
