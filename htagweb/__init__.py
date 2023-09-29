@@ -7,6 +7,7 @@
 # https://github.com/manatlan/htagweb
 # #############################################################################
 
+from .redysserver import RedysServer  #NOT THE DEFINITIVE NAME !!!!!!!!!!!!!!!!
 from .appserver import AppServer  # a completly different beast, but compatible with ^^
 from .htagserver import HtagServer  # a completly different beast.
 from .usot import Usot

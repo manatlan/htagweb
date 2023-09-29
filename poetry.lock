@@ -510,6 +510,17 @@ files = [
 ]
 
 [[package]]
+name = "redys"
+version = "0.9.7"
+description = "A simple redis-like in pure python3, fully asyncio compliant"
+optional = false
+python-versions = ">=3.7,<4.0"
+files = [
+    {file = "redys-0.9.7-py3-none-any.whl", hash = "sha256:2fe61bcfa0cdc46d3d203a13c0129f8bd71efbaab896f00cdfa8c6ac1593803a"},
+    {file = "redys-0.9.7.tar.gz", hash = "sha256:31c698d015381c5fbd5a4d167daa591d816e4613e1b3af810ecb1f3d70890dc8"},
+]
+
+[[package]]
 name = "sniffio"
 version = "1.3.0"
 description = "Sniff out which async library your code is running under"
@@ -761,4 +772,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "7387cb56c5cffd7486c9c507c556a2797469aa508a74e48777a3e34965d4bb52"
+content-hash = "13908b74471200d7eca74787a1ea33c1f91c88ab63dd4bc7f29958e92bb3bc05"
