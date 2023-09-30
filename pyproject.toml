@@ -23,7 +23,7 @@ htag = ">= 0.41.0"
 starlette = ">= 0.21.0"
 pycryptodomex = ">= 3.0.0"
 uvicorn = {version = ">=0.22,<1.0", extras = ["standard"]}
-redys = "^0.9.7"
+redys = "^0.9.8"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.0"

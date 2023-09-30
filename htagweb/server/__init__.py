@@ -183,15 +183,15 @@ async def starters():
 async def hrserver():
     print("HRSERVER started")
 
-    async def delay():
-        await asyncio.sleep(2)
-        print("go")
-        await starters()
+    # async def delay():
+    #     await asyncio.sleep(2)
+    #     print("go")
+    #     await starters()
 
-    asyncio.ensure_future( delay() )
-    await redys.Server()
-    # asyncio.ensure_future( redys.Server() )
-    # await starters()
+    # asyncio.ensure_future( delay() )
+    # await redys.Server()
+    asyncio.ensure_future( redys.Server() )
+    await starters()
 
 
 if __name__=="__main__":

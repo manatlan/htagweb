@@ -31,7 +31,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from htag.runners import commons
 from . import crypto,usot
 
-from htagweb.server import importClassFromFqn, hrserver
+from htagweb.server import importClassFromFqn, hrserver, starters
 from htagweb.server.client import HrPilot
 
 logger = logging.getLogger(__name__)
@@ -149,6 +149,15 @@ class HRSocket(WebSocketEndpoint):
     async def on_disconnect(self, websocket, close_code):
         pass
 
+def process1():
+    import redys
+    # asyncio.ensure_future( starters() )
+    asyncio.run( redys.Server() )
+
+def process2():
+    import redys
+    asyncio.run( starters() )
+
 class RedysServer(Starlette):   #NOT THE DEFINITIVE NAME !!!!!!!!!!!!!!!!
     def __init__(self,obj:"htag.Tag class|fqn|None"=None, debug:bool=True,ssl:bool=False,parano:bool=False,sesprovider:"htagweb.sessions.create*|None"=None):
         self.ssl=ssl
@@ -156,9 +165,18 @@ class RedysServer(Starlette):   #NOT THE DEFINITIVE NAME !!!!!!!!!!!!!!!!
         self.parano = str(uuid.uuid4()) if parano else None
         if sesprovider is None:
             sesprovider = sessions.createFile
+        ###################################################################
+        import redys
+        # asyncio.ensure_future( redys.Server() )
+        # asyncio.ensure_future( hrserver() )
 
-        ##asyncio.ensure_future( hrserver() )
+        import multiprocessing
+        p=multiprocessing.Process(target=process1)
+        p.start()
+        p=multiprocessing.Process(target=process2)
+        p.start()
 
+        #################################################################
         Starlette.__init__( self,
             debug=debug,
             routes=[WebSocketRoute("/_/{fqn}", HRSocket)],

@@ -51,9 +51,6 @@ class App(Tag.body):
 #------------------------------------------------------
 
 if __name__=="__main__":
-    try:
-        from htagweb import AppServer,RedysServer
-        app=RedysServer( "example:App" ,parano=False)
-        app.run(openBrowser=False)
-    except:
-        pass
+    from htagweb import AppServer,RedysServer
+    app=RedysServer( "example:App" ,parano=False)
+    app.run(openBrowser=True)
