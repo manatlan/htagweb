@@ -1,6 +1,6 @@
 import pytest
 from htag import Tag
-from htagweb import HtagServer,AppServer
+from htagweb import HtagServer,SimpleServer
 import sys,json
 from starlette.testclient import TestClient
 
@@ -54,8 +54,8 @@ def test_HtagServer_instanciates_htagapps():
         do_tests()
 
 
-def test_appserver():
-    app=AppServer( "test_hr:App" )
+def test_simpleserver():
+    app=SimpleServer( "test_hr:App" )
     with TestClient(app) as client:
         response = client.get('/')
 

@@ -114,9 +114,18 @@ def process(hid,event_response,event_interact,fqn,js,init):
     asyncio.run( loop() )
     print(f"Process {pid} ended")
 
-async def starters():
-    print("htag starters started")
+async def hrserver_orchestrator():
     with redys.AClient() as bus:
+
+        # prevent multi orchestrators
+        if await bus.get("hrserver_orchestrator_running")==True:
+            print("hrserver_orchestrator is already running")
+            return
+        else:
+            print("hrserver_orchestrator started")
+            await bus.set("hrserver_orchestrator_running",True)
+
+        # register its main event
         await bus.subscribe( EVENT_SERVER )
 
         ps={}
@@ -180,18 +189,17 @@ async def starters():
 
     print("htag starters stopped")
 
+
+
 async def hrserver():
     print("HRSERVER started")
 
-    # async def delay():
-    #     await asyncio.sleep(2)
-    #     print("go")
-    #     await starters()
+    async def delay():
+        await asyncio.sleep(0.5)
+        await hrserver_orchestrator()
 
-    # asyncio.ensure_future( delay() )
-    # await redys.Server()
-    asyncio.ensure_future( redys.Server() )
-    await starters()
+    asyncio.ensure_future( delay() )
+    await redys.Server()
 
 
 if __name__=="__main__":

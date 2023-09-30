@@ -10,7 +10,7 @@
 # gunicorn -w 4 -k uvicorn.workers.UvicornWorker -b localhost:8000 --preload basic:app
 
 """
-This thing is AppServer, but with 2 majors behaviour
+This thing is HtagServer, but with 2 majors behaviour
 
 - If "no klass"(None) is defined -> will hook "/" on IndexApp (a browser of folders/files)
 - every others routes -> will try to instanciate an htag app
@@ -23,7 +23,7 @@ import os
 from starlette.responses import HTMLResponse,Response
 
 from htag import Tag
-from .appserver import AppServer,getClass
+from .simpleserver import SimpleServer,getClass
 
 ####################################################
 class IndexApp(Tag.body):
@@ -60,11 +60,11 @@ class IndexApp(Tag.body):
 
 ####################################################
 
-class HtagServer(AppServer):
+class HtagServer(SimpleServer):
     def __init__(self,obj:"htag.Tag class|fqn|None"=None, *a,**k):
         if obj is None:
             obj = IndexApp
-        AppServer.__init__(self,obj,*a,**k)
+        SimpleServer.__init__(self,obj,*a,**k)
 
         self.add_route('/{path}', self._serve)
 

@@ -49,8 +49,8 @@ class App(Tag.body):
 
 # With htagweb.WebServer runner provided by htagweb
 #------------------------------------------------------
+from htagweb import SimpleServer,AppServer
+app=AppServer( App ,parano=False)
 
 if __name__=="__main__":
-    from htagweb import AppServer,RedysServer
-    app=RedysServer( "example:App" ,parano=False)
     app.run(openBrowser=True)
