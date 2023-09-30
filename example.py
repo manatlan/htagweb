@@ -1,7 +1,5 @@
 from htag import Tag
-
-from htag import Tag
-import json
+import json,asyncio,time
 
 class TagSession(Tag.div):  #dynamic component (compliant htag >= 0.30) !!!! FIRST IN THE WORLD !!!!
     def init(self):
@@ -21,7 +19,9 @@ class App(Tag.body):
     imports=[TagSession]
     statics=b"window.error=alert"
     def init(self):
-        # del self.session["apps.draw.App"]
+        self.place = Tag.div(js="console.log('I update myself')")
+        asyncio.ensure_future( self.loop_timer() )
+
         def inc_test_session(o):
             v=int(self.state.get("integer","0"))
             v=v+1
@@ -42,7 +42,15 @@ class App(Tag.body):
         self+=Tag.li(Tag.a("t0",_href="/"))
         self+=Tag.li(Tag.a("t1",_href="/?a=43"))
         self+=Tag.li(Tag.a("t2",_href="/?z=bb"))
+        self+=self.place
 
+    async def loop_timer(self):
+        while 1:
+            await asyncio.sleep(0.5)
+            self.place.set(time.time() )
+            if not await self.place.update(): # update component using current websocket
+                # break if can't (<- good practice to kill this asyncio/loop)
+                break
 
 
 # With Web http runner provided by htag

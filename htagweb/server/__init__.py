@@ -10,11 +10,11 @@
 import asyncio
 import redys
 import os,sys,importlib,inspect
+import multiprocessing
 from htag import Tag
-
-
-from multiprocessing import Process
+import htagweb.sessions
 from htag.render import HRenderer
+
 
 
 EVENT_SERVER="EVENT_SERVER"
@@ -49,7 +49,7 @@ def importClassFromFqn(fqn_norm:str) -> type:
         klass.imports=[]
     return klass
 
-import htagweb.sessions
+
 
 def process(hid,event_response,event_interact,fqn,js,init,sesprovidername):
     if sesprovidername is None:
@@ -67,51 +67,56 @@ def process(hid,event_response,event_interact,fqn,js,init,sesprovidername):
         def exit():
             RUNNING=False
 
-        print(uid)
         session = await createSession(uid)
-        #session={}
 
         styles=Tag.style("body.htagoff * {cursor:not-allowed !important;}")
 
         hr=HRenderer( klass ,js, init=init, exit_callback=exit, fullerror=True, statics=[styles,],session = session)
 
-        # register the hr.sendactions, for tag.update feature
-        #TODO: implement tag.update !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        #TODO: implement tag.update !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        #TODO: implement tag.update !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        #hr.sendactions=lambda actions: self._sendback(websocket,json.dumps(actions))
-        #TODO: implement tag.update !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        #TODO: implement tag.update !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        #TODO: implement tag.update !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-        print(f">Process {pid} started with :",hid,init,event_response,event_interact)
+        print(f">Process {pid} started with :",hid,init)
 
         with redys.AClient() as bus:
             # publish the 1st rendering
             await bus.publish(event_response,str(hr))
+
+            # register tag.update feature
+            #======================================
+            # async def update(actions):
+            #     try:
+            #         await bus.publish(event_response+"_update",actions)
+            #     except:
+            #         print("!!! concurrent write/read on redys !!!")
+            #     return True
+
+            # hr.sendactions=update
+            #======================================
+
 
             # subscribe for interaction
             await bus.subscribe( event_interact )
 
             while RUNNING:
                 params = await bus.get_event( event_interact )
-                if params:
+                # try: #TODO: but fail the test_server.py ?!?!?
+                # except: # some times it crash ;-(
+                #     print("!!! concurrent sockets reads !!!")
+                #     params = None
+                if params and isinstance(params,dict):  # sometimes it's not a dict ?!? (bool ?!)
                     if params.get("cmd") == CMD_EXIT:
                         print(f">Process {pid} {hid} killed")
                         break
                     elif params.get("cmd") == CMD_RENDER:
                         # just a false start, just need the current render
-                        print(f">Process {pid} just a render of {hid}")
+                        print(f">Process {pid} render {hid}")
                         await bus.publish(event_response,str(hr))
                     else:
-                        print(f">Process {pid} interact {hid}:",list(params.keys()))
+                        print(f">Process {pid} interact {hid}:")
                         #-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\- UT
                         if params["oid"]=="ut": params["oid"]=id(hr.tag)
                         #-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
 
                         actions = await hr.interact(**params)
-                        await bus.publish(event_response,actions)
+                        await bus.publish(event_response+"_interact",actions)
 
                 await asyncio.sleep(0.1)
 
@@ -176,7 +181,7 @@ async def hrserver_orchestrator():
                         # and recreate another one later
 
                 # create the process
-                p=Process(target=process, args=[],kwargs=params)
+                p=multiprocessing.Process(target=process, args=[],kwargs=params)
                 p.start()
 
                 # and save it in pool ps
@@ -189,7 +194,7 @@ async def hrserver_orchestrator():
         await killall(ps)
 
 
-    print("htag starters stopped")
+    print("hrserver_orchestrator stopped")
 
 
 
@@ -197,7 +202,7 @@ async def hrserver():
     print("HRSERVER started")
 
     async def delay():
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.3)
         await hrserver_orchestrator()
 
     asyncio.ensure_future( delay() )

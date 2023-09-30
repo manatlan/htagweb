@@ -25,11 +25,11 @@ class HrPilot:
         self.event_response = f"response_{self.hid}"
         self.event_interact = f"interact_{self.hid}"
 
-    async def _wait(self,s=TIMEOUT):
+    async def _wait(self,event, s=TIMEOUT):
         # wait for a response
         t1=time.monotonic()
         while time.monotonic() - t1 < s:
-            message = await self.bus.get_event( self.event_response )
+            message = await self.bus.get_event( event )
             if message:
                 return message
 
@@ -58,7 +58,7 @@ class HrPilot:
         ))
 
         # wait 1st rendering
-        html = await self._wait()
+        html = await self._wait(self.event_response)
 
         return html
 
@@ -74,13 +74,13 @@ class HrPilot:
             (dialog with process event)
         """
         # subscribe for response
-        await self.bus.subscribe( self.event_response )
+        await self.bus.subscribe( self.event_response+"_interact" )
 
         # post the interaction
         await self.bus.publish( self.event_interact, params )
 
         # wait actions
-        return await self._wait()
+        return await self._wait(self.event_response+"_interact")
 
 
     @staticmethod

@@ -31,7 +31,8 @@ from starlette.datastructures import MutableHeaders
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from htag.runners import commons
-from . import crypto,usot
+from . import crypto
+import redys
 
 from htagweb.server import importClassFromFqn, hrserver, hrserver_orchestrator
 from htagweb.server.client import HrPilot
@@ -116,6 +117,8 @@ def normalize(fqn):
         fqn="".join( reversed("".join(reversed(fqn)).replace(".",":",1)))
     return fqn
 
+
+
 class HRSocket(WebSocketEndpoint):
     encoding = "text"
 
@@ -131,7 +134,26 @@ class HRSocket(WebSocketEndpoint):
             logger.error("Can't send to socket, error: %s",e)
             return False
 
+    async def loop_tag_update(self, event, websocket):
+        with redys.AClient() as bus:
+            await bus.subscribe(event)
+
+            ok=True
+            while ok:
+                actions = await bus.get_event( event )
+                if actions:
+                    ok=await self._sendback(websocket,json.dumps(actions))
+                await asyncio.sleep(0.1)
+
     async def on_connect(self, websocket):
+        #====================================================== get the event
+        fqn=websocket.path_params.get("fqn","")
+        uid=websocket.scope["uid"]
+        event=HrPilot(uid,fqn).event_response+"_update"
+        #======================================================
+
+        # asyncio.ensure_future(self.loop_tag_update(event,websocket))
+
         await websocket.accept()
 
     async def on_receive(self, websocket, data):
@@ -150,7 +172,15 @@ class HRSocket(WebSocketEndpoint):
         await self._sendback( websocket, json.dumps(actions) )
 
     async def on_disconnect(self, websocket, close_code):
-        pass
+        #====================================================== get the event
+        fqn=websocket.path_params.get("fqn","")
+        uid=websocket.scope["uid"]
+        event=HrPilot(uid,fqn).event_response+"_update"
+        #======================================================
+
+        with redys.AClient() as bus:
+            await bus.unsubscribe(event)
+
 
 def processHrServer():
     asyncio.run( hrserver() )
