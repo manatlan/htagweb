@@ -1,7 +1,7 @@
 import pytest,asyncio
 import logging
 
-from htagweb import Usot
+from htagweb.usot import Usot
 
 class SessionMemory:
     def __init__(self):

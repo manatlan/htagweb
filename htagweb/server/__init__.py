@@ -49,8 +49,15 @@ def importClassFromFqn(fqn_norm:str) -> type:
         klass.imports=[]
     return klass
 
+import htagweb.sessions
 
-def process(hid,event_response,event_interact,fqn,js,init):
+def process(hid,event_response,event_interact,fqn,js,init,sesprovidername):
+    if sesprovidername is None:
+        sesprovidername="createFile"
+    createSession=getattr(htagweb.sessions,sesprovidername)
+
+    uid=hid.split("_")[0]
+
     pid = os.getpid()
     async def loop():
         if os.getcwd() not in sys.path: sys.path.insert(0,os.getcwd())
@@ -60,7 +67,10 @@ def process(hid,event_response,event_interact,fqn,js,init):
         def exit():
             RUNNING=False
 
-        session={}
+        print(uid)
+        session = await createSession(uid)
+        #session={}
+
         styles=Tag.style("body.htagoff * {cursor:not-allowed !important;}")
 
         hr=HRenderer( klass ,js, init=init, exit_callback=exit, fullerror=True, statics=[styles,],session = session)
@@ -75,7 +85,7 @@ def process(hid,event_response,event_interact,fqn,js,init):
         #TODO: implement tag.update !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-        print(f"Process {pid} started with :",hid,init,event_response,event_interact)
+        print(f">Process {pid} started with :",hid,init,event_response,event_interact)
 
         with redys.AClient() as bus:
             # publish the 1st rendering
@@ -88,14 +98,14 @@ def process(hid,event_response,event_interact,fqn,js,init):
                 params = await bus.get_event( event_interact )
                 if params:
                     if params.get("cmd") == CMD_EXIT:
-                        print(f"Process {pid} {hid} killed")
+                        print(f">Process {pid} {hid} killed")
                         break
                     elif params.get("cmd") == CMD_RENDER:
                         # just a false start, just need the current render
-                        print(f"Process {pid} just a render of {hid}")
+                        print(f">Process {pid} just a render of {hid}")
                         await bus.publish(event_response,str(hr))
                     else:
-                        print(f"Process {pid} interact {hid}:",params)
+                        print(f">Process {pid} interact {hid}:",list(params.keys()))
                         #-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\- UT
                         if params["oid"]=="ut": params["oid"]=id(hr.tag)
                         #-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
@@ -105,14 +115,11 @@ def process(hid,event_response,event_interact,fqn,js,init):
 
                 await asyncio.sleep(0.1)
 
-            # prevent the server that this process is going dead
-            await bus.publish( EVENT_SERVER, dict(cmd="REMOVE",hid=hid) )
-
             # unsubscribe for interaction
             await bus.unsubscribe( event_interact )
 
     asyncio.run( loop() )
-    print(f"Process {pid} ended")
+    print(f">Process {pid} ended")
 
 async def hrserver_orchestrator():
     with redys.AClient() as bus:
@@ -149,11 +156,6 @@ async def hrserver_orchestrator():
                     print(EVENT_SERVER, params.get("cmd") )
                     from pprint import pprint
                     pprint(ps)
-                    continue
-                elif params.get("cmd") == "REMOVE":
-                    hid=params.get("hid")
-                    print(EVENT_SERVER, params.get("cmd"),hid )
-                    del ps[hid] # remove from pool
                     continue
 
                 hid=params["hid"]

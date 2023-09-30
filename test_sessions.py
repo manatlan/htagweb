@@ -1,18 +1,38 @@
 import pytest,asyncio,sys
-from htagweb.sessions import createFile, createFilePersistent, createShm, createMem
+from htagweb.sessions import createFile, createFilePersistent, createShm
 
 
 async def session_test(method_session):
     session = await method_session("uid")
     try:
+        # bad way to clone
+        with pytest.raises(Exception):
+            dict(session)
+
+        # good way to clone
+        dict(session.items())
+
+        assert "nb" not in session
+
         session["nb"]=session.get("nb",0) + 1
+
+        assert "nb" in session
+        assert session
+        assert len(session)==1
+
 
         # ensure persistance is present
         session = await method_session("uid")
         assert session["nb"]==1
 
-        assert len(session.items())>0
+        session["x"]=42
+
+        assert len(session)==2
+
+        del session["x"]
+        assert len(session)==1
         session.clear()
+        assert len(session)==0
 
         session = await method_session("uid")
         assert len(session.items())==0
@@ -29,16 +49,6 @@ async def test_sessions_file():
 @pytest.mark.asyncio
 async def test_sessions_filepersitent():
     await session_test( createFilePersistent )
-
-# def test_sessions_memory():
-#     async def doit():
-#         from htagweb.sessions.memory import startServer,PX
-#         startServer()
-
-#         await session_test( createMem )
-# @pytest.mark.asyncio
-
-#     asyncio.run( doit())
 
 
 @pytest.mark.asyncio

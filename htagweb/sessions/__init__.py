@@ -19,8 +19,4 @@ async def createShm(uid):
     from . import shm
     return await shm.create(uid)
 
-async def createMem(uid):
-    from . import memory
-    return await memory.create(uid)
-
-__all__= ["createFile","createFilePersistent","createShm","createMem"]
+__all__= ["createFile","createFilePersistent","createShm"]

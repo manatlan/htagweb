@@ -17,6 +17,7 @@ import uuid
 import logging
 import uvicorn
 import asyncio
+import hashlib
 import multiprocessing
 from htag import Tag
 from starlette.applications import Starlette
@@ -61,8 +62,6 @@ def findfqn(x) -> str:
     return tagClass.__module__+"."+tagClass.__qualname__
 
 
-
-
 class WebServerSession:  # ASGI Middleware, for starlette
     def __init__(self, app:ASGIApp, https_only:bool = False, sesprovider:"async method(uid)"=None ) -> None:
         self.app = app
@@ -88,6 +87,7 @@ class WebServerSession:  # ASGI Middleware, for starlette
 
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
         scope["uid"]     = uid
+        scope["parano"]  = hashlib.md5(uid.encode()).hexdigest()
         scope["session"] = await self.cbsesprovider(uid)
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -119,12 +119,13 @@ def normalize(fqn):
 class HRSocket(WebSocketEndpoint):
     encoding = "text"
 
-    async def _sendback(self,ws, txt:str) -> bool:
+    async def _sendback(self,websocket, txt:str) -> bool:
+        parano_seed = websocket.scope["parano"] if websocket.app.parano else None
         try:
-            if ws.app.parano:
-                txt = crypto.encrypt(txt.encode(),ws.app.parano)
+            if parano_seed:
+                txt = crypto.encrypt(txt.encode(),parano_seed)
 
-            await ws.send_text( txt )
+            await websocket.send_text( txt )
             return True
         except Exception as e:
             logger.error("Can't send to socket, error: %s",e)
@@ -136,9 +137,10 @@ class HRSocket(WebSocketEndpoint):
     async def on_receive(self, websocket, data):
         fqn=websocket.path_params.get("fqn","")
         uid=websocket.scope["uid"]
+        parano_seed = websocket.scope["parano"] if websocket.app.parano else None
 
-        if websocket.app.parano:
-            data = crypto.decrypt(data.encode(),websocket.app.parano).decode()
+        if parano_seed:
+            data = crypto.decrypt(data.encode(),parano_seed).decode()
         data=json.loads(data)
 
         p=HrPilot(uid,fqn)
@@ -157,10 +159,14 @@ def processHrServer():
 class AppServer(Starlette):   #NOT THE DEFINITIVE NAME !!!!!!!!!!!!!!!!
     def __init__(self,obj:"htag.Tag class|fqn|None"=None, debug:bool=True,ssl:bool=False,parano:bool=False,sesprovider:"htagweb.sessions.create*|None"=None):
         self.ssl=ssl
-        #TODO: NOT GOOD (when socket disconnet panaro uid change ... so broken !!!!)
-        self.parano = str(uuid.uuid4()) if parano else None
+        self.parano=parano
+
         if sesprovider is None:
-            sesprovider = sessions.createFile
+            self.sesprovider = sessions.createFile
+        else:
+            self.sesprovider =  sesprovider
+
+        print("Session with:",self.sesprovider.__name__)
         ###################################################################
 
         p=multiprocessing.Process(target=processHrServer)
@@ -170,7 +176,7 @@ class AppServer(Starlette):   #NOT THE DEFINITIVE NAME !!!!!!!!!!!!!!!!
         Starlette.__init__( self,
             debug=debug,
             routes=[WebSocketRoute("/_/{fqn}", HRSocket)],
-            middleware=[Middleware(WebServerSession,https_only=ssl,sesprovider=sesprovider)],
+            middleware=[Middleware(WebServerSession,https_only=ssl,sesprovider=self.sesprovider)],
         )
 
         if obj:
@@ -180,14 +186,15 @@ class AppServer(Starlette):   #NOT THE DEFINITIVE NAME !!!!!!!!!!!!!!!!
 
     async def serve(self, request, obj ) -> HTMLResponse:
         uid = request.scope["uid"]
+        parano_seed = request.scope["parano"] if self.parano else None
+
         fqn=normalize(findfqn(obj))
-        print(uid,fqn, "->", importClassFromFqn(fqn) )
 
         protocol = "wss" if self.ssl else "ws"
 
-        if self.parano:
+        if parano_seed:
             jsparano = crypto.JSCRYPTO
-            jsparano += f"\nvar _PARANO_='{self.parano}'\n"
+            jsparano += f"\nvar _PARANO_='{parano_seed}'\n"
             jsparano += "\nasync function _read_(x) {return await decrypt(x,_PARANO_)}\n"
             jsparano += "\nasync function _write_(x) {return await encrypt(x,_PARANO_)}\n"
         else:
@@ -236,7 +243,7 @@ connect();
 
 """ % locals()
 
-        p = HrPilot(uid,fqn,js)
+        p = HrPilot(uid,fqn,js,self.sesprovider.__name__)
 
         args,kargs = commons.url2ak(str(request.url))
         html=await p.start(*args,**kargs)

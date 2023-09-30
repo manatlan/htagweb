@@ -15,7 +15,7 @@ class TagSession(Tag.div):  #dynamic component (compliant htag >= 0.30) !!!! FIR
 
     def render(self):
         self.otitle.set( "Live Session" )
-        self.orendu.set( json.dumps( dict(self.session), indent=1))
+        self.orendu.set( json.dumps( dict(self.session.items()), indent=1))
 
 class App(Tag.body):
     imports=[TagSession]
@@ -39,6 +39,9 @@ class App(Tag.body):
         self <= Tag.button("clear",_onclick=clllll)
         self <= TagSession()
 
+        self+=Tag.li(Tag.a("t0",_href="/"))
+        self+=Tag.li(Tag.a("t1",_href="/?a=43"))
+        self+=Tag.li(Tag.a("t2",_href="/?z=bb"))
 
 
 
@@ -53,4 +56,4 @@ from htagweb import SimpleServer,AppServer
 app=AppServer( App ,parano=False)
 
 if __name__=="__main__":
-    app.run(openBrowser=True)
+    app.run(openBrowser=False)

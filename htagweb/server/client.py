@@ -14,11 +14,12 @@ from htagweb.server import EVENT_SERVER
 TIMEOUT=30 # sec to wait answer from redys server
 
 class HrPilot:
-    def __init__(self,uid:str,fqn:str,js:str=None):
-        """ !!!!!!!!!!!!!!!!!!!! if js is None : can't do a start() !!!!!!!!!!!!!!!!!!!!!!"""
+    def __init__(self,uid:str,fqn:str,js:str=None,sesprovidername=None):
+        """ !!!!!!!!!!!!!!!!!!!! if js|sesprovidername is None : can't do a start() !!!!!!!!!!!!!!!!!!!!!!"""
         self.fqn=fqn
         self.js=js
         self.bus = redys.AClient()
+        self.sesprovidername=sesprovidername
 
         self.hid=f"{uid}_{fqn}"
         self.event_response = f"response_{self.hid}"
@@ -53,6 +54,7 @@ class HrPilot:
             fqn=self.fqn,
             js=self.js,
             init= (a,k),
+            sesprovidername=self.sesprovidername,
         ))
 
         # wait 1st rendering
