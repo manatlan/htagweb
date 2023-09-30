@@ -94,4 +94,4 @@ def test_parano():
 if __name__=="__main__":
     # test_basic()
     # test_a_full_fqn()
-    test_appserver()
+    test_simpleserver()
