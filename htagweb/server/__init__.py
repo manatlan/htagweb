@@ -86,14 +86,14 @@ def process(hid,event_response,event_interact,fqn,js,init,sesprovidername):
 
             # register tag.update feature
             #======================================
-            # async def update(actions):
-            #     try:
-            #         await bus.publish(event_response+"_update",actions)
-            #     except:
-            #         print("!!! concurrent write/read on redys !!!")
-            #     return True
+            async def update(actions):
+                try:
+                    await bus.publish(event_response+"_update",actions)
+                except:
+                    print("!!! concurrent write/read on redys !!!")
+                return True
 
-            # hr.sendactions=update
+            hr.sendactions=update
             #======================================
 
             while RUNNING:
@@ -103,10 +103,7 @@ def process(hid,event_response,event_interact,fqn,js,init,sesprovidername):
                 #     print("!!! concurrent sockets reads !!!")
                 #     params = None
                 if params and isinstance(params,dict):  # sometimes it's not a dict ?!? (bool ?!)
-                    if params.get("cmd") == CMD_EXIT:
-                        print(f">Process {pid} {hid} killed")
-                        break
-                    elif params.get("cmd") == CMD_RENDER:
+                    if params.get("cmd") == CMD_RENDER:
                         # just a false start, just need the current render
                         print(f">Process {pid} render {hid}")
                         assert await bus.publish(event_response,str(hr))
@@ -121,6 +118,9 @@ def process(hid,event_response,event_interact,fqn,js,init,sesprovidername):
                         assert await bus.publish(event_response+"_interact",actions)
 
                 await asyncio.sleep(0.1)
+
+            #consume all pending events
+            assert await bus.unsubscribe( event_interact )
 
     asyncio.run( loop() )
     print(f">Process {pid} ended")
@@ -172,13 +172,11 @@ async def hrserver_orchestrator():
                         # it's the same initialization process
 
                         # so ask process to send back its render
-                        # (TODO:sometimes it's not possible to assert it)
-                        await bus.publish(params["event_interact"],dict(cmd=CMD_RENDER))
+                        assert await bus.publish(params["event_interact"],dict(cmd=CMD_RENDER))
                         continue
                     else:
                         # kill itself because it's not the same init params
-                        # (TODO:sometimes it's not possible to assert it)
-                        await bus.publish(params["event_interact"],dict(cmd=CMD_EXIT))
+                        ps[hid]["process"].terminate()
                         # and recreate another one later
 
                 # create the process

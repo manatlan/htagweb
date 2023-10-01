@@ -152,7 +152,7 @@ class HRSocket(WebSocketEndpoint):
         event=HrPilot(uid,fqn).event_response+"_update"
         #======================================================
 
-        # asyncio.ensure_future(self.loop_tag_update(event,websocket))
+        asyncio.ensure_future(self.loop_tag_update(event,websocket))
 
         await websocket.accept()
 
@@ -178,8 +178,8 @@ class HRSocket(WebSocketEndpoint):
         event=HrPilot(uid,fqn).event_response+"_update"
         #======================================================
 
-        # with redys.v2.AClient() as bus:
-        #     await bus.unsubscribe(event)
+        with redys.v2.AClient() as bus:
+            await bus.unsubscribe(event)
 
 
 def processHrServer():

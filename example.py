@@ -18,7 +18,7 @@ class TagSession(Tag.div):  #dynamic component (compliant htag >= 0.30) !!!! FIR
 class App(Tag.body):
     imports=[TagSession]
     statics=b"window.error=alert"
-    def init(self):
+    def init(self,v="0"):
         self.place = Tag.div(js="console.log('I update myself')")
         asyncio.ensure_future( self.loop_timer() )
 
@@ -34,14 +34,15 @@ class App(Tag.body):
         def clllll(o):
             self.state.clear()
 
+        self <= Tag.div(v)
         self <= Tag.button("inc integer",_onclick=inc_test_session)
         self <= Tag.button("add list",_onclick=addd)
         self <= Tag.button("clear",_onclick=clllll)
         self <= TagSession()
 
         self+=Tag.li(Tag.a("t0",_href="/"))
-        self+=Tag.li(Tag.a("t1",_href="/?a=43"))
-        self+=Tag.li(Tag.a("t2",_href="/?z=bb"))
+        self+=Tag.li(Tag.a("t1",_href="/?v=1"))
+        self+=Tag.li(Tag.a("t2",_href="/?v=2"))
         self+=self.place
 
     async def loop_timer(self):
