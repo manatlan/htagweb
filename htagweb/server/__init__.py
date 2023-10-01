@@ -78,7 +78,7 @@ def process(hid,event_response,event_interact,fqn,js,init,sesprovidername):
 
         with redys.v2.AClient() as bus:
             # publish the 1st rendering
-            await bus.publish(event_response,str(hr))
+            assert await bus.publish(event_response,str(hr))
 
             # register tag.update feature
             #======================================
@@ -109,7 +109,7 @@ def process(hid,event_response,event_interact,fqn,js,init,sesprovidername):
                     elif params.get("cmd") == CMD_RENDER:
                         # just a false start, just need the current render
                         print(f">Process {pid} render {hid}")
-                        await bus.publish(event_response,str(hr))
+                        assert await bus.publish(event_response,str(hr))
                     else:
                         print(f">Process {pid} interact {hid}:")
                         #-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\- UT
@@ -117,7 +117,7 @@ def process(hid,event_response,event_interact,fqn,js,init,sesprovidername):
                         #-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
 
                         actions = await hr.interact(**params)
-                        await bus.publish(event_response+"_interact",actions)
+                        assert await bus.publish(event_response+"_interact",actions)
 
                 await asyncio.sleep(0.1)
 
@@ -146,7 +146,7 @@ async def hrserver_orchestrator():
         async def killall(ps:dict):
             # try to send a EXIT CMD to all running ps
             for hid,infos in ps.items():
-                await bus.publish(infos["event_interact"],dict(cmd=CMD_EXIT))
+                assert await bus.publish(infos["event_interact"],dict(cmd=CMD_EXIT))
 
         while 1:
             params = await bus.get_event( EVENT_SERVER )
@@ -174,11 +174,11 @@ async def hrserver_orchestrator():
                         # it's the same initialization process
 
                         # so ask process to send back its render
-                        await bus.publish(params["event_interact"],dict(cmd=CMD_RENDER))
+                        assert await bus.publish(params["event_interact"],dict(cmd=CMD_RENDER))
                         continue
                     else:
                         # kill itself because it's not the same init params
-                        await bus.publish(params["event_interact"],dict(cmd=CMD_EXIT))
+                        assert await bus.publish(params["event_interact"],dict(cmd=CMD_EXIT))
                         # and recreate another one later
 
                 # create the process

@@ -48,7 +48,7 @@ class HrPilot:
         await self.bus.subscribe( self.event_response )
 
         # start the process app
-        await self.bus.publish( EVENT_SERVER , dict(
+        assert await self.bus.publish( EVENT_SERVER , dict(
             hid=self.hid,
             event_response=self.event_response,
             event_interact=self.event_interact,
@@ -67,7 +67,7 @@ class HrPilot:
         """ Kill the process
             (dialog with process event)
         """
-        await self.bus.publish( self.event_interact, dict(cmd="EXIT") )
+        assert await self.bus.publish( self.event_interact, dict(cmd="EXIT") )
 
 
     async def interact(self,**params) -> dict:
@@ -78,7 +78,7 @@ class HrPilot:
         await self.bus.subscribe( self.event_response+"_interact" )
 
         # post the interaction
-        await self.bus.publish( self.event_interact, params )
+        assert await self.bus.publish( self.event_interact, params )
 
         # wait actions
         return await self._wait(self.event_response+"_interact")
@@ -90,7 +90,7 @@ class HrPilot:
             (dialog with server event)
         """
         with redys.v2.AClient() as bus:
-            await bus.publish( EVENT_SERVER, dict(cmd="PS") )
+            assert await bus.publish( EVENT_SERVER, dict(cmd="PS") )
     #~ @staticmethod
     #~ async def stop():
         #~ with redys.AClient() as bus:
@@ -101,7 +101,7 @@ class HrPilot:
             (dialog with server event)
         """
         with redys.v2.AClient() as bus:
-            await bus.publish( EVENT_SERVER, dict(cmd="CLEAN") )
+            assert await bus.publish( EVENT_SERVER, dict(cmd="CLEAN") )
 
 
 async def main():
