@@ -148,7 +148,7 @@ async def hrserver_orchestrator():
 
         while 1:
             params = await bus.get_event( EVENT_SERVER )
-            if params:
+            if params is not None:
                 if params.get("cmd") == CMD_EXIT:
                     print(EVENT_SERVER, params.get("cmd") )
                     break
