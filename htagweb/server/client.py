@@ -57,15 +57,13 @@ class HrPilot:
         ))
 
         # wait 1st rendering
-        html = await self._wait(self.event_response) or "?!"
+        return await self._wait(self.event_response) or "?!"
 
-        return html
-
-    async def kill(self):
-        """ Kill the process
-            (dialog with process event)
-        """
-        assert await self.bus.publish( self.event_interact, dict(cmd="EXIT") )
+    # async def kill(self):
+    #     """ Kill the process
+    #         (dialog with process event)
+    #     """
+    #     assert await self.bus.publish( self.event_interact, dict(cmd="EXIT") )
 
 
     async def interact(self,**params) -> dict:

@@ -76,7 +76,11 @@ def process(hid,event_response,event_interact,fqn,js,init,sesprovidername):
 
         print(f">Process {pid} started with :",hid,init)
 
+
         with redys.v2.AClient() as bus:
+            # subscribe for interaction
+            await bus.subscribe( event_interact )
+
             # publish the 1st rendering
             assert await bus.publish(event_response,str(hr))
 
@@ -91,10 +95,6 @@ def process(hid,event_response,event_interact,fqn,js,init,sesprovidername):
 
             # hr.sendactions=update
             #======================================
-
-
-            # subscribe for interaction
-            await bus.subscribe( event_interact )
 
             while RUNNING:
                 params = await bus.get_event( event_interact )
@@ -121,9 +121,6 @@ def process(hid,event_response,event_interact,fqn,js,init,sesprovidername):
                         assert await bus.publish(event_response+"_interact",actions)
 
                 await asyncio.sleep(0.1)
-
-            # unsubscribe for interaction
-            await bus.unsubscribe( event_interact )
 
     asyncio.run( loop() )
     print(f">Process {pid} ended")

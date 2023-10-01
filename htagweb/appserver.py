@@ -277,7 +277,7 @@ connect();
 
         args,kargs = commons.url2ak(str(request.url))
         html=await p.start(*args,**kargs)
-        return HTMLResponse(html or "no?!")
+        return HTMLResponse(html)
 
 
 
