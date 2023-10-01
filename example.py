@@ -1,6 +1,16 @@
 from htag import Tag
 import json,asyncio,time
 
+"""
+Complex htag's app to test:
+
+    - a dynamic object (TagSession), which got a render method (new way)
+    - using tag.state (in session)
+    - using tag.update with a task in a loop
+    - can recreate itself (when init params change)
+
+"""
+
 class TagSession(Tag.div):  #dynamic component (compliant htag >= 0.30) !!!! FIRST IN THE WORLD !!!!
     def init(self):
         self["style"]="border:1px solid black"
@@ -34,16 +44,23 @@ class App(Tag.body):
         def clllll(o):
             self.state.clear()
 
+
         self <= Tag.div(v)
         self <= Tag.button("inc integer",_onclick=inc_test_session)
         self <= Tag.button("add list",_onclick=addd)
         self <= Tag.button("clear",_onclick=clllll)
+        #~ self <= Tag.button("yield",_onclick=self.yielder)
         self <= TagSession()
 
         self+=Tag.li(Tag.a("t0",_href="/"))
         self+=Tag.li(Tag.a("t1",_href="/?v=1"))
         self+=Tag.li(Tag.a("t2",_href="/?v=2"))
         self+=self.place
+
+    #~ async def yielder(self,o):
+        #~ for i in "ABCDEF":
+            #~ await asyncio.sleep(0.3)
+            #~ self+=i
 
     async def loop_timer(self):
         while 1:

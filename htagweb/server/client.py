@@ -87,10 +87,7 @@ class HrPilot:
         """
         with redys.v2.AClient() as bus:
             assert await bus.publish( EVENT_SERVER, dict(cmd="PS") )
-    #~ @staticmethod
-    #~ async def stop():
-        #~ with redys.AClient() as bus:
-            #~ await bus.publish( EVENT_SERVER, dict(cmd="EXIT") )
+
     @staticmethod
     async def clean():
         """ SERVER COMMAND

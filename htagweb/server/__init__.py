@@ -141,10 +141,10 @@ async def hrserver_orchestrator():
 
         ps={}
 
-        async def killall(ps:dict):
+        def killall(ps:dict):
             # try to send a EXIT CMD to all running ps
             for hid,infos in ps.items():
-                assert await bus.publish(infos["event_interact"],dict(cmd=CMD_EXIT))
+                ps[hid]["process"].terminate()
 
         while 1:
             params = await bus.get_event( EVENT_SERVER )
@@ -154,7 +154,7 @@ async def hrserver_orchestrator():
                     break
                 elif params.get("cmd") == "CLEAN":
                     print(EVENT_SERVER, params.get("cmd") )
-                    await killall(ps)
+                    killall(ps)
                     continue
                 elif params.get("cmd") == "PS":
                     print(EVENT_SERVER, params.get("cmd") )
@@ -188,9 +188,9 @@ async def hrserver_orchestrator():
 
             await asyncio.sleep(0.1)
 
-        await bus.unsubscribe( EVENT_SERVER )
+        assert await bus.unsubscribe( EVENT_SERVER )
 
-        await killall(ps)
+        killall(ps)
 
 
     print("hrserver_orchestrator stopped")
