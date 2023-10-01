@@ -12,7 +12,7 @@ import redys
 import redys.v2
 from htagweb.server import EVENT_SERVER
 
-TIMEOUT=30 # sec to wait answer from redys server
+TIMEOUT=5 # sec to wait answer from redys server #TODO: set better
 
 class HrPilot:
     def __init__(self,uid:str,fqn:str,js:str=None,sesprovidername=None):
@@ -31,10 +31,8 @@ class HrPilot:
         t1=time.monotonic()
         while time.monotonic() - t1 < s:
             message = await self.bus.get_event( event )
-            if message:
+            if message is not None:
                 return message
-
-            await asyncio.sleep(0.1)
 
         return None
 
@@ -59,7 +57,7 @@ class HrPilot:
         ))
 
         # wait 1st rendering
-        html = await self._wait(self.event_response)
+        html = await self._wait(self.event_response) or "?!"
 
         return html
 
@@ -81,7 +79,7 @@ class HrPilot:
         assert await self.bus.publish( self.event_interact, params )
 
         # wait actions
-        return await self._wait(self.event_response+"_interact")
+        return await self._wait(self.event_response+"_interact") or {}
 
 
     @staticmethod

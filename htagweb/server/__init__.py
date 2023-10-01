@@ -117,6 +117,7 @@ def process(hid,event_response,event_interact,fqn,js,init,sesprovidername):
                         #-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
 
                         actions = await hr.interact(**params)
+
                         assert await bus.publish(event_response+"_interact",actions)
 
                 await asyncio.sleep(0.1)
@@ -174,11 +175,13 @@ async def hrserver_orchestrator():
                         # it's the same initialization process
 
                         # so ask process to send back its render
-                        assert await bus.publish(params["event_interact"],dict(cmd=CMD_RENDER))
+                        # (TODO:sometimes it's not possible to assert it)
+                        await bus.publish(params["event_interact"],dict(cmd=CMD_RENDER))
                         continue
                     else:
                         # kill itself because it's not the same init params
-                        assert await bus.publish(params["event_interact"],dict(cmd=CMD_EXIT))
+                        # (TODO:sometimes it's not possible to assert it)
+                        await bus.publish(params["event_interact"],dict(cmd=CMD_EXIT))
                         # and recreate another one later
 
                 # create the process
