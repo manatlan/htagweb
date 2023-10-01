@@ -62,6 +62,7 @@ def findfqn(x) -> str:
 
     return tagClass.__module__+"."+tagClass.__qualname__
 
+parano_seed = lambda uid: hashlib.md5(uid.encode()).hexdigest()
 
 class WebServerSession:  # ASGI Middleware, for starlette
     def __init__(self, app:ASGIApp, https_only:bool = False, sesprovider:"async method(uid)"=None ) -> None:
@@ -88,7 +89,6 @@ class WebServerSession:  # ASGI Middleware, for starlette
 
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
         scope["uid"]     = uid
-        scope["parano"]  = hashlib.md5(uid.encode()).hexdigest()
         scope["session"] = await self.cbsesprovider(uid)
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -123,10 +123,10 @@ class HRSocket(WebSocketEndpoint):
     encoding = "text"
 
     async def _sendback(self,websocket, txt:str) -> bool:
-        parano_seed = websocket.scope["parano"] if websocket.app.parano else None
         try:
-            if parano_seed:
-                txt = crypto.encrypt(txt.encode(),parano_seed)
+            if websocket.app.parano:
+                seed = parano_seed( websocket.scope["uid"])
+                txt = crypto.encrypt(txt.encode(),seed)
 
             await websocket.send_text( txt )
             return True
@@ -159,10 +159,9 @@ class HRSocket(WebSocketEndpoint):
     async def on_receive(self, websocket, data):
         fqn=websocket.path_params.get("fqn","")
         uid=websocket.scope["uid"]
-        parano_seed = websocket.scope["parano"] if websocket.app.parano else None
 
-        if parano_seed:
-            data = crypto.decrypt(data.encode(),parano_seed).decode()
+        if websocket.app.parano:
+            data = crypto.decrypt(data.encode(),parano_seed( uid )).decode()
         data=json.loads(data)
 
         p=HrPilot(uid,fqn)
@@ -216,25 +215,26 @@ class AppServer(Starlette):   #NOT THE DEFINITIVE NAME !!!!!!!!!!!!!!!!
 
     async def serve(self, request, obj ) -> HTMLResponse:
         uid = request.scope["uid"]
-        parano_seed = request.scope["parano"] if self.parano else None
 
         fqn=normalize(findfqn(obj))
 
         protocol = "wss" if self.ssl else "ws"
 
-        if parano_seed:
-            jsparano = crypto.JSCRYPTO
-            jsparano += f"\nvar _PARANO_='{parano_seed}'\n"
-            jsparano += "\nasync function _read_(x) {return await decrypt(x,_PARANO_)}\n"
-            jsparano += "\nasync function _write_(x) {return await encrypt(x,_PARANO_)}\n"
+        if self.parano:
+            seed = parano_seed( uid )
+
+            jstunnel = crypto.JSCRYPTO
+            jstunnel += f"\nvar _PARANO_='{seed}'\n"
+            jstunnel += "\nasync function _read_(x) {return await decrypt(x,_PARANO_)}\n"
+            jstunnel += "\nasync function _write_(x) {return await encrypt(x,_PARANO_)}\n"
         else:
-            jsparano = ""
-            jsparano += "\nasync function _read_(x) {return x}\n"
-            jsparano += "\nasync function _write_(x) {return x}\n"
+            jstunnel = ""
+            jstunnel += "\nasync function _read_(x) {return x}\n"
+            jstunnel += "\nasync function _write_(x) {return x}\n"
 
 
         js = """
-%(jsparano)s
+%(jstunnel)s
 
 async function interact( o ) {
     _WS_.send( await _write_(JSON.stringify(o)) );
