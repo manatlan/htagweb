@@ -34,7 +34,7 @@ from htag.runners import commons
 from . import crypto
 import redys.v2
 
-from htagweb.server import hrserver2, importClassFromFqn, hrserver, hrserver_orchestrator
+from htagweb.server import hrserver
 from htagweb.server.client import HrPilot
 
 logger = logging.getLogger(__name__)
@@ -152,9 +152,10 @@ class HRSocket(WebSocketEndpoint):
         event=HrPilot(uid,fqn).event_response+"_update"
         #======================================================
 
-        asyncio.ensure_future(self.loop_tag_update(event,websocket))
-
         await websocket.accept()
+
+        # add the loop to tag.update feature
+        asyncio.ensure_future(self.loop_tag_update(event,websocket))
 
     async def on_receive(self, websocket, data):
         fqn=websocket.path_params.get("fqn","")
@@ -182,7 +183,7 @@ class HRSocket(WebSocketEndpoint):
 
 
 def processHrServer():
-    asyncio.run( hrserver2() )
+    asyncio.run( hrserver() )
 
 
 class AppServer(Starlette):   #NOT THE DEFINITIVE NAME !!!!!!!!!!!!!!!!

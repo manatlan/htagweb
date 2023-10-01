@@ -79,7 +79,7 @@ class App(Tag.body):
 # With htagweb.WebServer runner provided by htagweb
 #------------------------------------------------------
 from htagweb import SimpleServer,AppServer
-app=AppServer( "App:ppp" ,parano=True)
+app=AppServer( "example:App" ,parano=True)
 
 if __name__=="__main__":
-    app.run(openBrowser=False)
+    app.run(openBrowser=True)

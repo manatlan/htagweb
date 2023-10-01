@@ -52,32 +52,39 @@ def importClassFromFqn(fqn_norm:str) -> type:
 
 
 def process(hid,event_response,event_interact,fqn,js,init,sesprovidername):
+    #''''''''''''''''''''''''''''''''''''''''''''''''''''
     if sesprovidername is None:
         sesprovidername="createFile"
     import htagweb.sessions
     createSession=getattr(htagweb.sessions,sesprovidername)
+    #''''''''''''''''''''''''''''''''''''''''''''''''''''
 
     uid=hid.split("_")[0]
 
     pid = os.getpid()
     async def loop():
-        if os.getcwd() not in sys.path: sys.path.insert(0,os.getcwd())
-        klass=importClassFromFqn(fqn)
-
-        RUNNING=True
-        def exit():
-            RUNNING=False
-
-        session = await createSession(uid)
-
-        styles=Tag.style("body.htagoff * {cursor:not-allowed !important;}")
-
-        hr=HRenderer( klass ,js, init=init, exit_callback=exit, fullerror=True, statics=[styles,],session = session)
-
-        print(f">Process {pid} started with :",hid,init)
-
-
         with redys.v2.AClient() as bus:
+            try:
+                if os.getcwd() not in sys.path: sys.path.insert(0,os.getcwd())
+                klass=importClassFromFqn(fqn)
+            except Exception as e:
+                print(f">Process {pid} ERROR :",hid,e)
+                assert await bus.publish(event_response,str(e))
+                return
+
+            RUNNING=True
+            def exit():
+                RUNNING=False
+
+            session = await createSession(uid)
+
+            styles=Tag.style("body.htagoff * {cursor:not-allowed !important;}")
+
+            hr=HRenderer( klass ,js, init=init, exit_callback=exit, fullerror=True, statics=[styles,],session = session)
+
+            print(f">Process {pid} started with :",hid,init)
+
+
             # subscribe for interaction
             await bus.subscribe( event_interact )
 
@@ -165,7 +172,7 @@ async def hrserver_orchestrator():
                 hid=params["hid"]
                 key_init=str(params["init"])
 
-                if hid in ps:
+                if hid in ps and ps[hid]["process"].is_alive():
                     # process is already running
 
                     if key_init == ps[hid]["key"]:
@@ -195,32 +202,12 @@ async def hrserver_orchestrator():
 
     print("hrserver_orchestrator stopped")
 
-
-
 async def hrserver():
-    print("HRSERVER started")
-
-    async def delay():
-        await asyncio.sleep(0.3)
-        await hrserver_orchestrator()
-
-    asyncio.ensure_future( delay() )
-    await redys.Server()
-
-
-async def hrserver2():
     print("HRSERVER2 started")
-
-    async def delay():
-        await asyncio.sleep(0.3)
-        await hrserver_orchestrator()
-
-    asyncio.ensure_future( delay() )
-
     s=redys.v2.Server()
     s.start()
-    while 1:
-        await asyncio.sleep(1)
+    await asyncio.sleep(0.5)    #TODO: can do better
+    await hrserver_orchestrator()
 
 if __name__=="__main__":
-    asyncio.run( hrserver2() )
+    asyncio.run( hrserver() )
