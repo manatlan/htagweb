@@ -69,6 +69,7 @@ def process(hid,event_response,event_interact,fqn,js,init,sesprovidername):
                 klass=importClassFromFqn(fqn)
             except Exception as e:
                 print(f">Process {pid} ERROR :",hid,e)
+                #TODO: do better here
                 assert await bus.publish(event_response,str(e))
                 return
 
