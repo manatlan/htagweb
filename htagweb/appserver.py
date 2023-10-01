@@ -141,7 +141,7 @@ class HRSocket(WebSocketEndpoint):
             ok=True
             while ok:
                 actions = await bus.get_event( event )
-                if actions:
+                if actions is not None:
                     ok=await self._sendback(websocket,json.dumps(actions))
                 await asyncio.sleep(0.1)
 
