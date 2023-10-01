@@ -32,9 +32,9 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from htag.runners import commons
 from . import crypto
-import redys
+import redys.v2
 
-from htagweb.server import importClassFromFqn, hrserver, hrserver_orchestrator
+from htagweb.server import hrserver2, importClassFromFqn, hrserver, hrserver_orchestrator
 from htagweb.server.client import HrPilot
 
 logger = logging.getLogger(__name__)
@@ -135,7 +135,7 @@ class HRSocket(WebSocketEndpoint):
             return False
 
     async def loop_tag_update(self, event, websocket):
-        with redys.AClient() as bus:
+        with redys.v2.AClient() as bus:
             await bus.subscribe(event)
 
             ok=True
@@ -178,12 +178,12 @@ class HRSocket(WebSocketEndpoint):
         event=HrPilot(uid,fqn).event_response+"_update"
         #======================================================
 
-        with redys.AClient() as bus:
-            await bus.unsubscribe(event)
+        # with redys.v2.AClient() as bus:
+        #     await bus.unsubscribe(event)
 
 
 def processHrServer():
-    asyncio.run( hrserver() )
+    asyncio.run( hrserver2() )
 
 
 class AppServer(Starlette):   #NOT THE DEFINITIVE NAME !!!!!!!!!!!!!!!!

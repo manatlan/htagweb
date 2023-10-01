@@ -7,8 +7,9 @@
 # https://github.com/manatlan/htagweb
 # #############################################################################
 
-import uuid,asyncio
-import redys,time
+import uuid,asyncio,time
+import redys
+import redys.v2
 from htagweb.server import EVENT_SERVER
 
 TIMEOUT=30 # sec to wait answer from redys server
@@ -18,7 +19,7 @@ class HrPilot:
         """ !!!!!!!!!!!!!!!!!!!! if js|sesprovidername is None : can't do a start() !!!!!!!!!!!!!!!!!!!!!!"""
         self.fqn=fqn
         self.js=js
-        self.bus = redys.AClient()
+        self.bus = redys.v2.AClient()
         self.sesprovidername=sesprovidername
 
         self.hid=f"{uid}_{fqn}"
@@ -88,7 +89,7 @@ class HrPilot:
         """ SERVER COMMAND
             (dialog with server event)
         """
-        with redys.AClient() as bus:
+        with redys.v2.AClient() as bus:
             await bus.publish( EVENT_SERVER, dict(cmd="PS") )
     #~ @staticmethod
     #~ async def stop():
@@ -99,7 +100,7 @@ class HrPilot:
         """ SERVER COMMAND
             (dialog with server event)
         """
-        with redys.AClient() as bus:
+        with redys.v2.AClient() as bus:
             await bus.publish( EVENT_SERVER, dict(cmd="CLEAN") )
 
 

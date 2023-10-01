@@ -9,10 +9,10 @@
 
 import asyncio
 import redys
+import redys.v2
 import os,sys,importlib,inspect
 import multiprocessing
 from htag import Tag
-import htagweb.sessions
 from htag.render import HRenderer
 
 
@@ -54,6 +54,7 @@ def importClassFromFqn(fqn_norm:str) -> type:
 def process(hid,event_response,event_interact,fqn,js,init,sesprovidername):
     if sesprovidername is None:
         sesprovidername="createFile"
+    import htagweb.sessions
     createSession=getattr(htagweb.sessions,sesprovidername)
 
     uid=hid.split("_")[0]
@@ -75,7 +76,7 @@ def process(hid,event_response,event_interact,fqn,js,init,sesprovidername):
 
         print(f">Process {pid} started with :",hid,init)
 
-        with redys.AClient() as bus:
+        with redys.v2.AClient() as bus:
             # publish the 1st rendering
             await bus.publish(event_response,str(hr))
 
@@ -127,7 +128,7 @@ def process(hid,event_response,event_interact,fqn,js,init,sesprovidername):
     print(f">Process {pid} ended")
 
 async def hrserver_orchestrator():
-    with redys.AClient() as bus:
+    with redys.v2.AClient() as bus:
 
         # prevent multi orchestrators
         if await bus.get("hrserver_orchestrator_running")==True:
@@ -209,5 +210,19 @@ async def hrserver():
     await redys.Server()
 
 
+async def hrserver2():
+    print("HRSERVER2 started")
+
+    async def delay():
+        await asyncio.sleep(0.3)
+        await hrserver_orchestrator()
+
+    asyncio.ensure_future( delay() )
+
+    s=redys.v2.Server()
+    s.start()
+    while 1:
+        await asyncio.sleep(1)
+
 if __name__=="__main__":
-    asyncio.run( hrserver() )
+    asyncio.run( hrserver2() )
