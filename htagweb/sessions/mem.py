@@ -8,23 +8,14 @@
 # #############################################################################
 
 import os,pickle,tempfile
+import redys.v2
 
-
-class FileDict: # default
-    """ mimic a dict (with minimal methods), unique source of truth, based on FS"""
-    def __init__(self,uid:str,persistent:bool=False):
+class MemDict: # default
+    """ mimic a dict (with minimal methods), unique source of truth, based on redys.v2"""
+    def __init__(self,uid:str):
         self._uid=uid
-        if persistent:
-            name=""
-        else:
-            name=f"{os.getppid()}-"
-        self._file=os.path.join( tempfile.gettempdir(), f"htagweb_{name}{uid}.ses" )
-
-        if os.path.isfile(self._file):
-            with open(self._file,"rb+") as fid:
-                self._d=pickle.load(fid)
-        else:
-            self._d={}
+        self._bus=redys.v2.Client()
+        self._d=self._bus.get(self._uid,{})
 
     def __len__(self):
         return len(self._d.keys())
@@ -44,23 +35,15 @@ class FileDict: # default
     def __delitem__(self,k:str):
         """ save session """
         del self._d[k]
-
-        with open(self._file,"wb+") as fid:
-            pickle.dump(self._d,fid, protocol=4)
+        self._bus.set(self._uid, self._d)
 
     def __setitem__(self,k:str,v):
         """ save session """
         self._d[k]=v
-
-        with open(self._file,"wb+") as fid:
-            pickle.dump(self._d,fid, protocol=4)
+        self._bus.set(self._uid, self._d)
 
     def clear(self):
         """ save session """
         self._d.clear()
-        if os.path.isfile(self._file):
-            os.unlink(self._file)
+        self._bus.remove(self._uid)
 
-class FilePersistentDict(FileDict): # default
-    def __init__(self,uid):
-        FileDict.__init__(self,uid,persistent=True)

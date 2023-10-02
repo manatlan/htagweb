@@ -8,15 +8,20 @@
 # #############################################################################
 
 async def createFile(uid):
-    from . import file
-    return await file.create(uid)
+    from .file import FileDict
+    return FileDict(uid)
 
 async def createFilePersistent(uid): # <- persistent after server reboot
-    from . import file
-    return await file.create(uid,True)
+    from .file import FilePersistentDict
+    return FilePersistentDict(uid)
 
+#DEPRECATED
 async def createShm(uid):
     from . import shm
     return await shm.create(uid)
 
-__all__= ["createFile","createFilePersistent","createShm"]
+async def createMem(uid):
+    from .mem import MemDict
+    return MemDict(uid)
+
+__all__= ["createFile","createFilePersistent","createShm","createMem"]

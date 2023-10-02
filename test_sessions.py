@@ -1,5 +1,6 @@
 import pytest,asyncio,sys
-from htagweb.sessions import createFile, createFilePersistent, createShm
+from htagweb.sessions import createFile, createFilePersistent, createShm, createMem
+from test_server import server
 
 
 async def session_test(method_session):
@@ -40,7 +41,9 @@ async def session_test(method_session):
     finally:
         session.clear()
 
-
+@pytest.mark.asyncio
+async def test_sessions_mem( server ):  # need redys.v2 runned
+    await session_test( createMem )
 
 @pytest.mark.asyncio
 async def test_sessions_file():

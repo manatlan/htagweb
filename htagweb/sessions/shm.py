@@ -7,6 +7,7 @@
 # https://github.com/manatlan/htagweb
 # #############################################################################
 
+# DEPRECATED
 async def create(uid,size=10240):
     # need to install "shared_memory_dict" (py>=3.8)
     from shared_memory_dict import SharedMemoryDict
