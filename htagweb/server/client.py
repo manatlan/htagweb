@@ -12,7 +12,7 @@ import redys
 import redys.v2
 from htagweb.server import EVENT_SERVER
 
-TIMEOUT=5 # sec to wait answer from redys server #TODO: set better
+TIMEOUT=20 # sec to wait answer from redys server #TODO: set better
 
 class HrPilot:
     def __init__(self,uid:str,fqn:str,js:str=None,sesprovidername=None):

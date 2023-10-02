@@ -105,11 +105,7 @@ def process(hid,event_response,event_interact,fqn,js,init,sesprovidername):
 
             while RUNNING:
                 params = await bus.get_event( event_interact )
-                # try: #TODO: but fail the test_server.py ?!?!?
-                # except: # some times it crash ;-(
-                #     print("!!! concurrent sockets reads !!!")
-                #     params = None
-                if params and isinstance(params,dict):  # sometimes it's not a dict ?!? (bool ?!)
+                if params is not None:  # sometimes it's not a dict ?!? (bool ?!)
                     if params.get("cmd") == CMD_RENDER:
                         # just a false start, just need the current render
                         print(f">Process {pid} render {hid}")
@@ -184,6 +180,7 @@ async def hrserver_orchestrator():
                     else:
                         # kill itself because it's not the same init params
                         ps[hid]["process"].terminate()
+
                         # and recreate another one later
 
                 # create the process
