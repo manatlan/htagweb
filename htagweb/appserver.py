@@ -21,7 +21,7 @@ import hashlib
 import multiprocessing
 from htag import Tag
 from starlette.applications import Starlette
-from starlette.responses import HTMLResponse
+from starlette.responses import HTMLResponse,PlainTextResponse
 from starlette.applications import Starlette
 from starlette.routing import Route,WebSocketRoute
 from starlette.endpoints import WebSocketEndpoint
@@ -186,27 +186,57 @@ def processHrServer():
     asyncio.run( hrserver() )
 
 
+
+async def lifespan(app):
+    import redys.v2
+    from htagweb.server import hrserver_orchestrator
+    s=redys.v2.Server()
+    s.start()
+
+    asyncio.ensure_future(hrserver_orchestrator())
+
+    bus=redys.v2.AClient()
+    while await bus.get("hrserver_orchestrator_running"):
+        await asyncio.sleep(0.1)
+
+    print("hrserver ok")
+    
+    yield
+    
+    s.terminate()
+
 class AppServer(Starlette):   #NOT THE DEFINITIVE NAME !!!!!!!!!!!!!!!!
-    def __init__(self,obj:"htag.Tag class|fqn|None"=None, debug:bool=True,ssl:bool=False,parano:bool=False,sesprovider:"htagweb.sessions.class*|None"=None):
+    def __init__(self,
+                obj:"htag.Tag class|fqn|None"=None, 
+                debug:bool=True,
+                ssl:bool=False,
+                parano:bool=False,
+                httponly:bool=False,
+                sesprovider:"htagweb.sessions.class*|None"=None,
+            ):
         self.ssl=ssl
         self.parano=parano
+        self.httponly=httponly
 
         if sesprovider is None:
-            self.sesprovider = sessions.MemDict
+            self.sesprovider = sessions.FileDict
         else:
-            self.sesprovider =  sesprovider
+            self.sesprovider = sesprovider
 
         print("Session with:",self.sesprovider.__name__)
         ###################################################################
 
-        p=multiprocessing.Process(target=processHrServer)
-        p.start()
+        if httponly:
+            routes=[Route("/_/{fqn}", self.HRHttp, methods=["POST"])]
+        else:
+            routes=[WebSocketRoute("/_/{fqn}", HRSocket)]
 
         #################################################################
         Starlette.__init__( self,
             debug=debug,
-            routes=[WebSocketRoute("/_/{fqn}", HRSocket)],
+            routes=routes,
             middleware=[Middleware(WebServerSession,https_only=ssl,sesprovider=self.sesprovider)],
+            lifespan=lifespan,
         )
 
         if obj:
@@ -216,10 +246,7 @@ class AppServer(Starlette):   #NOT THE DEFINITIVE NAME !!!!!!!!!!!!!!!!
 
     async def serve(self, request, obj ) -> HTMLResponse:
         uid = request.scope["uid"]
-
         fqn=normalize(findfqn(obj))
-
-        protocol = "wss" if self.ssl else "ws"
 
         if self.parano:
             seed = parano_seed( uid )
@@ -234,45 +261,63 @@ class AppServer(Starlette):   #NOT THE DEFINITIVE NAME !!!!!!!!!!!!!!!!
             jstunnel += "\nasync function _write_(x) {return x}\n"
 
 
-        js = """
+        if self.httponly:
+            # interactions use HTTP POST
+            js = """
 %(jstunnel)s
 
 async function interact( o ) {
-    _WS_.send( await _write_(JSON.stringify(o)) );
+    let body = await _write_(JSON.stringify(o));
+    let req=await window.fetch("/_/%(fqn)s",{method:"POST", body: body});
+    let actions=await req.text();
+    action( await _read_(actions) );
 }
 
-// instanciate the WEBSOCKET
-let _WS_=null;
-let retryms=500;
+window.addEventListener('DOMContentLoaded', start );
+""" % locals()
+        else:
+            # interactions use WS
+            protocol = "wss" if self.ssl else "ws"
 
-function connect() {
-    _WS_= new WebSocket("%(protocol)s://"+location.host+"/_/%(fqn)s");
-    _WS_.onopen=function(evt) {
-        console.log("** WS connected")
-        document.body.classList.remove("htagoff");
-        retryms=500;
-        start();
+            js = """
+    %(jstunnel)s
 
-        _WS_.onmessage = async function(e) {
-            let actions = await _read_(e.data)
-            action(actions)
-        };
-
+    async function interact( o ) {
+        _WS_.send( await _write_(JSON.stringify(o)) );
     }
 
-    _WS_.onclose = function(evt) {
-        console.log("** WS disconnected, retry in (ms):",retryms);
-        document.body.classList.add("htagoff");
+    // instanciate the WEBSOCKET
+    let _WS_=null;
+    let retryms=500;
 
-        setTimeout( function() {
-            connect();
-            retryms=retryms*2;
-        }, retryms);
-    };
-}
-connect();
+    function connect() {
+        _WS_= new WebSocket("%(protocol)s://"+location.host+"/_/%(fqn)s");
+        _WS_.onopen=function(evt) {
+            console.log("** WS connected")
+            document.body.classList.remove("htagoff");
+            retryms=500;
+            start();
 
-""" % locals()
+            _WS_.onmessage = async function(e) {
+                let actions = await _read_(e.data)
+                action(actions)
+            };
+
+        }
+
+        _WS_.onclose = function(evt) {
+            console.log("** WS disconnected, retry in (ms):",retryms);
+            document.body.classList.add("htagoff");
+
+            setTimeout( function() {
+                connect();
+                retryms=retryms*2;
+            }, retryms);
+        };
+    }
+    connect();
+
+    """ % locals()
 
         p = HrPilot(uid,fqn,js,self.sesprovider.__name__)
 
@@ -280,7 +325,25 @@ connect();
         html=await p.start(*args,**kargs)
         return HTMLResponse(html)
 
+    async def HRHttp(self,request) -> PlainTextResponse:
+        uid = request.scope["uid"]
+        fqn = request.path_params.get("fqn","")
+        seed = parano_seed( uid )
 
+        p=HrPilot(uid,fqn)
+        data = await request.body()
+        
+        if self.parano:
+            data = crypto.decrypt(data,seed).decode()
+            
+        data=json.loads(data)
+        actions=await p.interact( oid=data["id"], method_name=data["method"], args=data["args"], kargs=data["kargs"], event=data.get("event") )
+        txt=json.dumps(actions)
+        
+        if self.parano:
+            txt = crypto.encrypt(txt.encode(),seed)
+
+        return PlainTextResponse(txt)
 
     def run(self, host="0.0.0.0", port=8000, openBrowser=False):   # localhost, by default !!
         if openBrowser:
