@@ -192,7 +192,7 @@ class AppServer(Starlette):   #NOT THE DEFINITIVE NAME !!!!!!!!!!!!!!!!
         self.parano=parano
 
         if sesprovider is None:
-            self.sesprovider = sessions.FileDict
+            self.sesprovider = sessions.MemDict
         else:
             self.sesprovider =  sesprovider
 
