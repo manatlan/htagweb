@@ -54,7 +54,7 @@ def importClassFromFqn(fqn_norm:str) -> type:
 def process(hid,event_response,event_interact,fqn,js,init,sesprovidername):
     #''''''''''''''''''''''''''''''''''''''''''''''''''''
     if sesprovidername is None:
-        sesprovidername="createFile"
+        sesprovidername="FileDict"
     import htagweb.sessions
     createSession=getattr(htagweb.sessions,sesprovidername)
     #''''''''''''''''''''''''''''''''''''''''''''''''''''

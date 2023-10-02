@@ -132,7 +132,7 @@ class WebServerSession:  # ASGI Middleware, for starlette
 
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
         scope["uid"]     = uid
-        scope["session"] = await self.cbsesprovider(uid)
+        scope["session"] = self.cbsesprovider(uid)
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         logger.debug("request for %s, scope=%s",uid,scope)
@@ -231,11 +231,13 @@ console.log("started")
         del self.hr
 
 class SimpleServer(Starlette):
-    def __init__(self,obj:"htag.Tag class|fqn|None"=None, debug:bool=True,ssl:bool=False,parano:bool=False,sesprovider:"htagweb.sessions.create*|None"=None):
+    def __init__(self,obj:"htag.Tag class|fqn|None"=None, debug:bool=True,ssl:bool=False,parano:bool=False,sesprovider:"htagweb.sessions.class*|None"=None):
         self.ssl=ssl
         self.parano = str(uuid.uuid4()) if parano else None
+        
         if sesprovider is None:
-            sesprovider = sessions.createFile
+            sesprovider = sessions.FileDict
+
         Starlette.__init__( self,
             debug=debug,
             routes=[WebSocketRoute("/_/{fqn}", HRSocket)],

@@ -1,10 +1,10 @@
 import pytest,asyncio,sys
-from htagweb.sessions import createFile, createFilePersistent, createShm, createMem
+from htagweb.sessions import FileDict,FilePersistentDict,MemDict
 from test_server import server
 
 
-async def session_test(method_session):
-    session = await method_session("uid")
+def session_test(factory):
+    session = factory("uid")
     try:
         # bad way to clone
         with pytest.raises(Exception):
@@ -23,7 +23,7 @@ async def session_test(method_session):
 
 
         # ensure persistance is present
-        session = await method_session("uid")
+        session = factory("uid")
         assert session["nb"]==1
 
         session["x"]=42
@@ -35,7 +35,7 @@ async def session_test(method_session):
         session.clear()
         assert len(session)==0
 
-        session = await method_session("uid")
+        session = factory("uid")
         assert len(session.items())==0
 
     finally:
@@ -43,24 +43,14 @@ async def session_test(method_session):
 
 @pytest.mark.asyncio
 async def test_sessions_mem( server ):  # need redys.v2 runned
-    await session_test( createMem )
+    session_test( MemDict )
+
+def test_sessions_file():
+    session_test( FileDict )
 
 @pytest.mark.asyncio
-async def test_sessions_file():
-    await session_test( createFile )
-
-@pytest.mark.asyncio
-async def test_sessions_filepersitent():
-    await session_test( createFilePersistent )
-
-
-@pytest.mark.asyncio
-async def test_sessions_shm():
-    try:
-        import shared_memory_dict
-        await session_test( createShm )
-    except:
-        pass
+def test_sessions_filepersitent():
+    session_test( FilePersistentDict )
 
 
 

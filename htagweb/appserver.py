@@ -89,7 +89,7 @@ class WebServerSession:  # ASGI Middleware, for starlette
 
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
         scope["uid"]     = uid
-        scope["session"] = await self.cbsesprovider(uid)
+        scope["session"] = self.cbsesprovider(uid)
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         logger.debug("request for %s, scope=%s",uid,scope)
@@ -187,12 +187,12 @@ def processHrServer():
 
 
 class AppServer(Starlette):   #NOT THE DEFINITIVE NAME !!!!!!!!!!!!!!!!
-    def __init__(self,obj:"htag.Tag class|fqn|None"=None, debug:bool=True,ssl:bool=False,parano:bool=False,sesprovider:"htagweb.sessions.create*|None"=None):
+    def __init__(self,obj:"htag.Tag class|fqn|None"=None, debug:bool=True,ssl:bool=False,parano:bool=False,sesprovider:"htagweb.sessions.class*|None"=None):
         self.ssl=ssl
         self.parano=parano
 
         if sesprovider is None:
-            self.sesprovider = sessions.createFile
+            self.sesprovider = sessions.FileDict
         else:
             self.sesprovider =  sesprovider
 
