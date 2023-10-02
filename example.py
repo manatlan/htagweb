@@ -1,5 +1,5 @@
 from htag import Tag
-import json,asyncio,time
+import json,asyncio,time,os
 
 """
 Complex htag's app to test:
@@ -45,7 +45,7 @@ class App(Tag.body):
             self.state.clear()
 
 
-        self <= Tag.div(v)
+        self <= Tag.div(f"V{v} (pid:{os.getpid()})")
         self <= Tag.button("inc integer",_onclick=inc_test_session)
         self <= Tag.button("add list",_onclick=addd)
         self <= Tag.button("clear",_onclick=clllll)
@@ -79,7 +79,7 @@ class App(Tag.body):
 # With htagweb.WebServer runner provided by htagweb
 #------------------------------------------------------
 from htagweb import SimpleServer,AppServer
-app=AppServer( App ,parano=False,httponly=True)
+app=AppServer( App ,parano=False,httponly=False)
 
 if __name__=="__main__":
     #~ import logging

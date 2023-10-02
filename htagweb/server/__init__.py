@@ -147,7 +147,7 @@ async def hrserver_orchestrator():
         def killall(ps:dict):
             # try to send a EXIT CMD to all running ps
             for hid,infos in ps.items():
-                ps[hid]["process"].terminate()
+                ps[hid]["process"].kill()
 
         while 1:
             params = await bus.get_event( EVENT_SERVER )
@@ -179,7 +179,8 @@ async def hrserver_orchestrator():
                         continue
                     else:
                         # kill itself because it's not the same init params
-                        ps[hid]["process"].terminate()
+                        print("Reload a new process",hid)
+                        ps[hid]["process"].kill()
 
                         # and recreate another one later
 
