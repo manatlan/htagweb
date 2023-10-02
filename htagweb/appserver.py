@@ -193,7 +193,7 @@ async def lifespan(app):
     process_hrserver.terminate()
 
 
-class AppServer(Starlette):   #NOT THE DEFINITIVE NAME !!!!!!!!!!!!!!!!
+class AppServer(Starlette):
     def __init__(self,
                 obj:"htag.Tag class|fqn|None"=None,
                 debug:bool=True,

@@ -23,7 +23,8 @@ import os
 from starlette.responses import HTMLResponse,Response
 
 from htag import Tag
-from .simpleserver import SimpleServer,getClass
+from .simpleserver import SimpleServer
+from .server import importClassFromFqn
 
 ####################################################
 class IndexApp(Tag.body):
@@ -74,10 +75,10 @@ class HtagServer(SimpleServer):
         fqn_norm="".join( reversed("".join(reversed(fqn)).replace(".",":",1)))
 
         try:
-            klass=getClass(fqn_norm)
+            klass=importClassFromFqn(fqn_norm)
         except:
             try:
-                klass=getClass(fqn+":App")
+                klass=importClassFromFqn(fqn+":App")
             except ModuleNotFoundError:
                 return HTMLResponse("Not Found (%s)" % fqn,404,media_type="text/plain")
 

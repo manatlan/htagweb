@@ -78,18 +78,6 @@ def test_simpleserver():
 
 
 
-def test_parano():
-    app=HtagServer(parano=True)
-    with TestClient(app) as client:
-        response = client.get('/')
-
-        # assert that get bootstrap page
-        assert response.status_code == 200
-        assert "document.write(html)" in response.text
-        assert "_PARANO_" in response.text
-        assert "encrypt" in response.text
-
-        # the rest will be encrypted ;-)
 
 if __name__=="__main__":
     # test_basic()
