@@ -33,8 +33,7 @@ def importClassFromFqn(fqn_norm:str) -> type:
         except ModuleNotFoundError as e:
             """ can't be (really) reloaded if the component is in the
             same module as the instance htag server"""
-            print(e)
-            pass
+            print("*WARNING* can't force module reload:",e)
     else:
         module=importlib.import_module(modulename)
     #---------------------------
@@ -56,7 +55,7 @@ def process(hid,event_response,event_interact,fqn,js,init,sesprovidername):
     if sesprovidername is None:
         sesprovidername="MemDict"
     import htagweb.sessions
-    createSession=getattr(htagweb.sessions,sesprovidername)
+    FactorySession=getattr(htagweb.sessions,sesprovidername)
     #''''''''''''''''''''''''''''''''''''''''''''''''''''
 
     uid=hid.split("_")[0]
@@ -77,7 +76,7 @@ def process(hid,event_response,event_interact,fqn,js,init,sesprovidername):
             def exit():
                 RUNNING=False
 
-            session = await createSession(uid)
+            session = FactorySession(uid)
 
             styles=Tag.style("body.htagoff * {cursor:not-allowed !important;}")
 
@@ -204,10 +203,18 @@ async def hrserver_orchestrator():
     print("hrserver_orchestrator stopped")
 
 async def hrserver():
-    print("HRSERVER2 started")
     s=redys.v2.Server()
     s.start()
-    await asyncio.sleep(0.5)    #TODO: can do better
+
+    bus=redys.v2.AClient()
+    while 1:
+        try:
+            if await bus.ping()=="pong":
+                break
+        except:
+            pass
+        await asyncio.sleep(0.1)
+
     await hrserver_orchestrator()
 
 if __name__=="__main__":

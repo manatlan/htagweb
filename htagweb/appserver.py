@@ -186,40 +186,28 @@ def processHrServer():
     asyncio.run( hrserver() )
 
 
-
 async def lifespan(app):
-    import redys.v2
-    from htagweb.server import hrserver_orchestrator
-    s=redys.v2.Server()
-    s.start()
-
-    asyncio.ensure_future(hrserver_orchestrator())
-
-    bus=redys.v2.AClient()
-    while await bus.get("hrserver_orchestrator_running"):
-        await asyncio.sleep(0.1)
-
-    print("hrserver ok")
-    
+    process_hrserver=multiprocessing.Process(target=processHrServer)
+    process_hrserver.start()
     yield
-    
-    s.terminate()
+    process_hrserver.terminate()
+
 
 class AppServer(Starlette):   #NOT THE DEFINITIVE NAME !!!!!!!!!!!!!!!!
     def __init__(self,
-                obj:"htag.Tag class|fqn|None"=None, 
+                obj:"htag.Tag class|fqn|None"=None,
                 debug:bool=True,
                 ssl:bool=False,
                 parano:bool=False,
                 httponly:bool=False,
-                sesprovider:"htagweb.sessions.class*|None"=None,
+                sesprovider:"sessions.MemDict|sessions.FileDict|sessions.FilePersistentDict|None"=None,
             ):
         self.ssl=ssl
         self.parano=parano
         self.httponly=httponly
 
         if sesprovider is None:
-            self.sesprovider = sessions.FileDict
+            self.sesprovider = sessions.MemDict
         else:
             self.sesprovider = sesprovider
 
@@ -332,14 +320,14 @@ window.addEventListener('DOMContentLoaded', start );
 
         p=HrPilot(uid,fqn)
         data = await request.body()
-        
+
         if self.parano:
             data = crypto.decrypt(data,seed).decode()
-            
+
         data=json.loads(data)
         actions=await p.interact( oid=data["id"], method_name=data["method"], args=data["args"], kargs=data["kargs"], event=data.get("event") )
         txt=json.dumps(actions)
-        
+
         if self.parano:
             txt = crypto.encrypt(txt.encode(),seed)
 

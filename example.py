@@ -79,7 +79,12 @@ class App(Tag.body):
 # With htagweb.WebServer runner provided by htagweb
 #------------------------------------------------------
 from htagweb import SimpleServer,AppServer
-app=AppServer( "example:App" ,parano=True)
+app=AppServer( App ,parano=False,httponly=True)
 
 if __name__=="__main__":
+    #~ import logging
+    #~ logging.basicConfig(format='[%(levelname)-5s] %(name)s: %(message)s',level=logging.DEBUG)
+    #~ logging.getLogger("redys.servone").setLevel( logging.INFO )
+
+
     app.run(openBrowser=True)

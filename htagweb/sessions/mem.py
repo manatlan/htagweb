@@ -15,7 +15,7 @@ class MemDict: # default
     def __init__(self,uid:str):
         self._uid=uid
         self._bus=redys.v2.Client()
-        self._d=self._bus.get(self._uid,{})
+        self._d=self._bus.get(self._uid) or {}
 
     def __len__(self):
         return len(self._d.keys())
@@ -45,5 +45,5 @@ class MemDict: # default
     def clear(self):
         """ save session """
         self._d.clear()
-        self._bus.remove(self._uid)
+        self._bus.delete(self._uid)
 
