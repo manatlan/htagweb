@@ -237,7 +237,7 @@ class AppServer(Starlette):
                 return await self.serve(request,obj)
             self.add_route( '/', handleHome )
 
-    async def serve(self, request, obj ) -> HTMLResponse:
+    async def serve(self, request, obj, force:bool=False ) -> HTMLResponse:
         uid = request.scope["uid"]
         fqn=normalize(findfqn(obj))
 
@@ -312,7 +312,7 @@ window.addEventListener('DOMContentLoaded', start );
 
     """ % locals()
 
-        p = HrClient(uid,fqn,js,self.sesprovider.__name__)
+        p = HrClient(uid,fqn,js,self.sesprovider.__name__,force=force)
 
         args,kargs = commons.url2ak(str(request.url))
         html=await p.start(*args,**kargs)

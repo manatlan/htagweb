@@ -15,13 +15,14 @@ from htagweb.server import EVENT_SERVER
 TIMEOUT=20 # sec to wait answer from redys server #TODO: set better
 
 class HrClient:
-    def __init__(self,uid:str,fqn:str,js:str=None,sesprovidername=None):
+    def __init__(self,uid:str,fqn:str,js:str=None,sesprovidername=None,force=False):
         """ !!!!!!!!!!!!!!!!!!!! if js|sesprovidername is None : can't do a start() !!!!!!!!!!!!!!!!!!!!!!"""
         self.uid=uid
         self.fqn=fqn
         self.js=js
         self.bus = redys.v2.AClient()
         self.sesprovidername=sesprovidername
+        self.force=force
 
         self.hid=f"{uid}_{fqn}"
         self.event_response = f"response_{self.hid}"
@@ -56,6 +57,7 @@ class HrClient:
             js=self.js,
             init= (a,k),
             sesprovidername=self.sesprovidername,
+            force=self.force,
         ))
 
         # wait 1st rendering

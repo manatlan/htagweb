@@ -30,6 +30,10 @@ async def test_base( server ):
     html=await p.start()
     assert html.startswith("<!DOCTYPE html><html>")
 
+    p=HrClient(uid,"test_hr:App","//",force=True)
+    html=await p.start()
+    assert html.startswith("<!DOCTYPE html><html>")
+
     actions=await p.interact( oid="ut", method_name="doit", args=[], kargs={}, event={} )
     assert "update" in actions
 

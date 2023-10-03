@@ -50,7 +50,7 @@ def importClassFromFqn(fqn_norm:str) -> type:
 
 
 
-def process(uid,hid,event_response,event_interact,fqn,js,init,sesprovidername):
+def process(uid,hid,event_response,event_interact,fqn,js,init,sesprovidername,force):
     #''''''''''''''''''''''''''''''''''''''''''''''''''''
     if sesprovidername is None:
         sesprovidername="MemDict"
@@ -107,6 +107,7 @@ def process(uid,hid,event_response,event_interact,fqn,js,init,sesprovidername):
                     if params.get("cmd") == CMD_RENDER:
                         # just a false start, just need the current render
                         print(f">Process {pid} render {hid}")
+                        hr.session = FactorySession(uid)    # reload session
                         assert await bus.publish(event_response,str(hr))
                     else:
                         print(f">Process {pid} interact {hid}:")
@@ -169,18 +170,20 @@ async def hrserver_orchestrator():
                 if hid in ps and ps[hid]["process"].is_alive():
                     # process is already running
 
-                    if key_init == ps[hid]["key"]:
+                    if params["force"] or key_init != ps[hid]["key"]:
+                        # kill itself because it's not the same init params, or force recreate
+                        if params["force"]:
+                            print("Recreate a new process (forced)",hid)
+                        else:
+                            print("Recreate a new process (qp changed)",hid)
+                        ps[hid]["process"].kill()
+                        # and recreate another one later
+                    else:
                         # it's the same initialization process
 
                         # so ask process to send back its render
                         assert await bus.publish(params["event_interact"],dict(cmd=CMD_RENDER))
                         continue
-                    else:
-                        # kill itself because it's not the same init params
-                        print("Reload a new process",hid)
-                        ps[hid]["process"].kill()
-
-                        # and recreate another one later
 
                 # create the process
                 p=multiprocessing.Process(target=process, args=[],kwargs=params)
