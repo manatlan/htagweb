@@ -31,7 +31,7 @@ Process live as long as the server live (TODO: a TIMEOUT will be back soon)
  * compatible with **uvloop** !!!
  * compatible with multiple ~~gunicorn~~/uvicorn/webworkers !!!
  * compatible with [tag.update()](https://manatlan.github.io/htag/tag_update/)
- * works on gnu/linux, ios or windows !
+ * works on gnu/linux, ios or windows (from py3.7 to py3.11)!
  * real starlette session available (in tag.state, and starlette request.session)
  * compatible with oauth2 authent ( [authlib](https://pypi.org/project/Authlib/) )
  * 'parano mode' (can aes encrypt all communications between client & server ... to avoid mitm'proxies on ws exchanges)
