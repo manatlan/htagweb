@@ -50,15 +50,13 @@ def importClassFromFqn(fqn_norm:str) -> type:
 
 
 
-def process(hid,event_response,event_interact,fqn,js,init,sesprovidername):
+def process(uid,hid,event_response,event_interact,fqn,js,init,sesprovidername):
     #''''''''''''''''''''''''''''''''''''''''''''''''''''
     if sesprovidername is None:
         sesprovidername="MemDict"
     import htagweb.sessions
     FactorySession=getattr(htagweb.sessions,sesprovidername)
     #''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-    uid=hid.split("_")[0]
 
     pid = os.getpid()
     async def loop():
@@ -200,10 +198,7 @@ async def hrserver_orchestrator():
 
     print("hrserver_orchestrator stopped")
 
-async def hrserver():
-    s=redys.v2.Server()
-    s.start()
-
+async def wait_redys():
     bus=redys.v2.AClient()
     while 1:
         try:
@@ -213,7 +208,31 @@ async def hrserver():
             pass
         await asyncio.sleep(0.1)
 
+async def wait_hrserver():
+    bus=redys.v2.AClient()
+    while 1:
+        try:
+            if await bus.get("hrserver_orchestrator_running"):
+                break
+        except Exception as e:
+            print(e)
+        await asyncio.sleep(0.5)
+
+
+async def kill_hrserver():
+    bus=redys.v2.AClient()
+    await bus.publish( EVENT_SERVER, dict(cmd=CMD_EXIT) )   # kill orchestrator loop
+
+
+async def hrserver():
+    s=redys.v2.Server()
+    s.start()
+
+    await wait_redys()
+
     await hrserver_orchestrator()
+
+    s.stop()
 
 
 

@@ -14,9 +14,10 @@ from htagweb.server import EVENT_SERVER
 
 TIMEOUT=20 # sec to wait answer from redys server #TODO: set better
 
-class HrPilot:
+class HrClient:
     def __init__(self,uid:str,fqn:str,js:str=None,sesprovidername=None):
         """ !!!!!!!!!!!!!!!!!!!! if js|sesprovidername is None : can't do a start() !!!!!!!!!!!!!!!!!!!!!!"""
+        self.uid=uid
         self.fqn=fqn
         self.js=js
         self.bus = redys.v2.AClient()
@@ -47,6 +48,7 @@ class HrPilot:
 
         # start the process app
         assert await self.bus.publish( EVENT_SERVER , dict(
+            uid=self.uid,
             hid=self.hid,
             event_response=self.event_response,
             event_interact=self.event_interact,
@@ -99,7 +101,7 @@ class HrPilot:
 
 async def main():
     uid ="u1"
-    p=HrPilot(uid,"obj:App","//")
+    p=HrClient(uid,"obj:App","//")
     #~ html=await p.start()
     #~ print(html)
 

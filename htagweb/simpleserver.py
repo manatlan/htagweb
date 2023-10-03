@@ -150,7 +150,6 @@ class SimpleServer(Starlette):
         jsinc = ""
         jsinc += "\nasync function _read_(x) {return x}\n"
         jsinc += "\nasync function _write_(x) {return x}\n"
-        #TODO: consider https://developer.chrome.com/blog/removing-document-write/
 
         jsbootstrap="""
             %(jsinc)s

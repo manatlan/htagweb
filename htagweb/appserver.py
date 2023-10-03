@@ -35,7 +35,7 @@ from . import crypto
 import redys.v2
 
 from htagweb.server import hrserver
-from htagweb.server.client import HrPilot
+from htagweb.server.client import HrClient
 
 logger = logging.getLogger(__name__)
 ####################################################
@@ -135,6 +135,7 @@ class HRSocket(WebSocketEndpoint):
             return False
 
     async def loop_tag_update(self, event, websocket):
+        #TODO: there is trouble here sometimes ... to fix !
         with redys.v2.AClient() as bus:
             await bus.subscribe(event)
 
@@ -149,7 +150,7 @@ class HRSocket(WebSocketEndpoint):
         #====================================================== get the event
         fqn=websocket.path_params.get("fqn","")
         uid=websocket.scope["uid"]
-        event=HrPilot(uid,fqn).event_response+"_update"
+        event=HrClient(uid,fqn).event_response+"_update"
         #======================================================
 
         await websocket.accept()
@@ -165,7 +166,7 @@ class HRSocket(WebSocketEndpoint):
             data = crypto.decrypt(data.encode(),parano_seed( uid )).decode()
         data=json.loads(data)
 
-        p=HrPilot(uid,fqn)
+        p=HrClient(uid,fqn)
 
         actions=await p.interact( oid=data["id"], method_name=data["method"], args=data["args"], kargs=data["kargs"], event=data.get("event") )
 
@@ -175,7 +176,7 @@ class HRSocket(WebSocketEndpoint):
         #====================================================== get the event
         fqn=websocket.path_params.get("fqn","")
         uid=websocket.scope["uid"]
-        event=HrPilot(uid,fqn).event_response+"_update"
+        event=HrClient(uid,fqn).event_response+"_update"
         #======================================================
 
         with redys.v2.AClient() as bus:
@@ -307,7 +308,7 @@ window.addEventListener('DOMContentLoaded', start );
 
     """ % locals()
 
-        p = HrPilot(uid,fqn,js,self.sesprovider.__name__)
+        p = HrClient(uid,fqn,js,self.sesprovider.__name__)
 
         args,kargs = commons.url2ak(str(request.url))
         html=await p.start(*args,**kargs)
@@ -318,7 +319,7 @@ window.addEventListener('DOMContentLoaded', start );
         fqn = request.path_params.get("fqn","")
         seed = parano_seed( uid )
 
-        p=HrPilot(uid,fqn)
+        p=HrClient(uid,fqn)
         data = await request.body()
 
         if self.parano:
