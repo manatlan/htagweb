@@ -29,7 +29,7 @@ Process live as long as the server live (TODO: a TIMEOUT will be back soon)
  * based on [starlette](https://pypi.org/project/starlette/)
  * multiple ways to handle sessions (file, mem, etc ...)
  * compatible with **uvloop** !!!
- * compatible with multiple gunicorn/uvicorn/webworkers !!!
+ * compatible with multiple ~~gunicorn~~/uvicorn/webworkers !!!
  * compatible with [tag.update()](https://manatlan.github.io/htag/tag_update/)
  * works on gnu/linux, ios or windows !
  * real starlette session available (in tag.state, and starlette request.session)
@@ -90,6 +90,7 @@ It uses the SimpleServer, so it does'nt provide all features (parano mode, ssl, 
 
 ## Roadmap / futur
 
+ - make it works with gunicorn again !!!!!!!!!!!!!!!!!!!!!!!!!
  - better unittests !!!!!!!!!!!!!!!!
  - better logging !!!!!!!!!!!!!!!!
  - process lives : timeout !

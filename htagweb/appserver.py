@@ -191,12 +191,9 @@ async def lifespan(app):
     process_hrserver=multiprocessing.Process(target=processHrServer)
     process_hrserver.start()
 
-
-    # await wait_hrserver()
-
     yield
 
-    # process_hrserver.kill()
+    process_hrserver.kill()
 
 
 class AppServer(Starlette):
