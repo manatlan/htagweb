@@ -1,6 +1,6 @@
 import pytest
 from htag import Tag
-from htagweb import HtagServer,AppServer
+from htagweb import HtagServer,SimpleServer
 import sys,json
 from starlette.testclient import TestClient
 
@@ -54,8 +54,8 @@ def test_HtagServer_instanciates_htagapps():
         do_tests()
 
 
-def test_appserver():
-    app=AppServer( "test_hr:App" )
+def test_simpleserver():
+    app=SimpleServer( "test_hr:App" )
     with TestClient(app) as client:
         response = client.get('/')
 
@@ -78,20 +78,8 @@ def test_appserver():
 
 
 
-def test_parano():
-    app=HtagServer(parano=True)
-    with TestClient(app) as client:
-        response = client.get('/')
-
-        # assert that get bootstrap page
-        assert response.status_code == 200
-        assert "document.write(html)" in response.text
-        assert "_PARANO_" in response.text
-        assert "encrypt" in response.text
-
-        # the rest will be encrypted ;-)
 
 if __name__=="__main__":
     # test_basic()
     # test_a_full_fqn()
-    test_appserver()
+    test_simpleserver()

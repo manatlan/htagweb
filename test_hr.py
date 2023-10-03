@@ -19,6 +19,8 @@ async def test_hr():
     ses=dict(cpt=1)
     hr=HRenderer( App ,"//",session = ses)
 
+    assert str(hr).startswith("<!DOCTYPE html><html>")
+
     assert ses["created"]
     assert ses["cpt"]==1
 

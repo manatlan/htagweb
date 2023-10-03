@@ -7,10 +7,11 @@
 # https://github.com/manatlan/htagweb
 # #############################################################################
 
-from .appserver import AppServer  # a completly different beast, but compatible with ^^
-from .htagserver import HtagServer  # a completly different beast.
-from .usot import Usot
-
-__all__= ["AppServer"]
-
 __version__ = "0.0.0" # auto updated
+
+from .appserver import AppServer
+from .simpleserver import SimpleServer  # a completly different beast, but compatible with ^^
+from .htagserver import HtagServer  # a completly different beast.
+
+__all__= ["AppServer","SimpleServer"]
+

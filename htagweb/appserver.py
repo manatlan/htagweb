@@ -9,40 +9,19 @@
 
 # gunicorn -w 4 -k uvicorn.workers.UvicornWorker -b localhost:8000 --preload basic:app
 
-"""
-IDEM que htagweb.AppServer
-- mais sans le SHARED MEMORY DICT (donc compat py3.7) ... grace au sesprovider !
-- fichier solo
-- !!! utilise crypto de htagweb !!!
-
-
-
-This thing is completly new different beast, and doesn't work as all classic runners.
-
-It's a runner between "WebHTTP/WebServer" & "HtagServer" : the best of two worlds
-
-    - It's fully compatible with WebHTTP/WebServer (provide a serve method)
-    - it use same techs as HTagServer (WS only, parano mode, simple/#workers, etc ...)
-    - and the SEO trouble is faked by a pre-fake-rendering (it create a hr on http, for seo ... and recreate a real one at WS connect)
-
-Like HTagServer, as lifespan of htag instances is completly changed :
-htag instances should base their state on "self.root.state" only!
-Because a F5 will always destroy/recreate the instance.
-"""
 
 import os
 import sys
 import json
 import uuid
-import pickle
-import inspect
 import logging
 import uvicorn
-import importlib
-import contextlib
+import asyncio
+import hashlib
+import multiprocessing
 from htag import Tag
 from starlette.applications import Starlette
-from starlette.responses import HTMLResponse
+from starlette.responses import HTMLResponse,PlainTextResponse
 from starlette.applications import Starlette
 from starlette.routing import Route,WebSocketRoute
 from starlette.endpoints import WebSocketEndpoint
@@ -51,9 +30,12 @@ from starlette.requests import HTTPConnection
 from starlette.datastructures import MutableHeaders
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from htag.render import HRenderer
 from htag.runners import commons
-from . import crypto,usot
+from . import crypto
+import redys.v2
+
+from htagweb.server import hrserver
+from htagweb.server.client import HrClient
 
 logger = logging.getLogger(__name__)
 ####################################################
@@ -80,32 +62,7 @@ def findfqn(x) -> str:
 
     return tagClass.__module__+"."+tagClass.__qualname__
 
-def getClass(fqn_norm:str) -> type:
-    assert ":" in fqn_norm
-    #--------------------------- fqn -> module, name
-    modulename,name = fqn_norm.split(":",1)
-    if modulename in sys.modules:
-        module=sys.modules[modulename]
-        try:
-            module=importlib.reload( module )
-        except ModuleNotFoundError:
-            """ can't be (really) reloaded if the component is in the
-            same module as the instance htag server"""
-            pass
-    else:
-        module=importlib.import_module(modulename)
-    #---------------------------
-    klass= getattr(module,name)
-    if not ( inspect.isclass(klass) and issubclass(klass,Tag) ):
-        raise Exception(f"'{fqn_norm}' is not a htag.Tag subclass")
-
-    if not hasattr(klass,"imports"):
-        # if klass doesn't declare its imports
-        # we prefer to set them empty
-        # to avoid clutering
-        klass.imports=[]
-    return klass
-
+parano_seed = lambda uid: hashlib.md5(uid.encode()).hexdigest()
 
 class WebServerSession:  # ASGI Middleware, for starlette
     def __init__(self, app:ASGIApp, https_only:bool = False, sesprovider:"async method(uid)"=None ) -> None:
@@ -132,7 +89,7 @@ class WebServerSession:  # ASGI Middleware, for starlette
 
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
         scope["uid"]     = uid
-        scope["session"] = await self.cbsesprovider(uid)
+        scope["session"] = self.cbsesprovider(uid)
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         logger.debug("request for %s, scope=%s",uid,scope)
@@ -154,92 +111,121 @@ class WebServerSession:  # ASGI Middleware, for starlette
         await self.app(scope, receive, send_wrapper)
 
 
-def fqn2hr(fqn:str,js:str,init,session,fullerror=False): # fqn is a "full qualified name", full !
+def normalize(fqn):
     if ":" not in fqn:
         # replace last "." by ":"
         fqn="".join( reversed("".join(reversed(fqn)).replace(".",":",1)))
+    return fqn
 
-    klass=getClass(fqn)
 
-    styles=Tag.style("body.htagoff * {cursor:not-allowed !important;}")
-
-    return HRenderer( klass, js, init=init, session = session, fullerror=fullerror, statics=[styles,])
 
 class HRSocket(WebSocketEndpoint):
     encoding = "text"
 
-    async def _sendback(self,ws, txt:str) -> bool:
+    async def _sendback(self,websocket, txt:str) -> bool:
         try:
-            if ws.app.parano:
-                txt = crypto.encrypt(txt.encode(),ws.app.parano)
+            if websocket.app.parano:
+                seed = parano_seed( websocket.scope["uid"])
+                txt = crypto.encrypt(txt.encode(),seed)
 
-            await ws.send_text( txt )
+            await websocket.send_text( txt )
             return True
         except Exception as e:
             logger.error("Can't send to socket, error: %s",e)
             return False
 
+    async def loop_tag_update(self, event, websocket):
+        #TODO: there is trouble here sometimes ... to fix !
+        with redys.v2.AClient() as bus:
+            await bus.subscribe(event)
+
+            ok=True
+            while ok:
+                actions = await bus.get_event( event )
+                if actions is not None:
+                    ok=await self._sendback(websocket,json.dumps(actions))
+                await asyncio.sleep(0.1)
+
     async def on_connect(self, websocket):
+        #====================================================== get the event
         fqn=websocket.path_params.get("fqn","")
+        uid=websocket.scope["uid"]
+        event=HrClient(uid,fqn).event_response+"_update"
+        #======================================================
 
         await websocket.accept()
-        js="""
-// rewrite the onmessage of the _WS_ to interpret json action now !
-_WS_.onmessage = async function(e) {
-    let actions = await _read_(e.data)
-    action(actions)
-}
 
-// declare the interact js method to communicate thru the WS
-async function interact( o ) {
-    _WS_.send( await _write_(JSON.stringify(o)) );
-}
-
-console.log("started")
-"""
-
-        try:
-            hr=fqn2hr(fqn,js,commons.url2ak(str(websocket.url)),websocket.session,fullerror=websocket.app.debug)
-        except Exception as e:
-            await self._sendback( websocket, str(e) )
-            await websocket.close()
-            return
-
-        self.hr=hr
-
-        # send back the full rendering (1st onmessage after js connection)
-        await self._sendback( websocket, str(self.hr) )
-
-        # register the hr.sendactions, for tag.update feature
-        self.hr.sendactions=lambda actions: self._sendback(websocket,json.dumps(actions))
+        # add the loop to tag.update feature
+        asyncio.ensure_future(self.loop_tag_update(event,websocket))
 
     async def on_receive(self, websocket, data):
-        if websocket.app.parano:
-            data = crypto.decrypt(data.encode(),websocket.app.parano).decode()
+        fqn=websocket.path_params.get("fqn","")
+        uid=websocket.scope["uid"]
 
+        if websocket.app.parano:
+            data = crypto.decrypt(data.encode(),parano_seed( uid )).decode()
         data=json.loads(data)
 
-        #=================================== for UT only
-        if data["id"]=="ut":
-            data["id"]=id(self.hr.tag)
-        #===================================
+        p=HrClient(uid,fqn)
 
-        actions = await self.hr.interact(data["id"],data["method"],data["args"],data["kargs"],data.get("event"))
+        actions=await p.interact( oid=data["id"], method_name=data["method"], args=data["args"], kargs=data["kargs"], event=data.get("event") )
+
         await self._sendback( websocket, json.dumps(actions) )
 
     async def on_disconnect(self, websocket, close_code):
-        del self.hr
+        #====================================================== get the event
+        fqn=websocket.path_params.get("fqn","")
+        uid=websocket.scope["uid"]
+        event=HrClient(uid,fqn).event_response+"_update"
+        #======================================================
+
+        with redys.v2.AClient() as bus:
+            await bus.unsubscribe(event)
+
+
+def processHrServer():
+    asyncio.run( hrserver() )
+
+
+async def lifespan(app):
+    process_hrserver=multiprocessing.Process(target=processHrServer)
+    process_hrserver.start()
+    yield
+    process_hrserver.terminate()
+
 
 class AppServer(Starlette):
-    def __init__(self,obj:"htag.Tag class|fqn|None"=None, debug:bool=True,ssl:bool=False,parano:bool=False,sesprovider:"htagweb.sessions.create*|None"=None):
+    def __init__(self,
+                obj:"htag.Tag class|fqn|None"=None,
+                debug:bool=True,
+                ssl:bool=False,
+                parano:bool=False,
+                httponly:bool=False,
+                sesprovider:"sessions.MemDict|sessions.FileDict|sessions.FilePersistentDict|None"=None,
+            ):
         self.ssl=ssl
-        self.parano = str(uuid.uuid4()) if parano else None
+        self.parano=parano
+        self.httponly=httponly
+
         if sesprovider is None:
-            sesprovider = sessions.createFile
+            self.sesprovider = sessions.MemDict
+        else:
+            self.sesprovider = sesprovider
+
+        print("Session with:",self.sesprovider.__name__)
+        ###################################################################
+
+        if httponly:
+            routes=[Route("/_/{fqn}", self.HRHttp, methods=["POST"])]
+        else:
+            routes=[WebSocketRoute("/_/{fqn}", HRSocket)]
+
+        #################################################################
         Starlette.__init__( self,
             debug=debug,
-            routes=[WebSocketRoute("/_/{fqn}", HRSocket)],
-            middleware=[Middleware(WebServerSession,https_only=ssl,sesprovider=sesprovider)],
+            routes=routes,
+            middleware=[Middleware(WebServerSession,https_only=ssl,sesprovider=self.sesprovider)],
+            lifespan=lifespan,
         )
 
         if obj:
@@ -248,88 +234,105 @@ class AppServer(Starlette):
             self.add_route( '/', handleHome )
 
     async def serve(self, request, obj ) -> HTMLResponse:
-        fqn=findfqn(obj)
-        protocol = "wss" if self.ssl else "ws"
+        uid = request.scope["uid"]
+        fqn=normalize(findfqn(obj))
+
         if self.parano:
-            jsparano = crypto.JSCRYPTO
-            jsparano += f"\nvar _PARANO_='{self.parano}'\n"
-            jsparano += "\nasync function _read_(x) {return await decrypt(x,_PARANO_)}\n"
-            jsparano += "\nasync function _write_(x) {return await encrypt(x,_PARANO_)}\n"
+            seed = parano_seed( uid )
+
+            jstunnel = crypto.JSCRYPTO
+            jstunnel += f"\nvar _PARANO_='{seed}'\n"
+            jstunnel += "\nasync function _read_(x) {return await decrypt(x,_PARANO_)}\n"
+            jstunnel += "\nasync function _write_(x) {return await encrypt(x,_PARANO_)}\n"
         else:
-            jsparano = ""
-            jsparano += "\nasync function _read_(x) {return x}\n"
-            jsparano += "\nasync function _write_(x) {return x}\n"
-        #TODO: consider https://developer.chrome.com/blog/removing-document-write/
+            jstunnel = ""
+            jstunnel += "\nasync function _read_(x) {return x}\n"
+            jstunnel += "\nasync function _write_(x) {return x}\n"
 
-        jsbootstrap="""
-            %(jsparano)s
-            // instanciate the WEBSOCKET
-            let _WS_=null;
-            let retryms=500;
-            
-            function connect() {
-                _WS_= new WebSocket("%(protocol)s://"+location.host+"/_/%(fqn)s"+location.search);
-                _WS_.onopen=function(evt) {
-                    console.log("** WS connected")
-                    document.body.classList.remove("htagoff");
-                    retryms=500;
-                    
-                    _WS_.onmessage = async function(e) {
-                        // when connected -> the full HTML page is returned, installed & start'ed !!!
 
-                        let html = await _read_(e.data);
-                        html = html.replace("<body ","<body onload='start()' ");
+        if self.httponly:
+            # interactions use HTTP POST
+            js = """
+%(jstunnel)s
 
-                        document.open();
-                        document.write(html);
-                        document.close();
-                    };
-                }
-                
-                _WS_.onclose = function(evt) {
-                    console.log("** WS disconnected");
-                    //console.log("** WS disconnected, retry in (ms):",retryms);
-                    document.body.classList.add("htagoff");
+async function interact( o ) {
+    let body = await _write_(JSON.stringify(o));
+    let req=await window.fetch("/_/%(fqn)s",{method:"POST", body: body});
+    let actions=await req.text();
+    action( await _read_(actions) );
+}
 
-                    //setTimeout( function() {
-                    //    connect();
-                    //    retryms=retryms*2;
-                    //}, retryms);
-                };
-            }
-            connect();
-        """ % locals()
+window.addEventListener('DOMContentLoaded', start );
+""" % locals()
+        else:
+            # interactions use WS
+            protocol = "wss" if self.ssl else "ws"
 
-        # here return a first rendering (only for SEO)
-        # the hrenderer is DESTROYED just after
-        hr=fqn2hr(fqn,jsbootstrap,commons.url2ak(str(request.url)),request.session, fullerror=self.debug)
+            js = """
+    %(jstunnel)s
 
-        return HTMLResponse( str(hr) )
+    async function interact( o ) {
+        _WS_.send( await _write_(JSON.stringify(o)) );
+    }
 
-        # bootstrapHtmlPage="""<!DOCTYPE html>
-        #     <html>
-        #       <head>
-        #             <script>
-        #             %(jsparano)s
-        #             // instanciate the WEBSOCKET
-        #             var _WS_ = new WebSocket("%(protocol)s://"+location.host+"/_/%(fqn)s"+location.search);
-        #             _WS_.onmessage = async function(e) {
-        #                 // when connected -> the full HTML page is returned, installed & start'ed !!!
+    // instanciate the WEBSOCKET
+    let _WS_=null;
+    let retryms=500;
 
-        #                 let html = await _read_(e.data);
-        #                 html = html.replace("<body ","<body onload='start()' ");
+    function connect() {
+        _WS_= new WebSocket("%(protocol)s://"+location.host+"/_/%(fqn)s");
+        _WS_.onopen=function(evt) {
+            console.log("** WS connected")
+            document.body.classList.remove("htagoff");
+            retryms=500;
+            start();
 
-        #                 document.open();
-        #                 document.write(html);
-        #                 document.close();
-        #             };
-        #             </script>
-        #       </head>
-        #       <body>loading</body>
-        #     </html>
-        #     """ % locals()
+            _WS_.onmessage = async function(e) {
+                let actions = await _read_(e.data)
+                action(actions)
+            };
 
-        # return HTMLResponse( bootstrapHtmlPage )
+        }
+
+        _WS_.onclose = function(evt) {
+            console.log("** WS disconnected, retry in (ms):",retryms);
+            document.body.classList.add("htagoff");
+
+            setTimeout( function() {
+                connect();
+                retryms=retryms*2;
+            }, retryms);
+        };
+    }
+    connect();
+
+    """ % locals()
+
+        p = HrClient(uid,fqn,js,self.sesprovider.__name__)
+
+        args,kargs = commons.url2ak(str(request.url))
+        html=await p.start(*args,**kargs)
+        return HTMLResponse(html)
+
+    async def HRHttp(self,request) -> PlainTextResponse:
+        uid = request.scope["uid"]
+        fqn = request.path_params.get("fqn","")
+        seed = parano_seed( uid )
+
+        p=HrClient(uid,fqn)
+        data = await request.body()
+
+        if self.parano:
+            data = crypto.decrypt(data,seed).decode()
+
+        data=json.loads(data)
+        actions=await p.interact( oid=data["id"], method_name=data["method"], args=data["args"], kargs=data["kargs"], event=data.get("event") )
+        txt=json.dumps(actions)
+
+        if self.parano:
+            txt = crypto.encrypt(txt.encode(),seed)
+
+        return PlainTextResponse(txt)
 
     def run(self, host="0.0.0.0", port=8000, openBrowser=False):   # localhost, by default !!
         if openBrowser:

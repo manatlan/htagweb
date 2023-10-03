@@ -1,7 +1,7 @@
 import os,sys; sys.path.insert(0,os.path.realpath(os.path.dirname(os.path.dirname(__file__))))
 
 from htag import Tag
-from htagweb import AppServer
+from htagweb import SimpleServer
 from authlib.integrations.starlette_client import OAuth
 from starlette.responses import Response,RedirectResponse
 import time
@@ -92,7 +92,7 @@ class App(Tag.body):
 #=========================================
 
 # IT WORKS FOR THE 3 runners of htagweb ;-) (should work with old webhttp/webws runners from htag too)
-app=AppServer(App)
+app=SimpleServer(App)
 
 app.add_route("/oauth_{action}", oauth_request_action )
 

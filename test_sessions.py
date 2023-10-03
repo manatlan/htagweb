@@ -1,53 +1,56 @@
 import pytest,asyncio,sys
-from htagweb.sessions import createFile, createFilePersistent, createShm, createMem
+from htagweb.sessions import FileDict,FilePersistentDict,MemDict
+from test_server import server
 
 
-async def session_test(method_session):
-    session = await method_session("uid")
+def session_test(factory):
+    session = factory("uid")
     try:
+        # bad way to clone
+        with pytest.raises(Exception):
+            dict(session)
+
+        # good way to clone
+        dict(session.items())
+
+        assert "nb" not in session
+
         session["nb"]=session.get("nb",0) + 1
 
+        assert "nb" in session
+        assert session
+        assert len(session)==1
+
+
         # ensure persistance is present
-        session = await method_session("uid")
+        session = factory("uid")
         assert session["nb"]==1
 
-        assert len(session.items())>0
-        session.clear()
+        session["x"]=42
 
-        session = await method_session("uid")
+        assert len(session)==2
+
+        del session["x"]
+        assert len(session)==1
+        session.clear()
+        assert len(session)==0
+
+        session = factory("uid")
         assert len(session.items())==0
 
     finally:
         session.clear()
 
+@pytest.mark.asyncio
+async def test_sessions_mem( server ):  # need redys.v2 runned
+    session_test( MemDict )
 
+def test_sessions_file():
+    session_test( FileDict )
 
 @pytest.mark.asyncio
-async def test_sessions_file():
-    await session_test( createFile )
-
-@pytest.mark.asyncio
-async def test_sessions_filepersitent():
-    await session_test( createFilePersistent )
-
-# def test_sessions_memory():
-#     async def doit():
-#         from htagweb.sessions.memory import startServer,PX
-#         startServer()
-
-#         await session_test( createMem )
-# @pytest.mark.asyncio
-
-#     asyncio.run( doit())
-
-
-@pytest.mark.asyncio
-async def test_sessions_shm():
-    try:
-        import shared_memory_dict
-        await session_test( createShm )
-    except:
-        pass
+def test_sessions_filepersitent():
+    session_test( FilePersistentDict )
 
 
 
