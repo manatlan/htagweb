@@ -55,7 +55,7 @@ non-sense in http_only mode.
 When False: (default) exchanges between front/ui and back are in clear text (json), readable by a MITM.
 When True: exchanges will be encrypted (less readable by a MITM, TODO: will try to use public/private keys in future)
 
-#### http_only(bool)
+#### httponly(bool)
 
 When False: (default) it will use websocket transport (between front/ui and back), with auto-reconnect feature.
 When True: it will use http transport (between front/ui and back). But "tag.update" feature will not be available.
