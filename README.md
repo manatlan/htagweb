@@ -6,21 +6,25 @@
     <img src="https://badge.fury.io/py/htagweb.svg?x" alt="Package version">
 </a>
 
-This "htagweb" module is the official way to expose htag's apps on the web.
+This module exposes htag's runners for the web. It's the official runners to expose
+htag apps on the web, to handle multiple clients/session in the right way.
 
-**ULTRA IMPORTANT** ;-)
+There are 3 runners:
 
-**This module will be completly rewritten (for the 3rd time ;-)). And it will work, like in the past, as others classicals runners (tag instances will live, in separates processes). (state and session will remain too). Just need to test the new branch (it will use redys ;-) )**
+ - **AppServer** : the real one ;-)
+ - SimpleServer : for tests purposes
+ - HtagServer : (use SimpleServer) to browse/expose python/htag files in an UI.
 
-**Important note**
-On the web, the server can handle many clients : so, it's not possible to handle each tag instances per user. SO there are 1 limitation compared to classical htag runners which comes with htag.
 
- - ~~there can be only one managed instance of a htag class, per user~~ (it's the case in classical runners too)
- - and tag instances doesn't live as long as the runner lives (when you hit F5, it will be destroyed/recreated). So, keeping states must be done thru the tag.state / tag.root.state (which is the session of the user).
+## AppServer
 
-So developping a htag app which work the same on desktop and on the web, should manage its states in tag.state / tag.root.state ;-)
+It's the real runner to expose htag apps in a real production environment, and provide
+all features, while maintaining tag instances like classical/desktop htag runners.
 
- ## Features
+All htag apps are runned in its own process, and an user can only have an instance of an htag app. (so process are recreated when query params changes)
+Process live as long as the server live (TODO: a TIMEOUT will be back soon)
+
+**Features**
 
  * based on [starlette](https://pypi.org/project/starlette/)
  * multiple ways to handle sessions (file, mem, etc ...)
@@ -31,21 +35,67 @@ So developping a htag app which work the same on desktop and on the web, should 
  * real starlette session available (in tag.state, and starlette request.session)
  * compatible with oauth2 authent ( [authlib](https://pypi.org/project/Authlib/) )
  * 'parano mode' (can aes encrypt all communications between client & server ... to avoid mitm'proxies on ws exchanges)
+ * auto reconnect websocket
+
+
+#### debug (bool)
+
+When False: (default) no debugging facilities
+When True: use starlette debugger.
+
+#### ssl (bool)
+
+When False: (default) use "ws://" to connect the websocket
+When True: use "wss://" to connect the websocket
+
+non-sense in http_only mode.
+
+#### parano (bool)
+
+When False: (default) exchanges between front/ui and back are in clear text (json), readable by a MITM.
+When True: exchanges will be encrypted (less readable by a MITM, TODO: will try to use public/private keys in future)
+
+#### http_only(bool)
+
+When False: (default) it will use websocket transport (between front/ui and back), with auto-reconnect feature.
+When True: it will use http transport (between front/ui and back). But "tag.update" feature will not be available.
+
+#### sesprovider (htagweb.sessions)
+
+You can provide a Session Factory to handle the session in different modes.
+
+- htagweb.sessions.MemDict (default) : sessions are stored in memory (renewed on reboot)
+- htagweb.sessions.FileDict : sessions are stored in filesystem (renewed on reboot)
+- htagweb.sessions.FilePersistentDict : make sessions persistent during reboot
+
+## SimpleServer
+
+It's a special runner for tests purposes. It doesn't provide all features (parano mode, ssl, session factory...).
+Its main goal is to provide a simple runner during dev process, befause when you hit "F5" :
+it will destroy/recreate the tag instances.
+
+SimpleServer uses only websocket transport (tag instances exist only during websocket connexions)
+
+And it uses `htagweb.sessions.FileDict` as session manager.
+
+## HtagServer
+
+It's a special runner, which is mainly used by the `python3 -m htagweb`, to expose
+current python/htag files in a browser. Its main goal is to test quickly the files
+whose are in your folder, using an UI in your browser.
+
+It uses the SimpleServer, so it does'nt provide all features (parano mode, ssl, session factory ...)
+
+-------------------------------
 
 ## Roadmap / futur
 
-priority :
+ - better unittests !!!!!!!!!!!!!!!!
+ - better logging !!!!!!!!!!!!!!!!
+ - process lives : timeout !
+ - parano mode : use public/private keys ?
 
- - ci/cd test python>3.7 with shared_memory_dict
- - unittests on sessions.memory (won't work now)
- - better unittests on usot
 
-futur:
-
- - ? replace starlette by fastapi ?
- - the double rendering (double init creation) is not ideal. But great for SEO bots. Perhaps I could find a better way (and let only one rendering, but how ?!) ?!
- - more unittests !!!
- - better logging !!!
 
 
 ## Examples

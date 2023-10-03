@@ -34,7 +34,7 @@ from htag.runners import commons
 from . import crypto
 import redys.v2
 
-from htagweb.server import hrserver
+from htagweb.server import hrserver, wait_hrserver
 from htagweb.server.client import HrClient
 
 logger = logging.getLogger(__name__)
@@ -190,8 +190,12 @@ def processHrServer():
 async def lifespan(app):
     process_hrserver=multiprocessing.Process(target=processHrServer)
     process_hrserver.start()
+
+    await wait_hrserver()
+
     yield
-    process_hrserver.terminate()
+
+    process_hrserver.kill()
 
 
 class AppServer(Starlette):

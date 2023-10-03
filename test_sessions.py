@@ -6,10 +6,6 @@ from test_server import server
 def session_test(factory):
     session = factory("uid")
     try:
-        # bad way to clone
-        with pytest.raises(Exception):
-            dict(session)
-
         # good way to clone
         dict(session.items())
 
@@ -37,6 +33,10 @@ def session_test(factory):
 
         session = factory("uid")
         assert len(session.items())==0
+
+        session["k"]=42
+        assert session.pop("k",12)==42
+        assert session.pop("k",12)==12
 
     finally:
         session.clear()

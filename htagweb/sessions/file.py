@@ -9,8 +9,8 @@
 
 import os,pickle,tempfile
 
-
-class FileDict: # default
+from collections import UserDict
+class FileDict(dict): # default
     """ mimic a dict (with minimal methods), unique source of truth, based on FS"""
     def __init__(self,uid:str,persistent:bool=False):
         self._uid=uid
@@ -22,44 +22,32 @@ class FileDict: # default
 
         if os.path.isfile(self._file):
             with open(self._file,"rb+") as fid:
-                self._d=pickle.load(fid)
+                d=pickle.load(fid)
         else:
-            self._d={}
+            d={}
 
-    def __len__(self):
-        return len(self._d.keys())
-
-    def __contains__(self,key):
-        return key in self._d.keys()
-
-    def items(self):
-        return self._d.items()
-
-    def get(self,k:str,default=None):
-        return self._d.get(k,default)
-
-    def __getitem__(self,k:str):
-        return self._d[k]
+        super().__init__( d )
 
     def __delitem__(self,k:str):
-        """ save session """
-        del self._d[k]
-
-        with open(self._file,"wb+") as fid:
-            pickle.dump(self._d,fid, protocol=4)
+        super().__delitem__(k)
+        self._save()
 
     def __setitem__(self,k:str,v):
-        """ save session """
-        self._d[k]=v
-
-        with open(self._file,"wb+") as fid:
-            pickle.dump(self._d,fid, protocol=4)
+        super().__setitem__(k,v)
+        self._save()
 
     def clear(self):
-        """ save session """
-        self._d.clear()
-        if os.path.isfile(self._file):
-            os.unlink(self._file)
+        super().clear()
+        self._save()
+
+    def _save(self):
+        if len(self):
+            with open(self._file,"wb+") as fid:
+                pickle.dump(dict(self),fid, protocol=4)
+        else:
+            if os.path.isfile(self._file):
+                os.unlink(self._file)
+
 
 class FilePersistentDict(FileDict): # default
     def __init__(self,uid):
