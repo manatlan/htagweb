@@ -22,7 +22,7 @@ htag = "^0.42"
 starlette = "0.29.0"
 pycryptodomex = "^3.19.0"
 uvicorn = {version = "0.22.0", extras = ["standard"]}
-redys = "0.9.9"
+redys = "^0.9"
 
 
 [tool.poetry.group.dev.dependencies]
