@@ -511,13 +511,13 @@ files = [
 
 [[package]]
 name = "redys"
-version = "0.9.9"
+version = "0.9.10"
 description = "A simple redis-like in pure python3, fully asyncio compliant"
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "redys-0.9.9-py3-none-any.whl", hash = "sha256:4de11b75e30c588361c6abe923afcd5a32670ee18e3883b8c09f06a9c3455031"},
-    {file = "redys-0.9.9.tar.gz", hash = "sha256:cc30a61e5c9cb98e519876c31d389b3df86fa88dc1b629dcc22e32d95b232486"},
+    {file = "redys-0.9.10-py3-none-any.whl", hash = "sha256:c56f993a53a127b6ead46cb2f460325d988d12893ca2d446fc8034fffa8dfad7"},
+    {file = "redys-0.9.10.tar.gz", hash = "sha256:3abc6e659fb59e027a35a5242a03b35825f4da8c13f170aab7bdd0b6edf5ed8f"},
 ]
 
 [[package]]
