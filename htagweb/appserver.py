@@ -243,15 +243,15 @@ class AppServer(Starlette):
 
         if obj:
             async def handleHome(request):
-                return await self.handle(request,obj,recreate=False,http_only=http_only,parano=parano)
+                return await self.handle(request,obj)
             self.add_route( '/', handleHome )
 
     # new method
     async def handle(self, request,
                     obj:"htag.Tag class|fqn",
                     recreate:bool=False,
-                    http_only:"bool|None"=False,
-                    parano:"bool|None"=False ) -> HTMLResponse:
+                    http_only:"bool|None"=None,
+                    parano:"bool|None"=None ) -> HTMLResponse:
         return await self.serve(request,obj,recreate,http_only,parano)
 
 
@@ -259,8 +259,8 @@ class AppServer(Starlette):
     async def serve(self, request,
                     obj:"htag.Tag class|fqn",
                     force:bool=False,
-                    http_only:"bool|None"=False,
-                    parano:"bool|None"=False ) -> HTMLResponse:
+                    http_only:"bool|None"=None,
+                    parano:"bool|None"=None ) -> HTMLResponse:
 
         # take default behaviour if not present
         is_parano = self.parano if parano is None else parano
