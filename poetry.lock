@@ -164,13 +164,13 @@ typing-extensions = {version = "*", markers = "python_version < \"3.8\""}
 
 [[package]]
 name = "htag"
-version = "0.42.0"
+version = "0.43.0"
 description = "GUI toolkit for building GUI toolkits (and create beautiful applications for mobile, web, and desktop from a single python3 codebase)"
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "htag-0.42.0-py3-none-any.whl", hash = "sha256:b856b20eff5944e856bca3456f6313d2582b14287e47d746b848d14a4cd32acc"},
-    {file = "htag-0.42.0.tar.gz", hash = "sha256:3c6c226af1e75fd54f3c6bb1e4a6d8ccc449a8da201a2fedc932711bcaa7ac60"},
+    {file = "htag-0.43.0-py3-none-any.whl", hash = "sha256:ed134ee9ee6b0b09c060bab83b333734f9973411d66d71dd9d7674e1a2c3960a"},
+    {file = "htag-0.43.0.tar.gz", hash = "sha256:f45a6af5e9f57b2a4830c30531a3263487feae29ae46210777184c67dd07c10f"},
 ]
 
 [[package]]
@@ -772,4 +772,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "0b67ef8004abeddd715ef88effdb2e718ddebeb964580d099fcf3981b6a79fb4"
+content-hash = "86559051714a7f23425c5fe237958fa42921c01062d582042b689184ced4e82d"
