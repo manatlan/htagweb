@@ -34,7 +34,7 @@ Process live as long as the server live (TODO: a TIMEOUT will be back soon)
  * works on gnu/linux, ios or windows (from py3.7 to py3.11)!
  * real starlette session available (in tag.state, and starlette request.session)
  * compatible with oauth2 authent ( [authlib](https://pypi.org/project/Authlib/) )
- * 'parano mode' (can aes encrypt all communications between client & server ... to avoid mitm'proxies on ws exchanges)
+ * 'parano mode' (can aes encrypt all communications between client & server ... to avoid mitm'proxies on ws/http interactions)
  * auto reconnect websocket
 
 
@@ -52,13 +52,13 @@ non-sense in http_only mode.
 
 #### parano (bool)
 
-When False: (default) exchanges between front/ui and back are in clear text (json), readable by a MITM.
-When True: exchanges will be encrypted (less readable by a MITM, TODO: will try to use public/private keys in future)
+When False: (default) interactions between front/ui and back are in clear text (json), readable by a MITM.
+When True: interactions will be encrypted (less readable by a MITM, TODO: will try to use public/private keys in future)
 
 #### httponly(bool)
 
-When False: (default) it will use websocket transport (between front/ui and back), with auto-reconnect feature.
-When True: it will use http transport (between front/ui and back). But "tag.update" feature will not be available.
+When False: (default) it will use websocket interactions (between front/ui and back), with auto-reconnect feature.
+When True: it will use http interactions (between front/ui and back). But "tag.update" feature will not be available.
 
 #### sesprovider (htagweb.sessions)
 
@@ -66,7 +66,7 @@ You can provide a Session Factory to handle the session in different modes.
 
 - htagweb.sessions.MemDict (default) : sessions are stored in memory (renewed on reboot)
 - htagweb.sessions.FileDict : sessions are stored in filesystem (renewed on reboot)
-- htagweb.sessions.FilePersistentDict : make sessions persistent during reboot
+- htagweb.sessions.FilePersistentDict : make sessions persistent after reboot
 
 ## SimpleServer
 
@@ -74,7 +74,7 @@ It's a special runner for tests purposes. It doesn't provide all features (paran
 Its main goal is to provide a simple runner during dev process, befause when you hit "F5" :
 it will destroy/recreate the tag instances.
 
-SimpleServer uses only websocket transport (tag instances exist only during websocket connexions)
+SimpleServer uses only websocket interactions (tag instances exist only during websocket connexions)
 
 And it uses `htagweb.sessions.FileDict` as session manager.
 
