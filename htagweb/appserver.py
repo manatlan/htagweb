@@ -34,7 +34,7 @@ from htag.runners import commons
 from . import crypto
 import redys.v2
 
-from htagweb.server import hrserver, hrserver_orchestrator, wait_hrserver
+from htagweb.server import hrserver, hrserver_orchestrator, kill_hrserver, wait_hrserver
 from htagweb.server.client import HrClient
 
 logger = logging.getLogger(__name__)
@@ -188,12 +188,21 @@ def processHrServer():
 
 
 async def lifespan(app):
+    # start a process loop (with redys + hrserver)
     process_hrserver=multiprocessing.Process(target=processHrServer)
     process_hrserver.start()
 
+    # wait hrserver ready
+    await wait_hrserver()
+
     yield
 
-    process_hrserver.kill()
+    # stop hrserver
+    loop = asyncio.get_event_loop()
+    await kill_hrserver()
+
+    # wait process to finnish gracefully
+    process_hrserver.join()
 
 
 class AppServer(Starlette):
@@ -202,25 +211,26 @@ class AppServer(Starlette):
                 debug:bool=True,
                 ssl:bool=False,
                 parano:bool=False,
-                httponly:bool=False,
-                sesprovider:"sessions.MemDict|sessions.FileDict|sessions.FilePersistentDict|None"=None,
+                http_only:bool=False,
+                session_factory:"sessions.MemDict|sessions.FileDict|sessions.FilePersistentDict|None"=None,
             ):
         self.ssl=ssl
         self.parano=parano
-        self.httponly=httponly
+        self.http_only=http_only
 
-        if sesprovider is None:
+        if session_factory is None:
             self.sesprovider = sessions.MemDict
         else:
-            self.sesprovider = sesprovider
+            self.sesprovider = session_factory
 
         print("Session with:",self.sesprovider.__name__)
         ###################################################################
 
-        if httponly:
-            routes=[Route("/_/{fqn}", self.HRHttp, methods=["POST"])]
-        else:
-            routes=[WebSocketRoute("/_/{fqn}", HRSocket)]
+        # exposes ws & http routes in all cases
+        routes=[
+            Route("/_/{fqn}", self.HRHttp, methods=["POST"]),
+            WebSocketRoute("/_/{fqn}", HRSocket)
+        ]
 
         #################################################################
         Starlette.__init__( self,
@@ -235,7 +245,13 @@ class AppServer(Starlette):
                 return await self.serve(request,obj)
             self.add_route( '/', handleHome )
 
-    async def serve(self, request, obj, force:bool=False ) -> HTMLResponse:
+    # new method
+    async def handle(self, request, obj:"htag.Tag class|fqn", recreate:bool=False ) -> HTMLResponse:
+        return await self.serve(request,obj,recreate)
+
+
+    # DEPRECATED
+    async def serve(self, request, obj:"htag.Tag class|fqn", force:bool=False ) -> HTMLResponse:
         uid = request.scope["uid"]
         fqn=normalize(findfqn(obj))
 
@@ -252,7 +268,7 @@ class AppServer(Starlette):
             jstunnel += "\nasync function _write_(x) {return x}\n"
 
 
-        if self.httponly:
+        if self.http_only:
             # interactions use HTTP POST
             js = """
 %(jstunnel)s

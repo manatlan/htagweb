@@ -8,6 +8,7 @@ Complex htag's app to test:
     - using tag.state (in session)
     - using tag.update with a task in a loop
     - can recreate itself (when init params change)
+    - handle another route (on Jo())
 
 """
 
@@ -49,18 +50,13 @@ class App(Tag.body):
         self <= Tag.button("inc integer",_onclick=inc_test_session)
         self <= Tag.button("add list",_onclick=addd)
         self <= Tag.button("clear",_onclick=clllll)
-        #~ self <= Tag.button("yield",_onclick=self.yielder)
         self <= TagSession()
 
         self+=Tag.li(Tag.a("t0",_href="/"))
         self+=Tag.li(Tag.a("t1",_href="/?v=1"))
         self+=Tag.li(Tag.a("t2",_href="/?v=2"))
+        self+=Tag.li(Tag.a("Other app",_href="/jo"))
         self+=self.place
-
-    #~ async def yielder(self,o):
-        #~ for i in "ABCDEF":
-            #~ await asyncio.sleep(0.3)
-            #~ self+=i
 
     async def loop_timer(self):
         while 1:
@@ -71,6 +67,19 @@ class App(Tag.body):
                 break
 
 
+class Jo(Tag.body):
+    statics=b"window.error=alert"
+    def init(self):
+
+        def test(o):
+            self <= o.innerHTML
+
+        self <= Tag.button("A",_onclick=test)
+        self <= Tag.button("B",_onclick=test)
+
+async def handleJo(req):
+    return await req.app.handle(req,Jo)
+
 # With Web http runner provided by htag
 #------------------------------------------------------
 # from htag.runners import WebHTTP
@@ -79,7 +88,8 @@ class App(Tag.body):
 # With htagweb.WebServer runner provided by htagweb
 #------------------------------------------------------
 from htagweb import SimpleServer,AppServer
-app=AppServer( App ,parano=False,httponly=False)
+app=AppServer( App ,parano=False,http_only=True)
+app.add_route("/jo", handleJo )
 
 if __name__=="__main__":
     #~ import logging

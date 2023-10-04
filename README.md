@@ -55,12 +55,12 @@ non-sense in http_only mode.
 - When False: (default) interactions between front/ui and back are in clear text (json), readable by a MITM.
 - When True: interactions will be encrypted (less readable by a MITM, TODO: will try to use public/private keys in future)
 
-#### httponly(bool)
+#### http_only (bool)
 
 - When False: (default) it will use websocket interactions (between front/ui and back), with auto-reconnect feature.
 - When True: it will use http interactions (between front/ui and back). But "tag.update" feature will not be available.
 
-#### sesprovider (htagweb.sessions)
+#### session_factory (htagweb.sessions)
 
 You can provide a Session Factory to handle the session in different modes.
 
