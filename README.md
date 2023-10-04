@@ -40,25 +40,25 @@ Process live as long as the server live (TODO: a TIMEOUT will be back soon)
 
 #### debug (bool)
 
-When False: (default) no debugging facilities
-When True: use starlette debugger.
+- When False: (default) no debugging facilities
+- When True: use starlette debugger.
 
 #### ssl (bool)
 
-When False: (default) use "ws://" to connect the websocket
-When True: use "wss://" to connect the websocket
+- When False: (default) use "ws://" to connect the websocket
+- When True: use "wss://" to connect the websocket
 
 non-sense in http_only mode.
 
 #### parano (bool)
 
-When False: (default) interactions between front/ui and back are in clear text (json), readable by a MITM.
-When True: interactions will be encrypted (less readable by a MITM, TODO: will try to use public/private keys in future)
+- When False: (default) interactions between front/ui and back are in clear text (json), readable by a MITM.
+- When True: interactions will be encrypted (less readable by a MITM, TODO: will try to use public/private keys in future)
 
 #### httponly(bool)
 
-When False: (default) it will use websocket interactions (between front/ui and back), with auto-reconnect feature.
-When True: it will use http interactions (between front/ui and back). But "tag.update" feature will not be available.
+- When False: (default) it will use websocket interactions (between front/ui and back), with auto-reconnect feature.
+- When True: it will use http interactions (between front/ui and back). But "tag.update" feature will not be available.
 
 #### sesprovider (htagweb.sessions)
 
