@@ -37,6 +37,20 @@ Process live as long as the server live (TODO: a TIMEOUT will be back soon)
  * 'parano mode' (can aes encrypt all communications between client & server ... to avoid mitm'proxies on ws/http interactions)
  * auto reconnect websocket
 
+### Instanciate
+
+Like a classical starlette'app :
+
+```python
+from htagweb import AppServer
+from yourcode import YourApp # <-- your htag class
+
+app=AppServer( YourApp, ... )
+if __name__=="__main__":
+    app.run()
+```
+
+You can use the following parameters :
 
 #### debug (bool)
 
@@ -55,10 +69,14 @@ non-sense in http_only mode.
 - When False: (default) interactions between front/ui and back are in clear text (json), readable by a MITM.
 - When True: interactions will be encrypted (less readable by a MITM, TODO: will try to use public/private keys in future)
 
+this parameter is available on `app.handle(request, obj, ... parano=True|False ...)` too, to override defaults !
+
 #### http_only (bool)
 
 - When False: (default) it will use websocket interactions (between front/ui and back), with auto-reconnect feature.
 - When True: it will use http interactions (between front/ui and back). But "tag.update" feature will not be available.
+
+this parameter is available on `app.handle(request, obj, ... http_only=True|False ...)` too, to override defaults !
 
 #### session_factory (htagweb.sessions)
 

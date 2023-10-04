@@ -124,7 +124,7 @@ class HRSocket(WebSocketEndpoint):
 
     async def _sendback(self,websocket, txt:str) -> bool:
         try:
-            if websocket.app.parano:
+            if self.is_parano:
                 seed = parano_seed( websocket.scope["uid"])
                 txt = crypto.encrypt(txt.encode(),seed)
 
@@ -152,6 +152,7 @@ class HRSocket(WebSocketEndpoint):
         uid=websocket.scope["uid"]
         event=HrClient(uid,fqn).event_response+"_update"
         #======================================================
+        self.is_parano="parano" in websocket.query_params.keys()
 
         await websocket.accept()
 
@@ -162,7 +163,7 @@ class HRSocket(WebSocketEndpoint):
         fqn=websocket.path_params.get("fqn","")
         uid=websocket.scope["uid"]
 
-        if websocket.app.parano:
+        if self.is_parano:
             data = crypto.decrypt(data.encode(),parano_seed( uid )).decode()
         data=json.loads(data)
 
@@ -208,15 +209,15 @@ async def lifespan(app):
 class AppServer(Starlette):
     def __init__(self,
                 obj:"htag.Tag class|fqn|None"=None,
+                session_factory:"sessions.MemDict|sessions.FileDict|sessions.FilePersistentDict|None"=None,
                 debug:bool=True,
                 ssl:bool=False,
                 parano:bool=False,
                 http_only:bool=False,
-                session_factory:"sessions.MemDict|sessions.FileDict|sessions.FilePersistentDict|None"=None,
             ):
         self.ssl=ssl
-        self.parano=parano
-        self.http_only=http_only
+        self.parano = parano
+        self.http_only = http_only
 
         if session_factory is None:
             self.sesprovider = sessions.MemDict
@@ -242,112 +243,125 @@ class AppServer(Starlette):
 
         if obj:
             async def handleHome(request):
-                return await self.serve(request,obj)
+                return await self.handle(request,obj,recreate=False,http_only=http_only,parano=parano)
             self.add_route( '/', handleHome )
 
     # new method
-    async def handle(self, request, obj:"htag.Tag class|fqn", recreate:bool=False ) -> HTMLResponse:
-        return await self.serve(request,obj,recreate)
+    async def handle(self, request,
+                    obj:"htag.Tag class|fqn",
+                    recreate:bool=False,
+                    http_only:"bool|None"=False,
+                    parano:"bool|None"=False ) -> HTMLResponse:
+        return await self.serve(request,obj,recreate,http_only,parano)
 
 
     # DEPRECATED
-    async def serve(self, request, obj:"htag.Tag class|fqn", force:bool=False ) -> HTMLResponse:
+    async def serve(self, request,
+                    obj:"htag.Tag class|fqn",
+                    force:bool=False,
+                    http_only:"bool|None"=False,
+                    parano:"bool|None"=False ) -> HTMLResponse:
+
+        # take default behaviour if not present
+        is_parano = self.parano if parano is None else parano
+        is_http_only = self.http_only if http_only is None else http_only
+
+
         uid = request.scope["uid"]
+        args,kargs = commons.url2ak(str(request.url))
         fqn=normalize(findfqn(obj))
 
-        if self.parano:
+        if is_parano:
             seed = parano_seed( uid )
 
-            jstunnel = crypto.JSCRYPTO
-            jstunnel += f"\nvar _PARANO_='{seed}'\n"
-            jstunnel += "\nasync function _read_(x) {return await decrypt(x,_PARANO_)}\n"
-            jstunnel += "\nasync function _write_(x) {return await encrypt(x,_PARANO_)}\n"
+            jslib = crypto.JSCRYPTO
+            jslib += f"\nvar _PARANO_='{seed}'\n"
+            jslib += "\nasync function _read_(x) {return await decrypt(x,_PARANO_)}\n"
+            jslib += "\nasync function _write_(x) {return await encrypt(x,_PARANO_)}\n"
+            pparano="?parano"
         else:
-            jstunnel = ""
-            jstunnel += "\nasync function _read_(x) {return x}\n"
-            jstunnel += "\nasync function _write_(x) {return x}\n"
+            jslib = ""
+            jslib += "\nasync function _read_(x) {return x}\n"
+            jslib += "\nasync function _write_(x) {return x}\n"
+            pparano=""
 
 
-        if self.http_only:
+        if is_http_only:
             # interactions use HTTP POST
-            js = """
-%(jstunnel)s
+            js = """%(jslib)s
 
-async function interact( o ) {
-    let body = await _write_(JSON.stringify(o));
-    let req=await window.fetch("/_/%(fqn)s",{method:"POST", body: body});
-    let actions=await req.text();
-    action( await _read_(actions) );
-}
+            async function interact( o ) {
+                let body = await _write_(JSON.stringify(o));
+                let req=await window.fetch("/_/%(fqn)s%(pparano)s",{method:"POST", body: body});
+                let actions=await req.text();
+                action( await _read_(actions) );
+            }
 
-window.addEventListener('DOMContentLoaded', start );
-""" % locals()
+            window.addEventListener('DOMContentLoaded', start );
+            """ % locals()
         else:
             # interactions use WS
             protocol = "wss" if self.ssl else "ws"
 
-            js = """
-    %(jstunnel)s
+            js = """%(jslib)s
 
-    async function interact( o ) {
-        _WS_.send( await _write_(JSON.stringify(o)) );
-    }
+            async function interact( o ) {
+                _WS_.send( await _write_(JSON.stringify(o)) );
+            }
 
-    // instanciate the WEBSOCKET
-    let _WS_=null;
-    let retryms=500;
+            // instanciate the WEBSOCKET
+            let _WS_=null;
+            let retryms=500;
 
-    function connect() {
-        _WS_= new WebSocket("%(protocol)s://"+location.host+"/_/%(fqn)s");
-        _WS_.onopen=function(evt) {
-            console.log("** WS connected")
-            document.body.classList.remove("htagoff");
-            retryms=500;
-            start();
+            function connect() {
+                _WS_= new WebSocket("%(protocol)s://"+location.host+"/_/%(fqn)s%(pparano)s");
+                _WS_.onopen=function(evt) {
+                    console.log("** WS connected")
+                    document.body.classList.remove("htagoff");
+                    retryms=500;
+                    start();
 
-            _WS_.onmessage = async function(e) {
-                let actions = await _read_(e.data)
-                action(actions)
-            };
+                    _WS_.onmessage = async function(e) {
+                        let actions = await _read_(e.data)
+                        action(actions)
+                    };
 
-        }
+                }
 
-        _WS_.onclose = function(evt) {
-            console.log("** WS disconnected, retry in (ms):",retryms);
-            document.body.classList.add("htagoff");
+                _WS_.onclose = function(evt) {
+                    console.log("** WS disconnected, retry in (ms):",retryms);
+                    document.body.classList.add("htagoff");
 
-            setTimeout( function() {
-                connect();
-                retryms=retryms*2;
-            }, retryms);
-        };
-    }
-    connect();
+                    setTimeout( function() {
+                        connect();
+                        retryms=retryms*2;
+                    }, retryms);
+                };
+            }
+            connect();
+            """ % locals()
 
-    """ % locals()
-
-        p = HrClient(uid,fqn,js,self.sesprovider.__name__,force=force)
-
-        args,kargs = commons.url2ak(str(request.url))
+        p = HrClient(uid,fqn,js,self.sesprovider.__name__,recreate=force)
         html=await p.start(*args,**kargs)
         return HTMLResponse(html)
 
     async def HRHttp(self,request) -> PlainTextResponse:
         uid = request.scope["uid"]
         fqn = request.path_params.get("fqn","")
+        is_parano="parano" in request.query_params.keys()
         seed = parano_seed( uid )
 
         p=HrClient(uid,fqn)
         data = await request.body()
 
-        if self.parano:
+        if is_parano:
             data = crypto.decrypt(data,seed).decode()
 
         data=json.loads(data)
         actions=await p.interact( oid=data["id"], method_name=data["method"], args=data["args"], kargs=data["kargs"], event=data.get("event") )
         txt=json.dumps(actions)
 
-        if self.parano:
+        if is_parano:
             txt = crypto.encrypt(txt.encode(),seed)
 
         return PlainTextResponse(txt)

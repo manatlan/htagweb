@@ -2,7 +2,7 @@ from htag import Tag
 import json,asyncio,time,os
 
 """
-Complex htag's app to test:
+Complex htag's app for my tests purpose:
 
     - a dynamic object (TagSession), which got a render method (new way)
     - using tag.state (in session)
@@ -78,17 +78,11 @@ class Jo(Tag.body):
         self <= Tag.button("B",_onclick=test)
 
 async def handleJo(req):
-    return await req.app.handle(req,Jo)
+    return await req.app.handle(req,Jo,http_only=True,parano=True)
 
-# With Web http runner provided by htag
-#------------------------------------------------------
-# from htag.runners import WebHTTP
-# WebHTTP( App ).run()
-
-# With htagweb.WebServer runner provided by htagweb
 #------------------------------------------------------
 from htagweb import SimpleServer,AppServer
-app=AppServer( App ,parano=False,http_only=True)
+app=AppServer( App )
 app.add_route("/jo", handleJo )
 
 if __name__=="__main__":
