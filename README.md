@@ -15,7 +15,6 @@ There are 3 runners:
  - SimpleServer : for tests purposes
  - HtagServer : (use SimpleServer) to browse/expose python/htag files in an UI.
 
-
 ## AppServer
 
 It's the real runner to expose htag apps in a real production environment, and provide
