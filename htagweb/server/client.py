@@ -7,12 +7,15 @@
 # https://github.com/manatlan/htagweb
 # #############################################################################
 
-import uuid,asyncio,time
+import uuid,asyncio,time,sys
 import redys
 import redys.v2
 from htagweb.server import EVENT_SERVER
+import logging
+logger = logging.getLogger(__name__)
 
-TIMEOUT=20 # sec to wait answer from redys server #TODO: set better
+TIMEOUT=2*60 # A interaction can take 2min max
+
 
 class HrClient:
     def __init__(self,uid:str,fqn:str,js:str=None,sesprovidername=None,recreate=False):
@@ -28,6 +31,12 @@ class HrClient:
         self.event_response = f"response_{self.hid}"
         self.event_interact = f"interact_{self.hid}"
 
+    def error(self, *a):
+        txt=f".HrClient {self.uid} {self.fqn}: %s" % (" ".join([str(i) for i in a]))
+        print(txt,flush=True,file=sys.stderr)
+        logger.error(txt)
+
+
     async def _wait(self,event, s=TIMEOUT):
         # wait for a response
         t1=time.monotonic()
@@ -36,6 +45,7 @@ class HrClient:
             if message is not None:
                 return message
 
+        self.error(f"Event TIMEOUT ({s}s) on {event} !!!")
         return None
 
     async def start(self,*a,**k) -> str:
@@ -78,10 +88,12 @@ class HrClient:
         await self.bus.subscribe( self.event_response+"_interact" )
 
         # post the interaction
-        assert await self.bus.publish( self.event_interact, params )
+        if await self.bus.publish( self.event_interact, params ):
+            # wait actions
+            return await self._wait(self.event_response+"_interact") or {}
+        else:
+            self.error(f"Can't publish {self.event_interact} !!!")
 
-        # wait actions
-        return await self._wait(self.event_response+"_interact") or {}
 
 
     @staticmethod

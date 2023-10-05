@@ -15,6 +15,8 @@ import multiprocessing
 from htag import Tag
 from htag.render import HRenderer
 
+import logging
+logger = logging.getLogger(__name__)
 
 
 EVENT_SERVER="EVENT_SERVER"
@@ -50,7 +52,9 @@ def importClassFromFqn(fqn_norm:str) -> type:
 
 
 
+##################################################################################
 def process(uid,hid,event_response,event_interact,fqn,js,init,sesprovidername,force):
+##################################################################################
     #''''''''''''''''''''''''''''''''''''''''''''''''''''
     if sesprovidername is None:
         sesprovidername="MemDict"
@@ -59,150 +63,170 @@ def process(uid,hid,event_response,event_interact,fqn,js,init,sesprovidername,fo
     #''''''''''''''''''''''''''''''''''''''''''''''''''''
 
     pid = os.getpid()
+
+    def log(*a):
+        txt=f">PID {pid} {hid}: %s" % (" ".join([str(i) for i in a]))
+        print(txt,flush=True,file=sys.stdout)
+        logger.info(txt)
+
     async def loop():
-        with redys.v2.AClient() as bus:
-            try:
-                if os.getcwd() not in sys.path: sys.path.insert(0,os.getcwd())
-                klass=importClassFromFqn(fqn)
-            except Exception as e:
-                print(f">Process {pid} ERROR :",hid,e)
-                #TODO: do better here
-                assert await bus.publish(event_response,str(e))
-                return
+        RRR={"1":"1"} #TODO: find something better ;-)
 
-            RUNNING=True
-            def exit():
-                RUNNING=False
+        def suicide():
+            log("suicide")
+            RRR.clear()
 
-            session = FactorySession(uid)
-
-            styles=Tag.style("body.htagoff * {cursor:not-allowed !important;}")
-
-            hr=HRenderer( klass ,js, init=init, exit_callback=exit, fullerror=True, statics=[styles,],session = session)
-
-            print(f">Process {pid} started with :",hid,init)
-
-
-            # subscribe for interaction
-            await bus.subscribe( event_interact )
-
-            # publish the 1st rendering
-            assert await bus.publish(event_response,str(hr))
-
-            # register tag.update feature
-            #======================================
-            async def update(actions):
-                try:
-                    await bus.publish(event_response+"_update",actions)
-                except:
-                    print("!!! concurrent write/read on redys !!!")
-                return True
-
-            hr.sendactions=update
-            #======================================
-
-            while RUNNING:
-                params = await bus.get_event( event_interact )
-                if params is not None:  # sometimes it's not a dict ?!? (bool ?!)
-                    if params.get("cmd") == CMD_RENDER:
-                        # just a false start, just need the current render
-                        print(f">Process {pid} render {hid}")
-                        hr.session = FactorySession(uid)    # reload session
-                        assert await bus.publish(event_response,str(hr))
-                    else:
-                        print(f">Process {pid} interact {hid}:")
-                        #-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\- UT
-                        if params["oid"]=="ut": params["oid"]=id(hr.tag)
-                        #-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
-
-                        actions = await hr.interact(**params)
-                        
-                        # always save session after interaction 
-                        hr.session._save()
-
-                        assert await bus.publish(event_response+"_interact",actions)
-
-                await asyncio.sleep(0.1)
-
-            #consume all pending events
-            assert await bus.unsubscribe( event_interact )
-
-    asyncio.run( loop() )
-    print(f">Process {pid} ended")
-
-async def hrserver_orchestrator():
-    with redys.v2.AClient() as bus:
-
-        # prevent multi orchestrators
-        if await bus.get("hrserver_orchestrator_running")==True:
-            print("hrserver_orchestrator is already running")
+        bus = redys.v2.AClient()
+        try:
+            if os.getcwd() not in sys.path: sys.path.insert(0,os.getcwd())
+            klass=importClassFromFqn(fqn)
+        except Exception as e:
+            log("importClassFromFqn -->",e)
+            #TODO: do better here
+            assert await bus.publish(event_response,str(e))
             return
-        else:
-            print("hrserver_orchestrator started")
-            await bus.set("hrserver_orchestrator_running",True)
 
-        # register its main event
-        await bus.subscribe( EVENT_SERVER )
+        session = FactorySession(uid)
 
-        ps={}
+        styles=Tag.style("body.htagoff * {cursor:not-allowed !important;}")
 
-        def killall(ps:dict):
-            # try to send a EXIT CMD to all running ps
-            for hid,infos in ps.items():
-                ps[hid]["process"].kill()
+        hr=HRenderer( klass ,js, init=init, exit_callback=suicide, fullerror=True, statics=[styles,],session = session)
 
-        while 1:
-            params = await bus.get_event( EVENT_SERVER )
-            if params is not None:
-                if params.get("cmd") == CMD_EXIT:
-                    print(EVENT_SERVER, params.get("cmd") )
-                    break
-                elif params.get("cmd") == "CLEAN":
-                    print(EVENT_SERVER, params.get("cmd") )
-                    killall(ps)
-                    continue
-                elif params.get("cmd") == "PS":
-                    print(EVENT_SERVER, params.get("cmd") )
-                    from pprint import pprint
-                    pprint(ps)
-                    continue
+        log(f"Start with params:",init)
 
-                hid=params["hid"]
-                key_init=str(params["init"])
 
-                if hid in ps and ps[hid]["process"].is_alive():
-                    # process is already running
+        # subscribe for interaction
+        await bus.subscribe( event_interact )
 
-                    if params["force"] or key_init != ps[hid]["key"]:
-                        # kill itself because it's not the same init params, or force recreate
-                        if params["force"]:
-                            print("Recreate a new process (forced)",hid)
-                        else:
-                            print("Recreate a new process (qp changed)",hid)
-                        ps[hid]["process"].kill()
-                        # and recreate another one later
-                    else:
-                        # it's the same initialization process
+        # publish the 1st rendering
+        assert await bus.publish(event_response,str(hr))
 
-                        # so ask process to send back its render
-                        assert await bus.publish(params["event_interact"],dict(cmd=CMD_RENDER))
-                        continue
+        # register tag.update feature
+        #======================================
+        async def update(actions):
+            try:
+                r=await bus.publish(event_response+"_update",actions)
+            except:
+                log("!!! concurrent write/read on redys !!!")
+                r=False
+            return r
 
-                # create the process
-                p=multiprocessing.Process(target=process, args=[],kwargs=params)
-                p.start()
+        hr.sendactions=update
+        #======================================
 
-                # and save it in pool ps
-                ps[hid]=dict( process=p, key=key_init, event_interact=params["event_interact"])
+        while RRR:
+            params = await bus.get_event( event_interact )
+            if params is not None:  # sometimes it's not a dict ?!? (bool ?!)
+                if params.get("cmd") == CMD_RENDER:
+                    # just a false start, just need the current render
+                    log("RERENDER")
+                    hr.session = FactorySession(uid)    # reload session
+                    assert await bus.publish(event_response,str(hr))
+                else:
+                    log("INTERACT")
+                    #-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\- UT
+                    if params["oid"]=="ut": params["oid"]=id(hr.tag)
+                    #-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
+
+                    actions = await hr.interact(**params)
+
+                    # always save session after interaction
+                    hr.session._save()
+
+                    assert await bus.publish(event_response+"_interact",actions)
 
             await asyncio.sleep(0.1)
 
-        assert await bus.unsubscribe( EVENT_SERVER )
+        #consume all pending events
+        assert await bus.unsubscribe( event_interact )
 
-        killall(ps)
+    asyncio.run( loop() )
+    log("end")
 
 
-    print("hrserver_orchestrator stopped")
+
+##################################################################################
+async def hrserver_orchestrator():
+##################################################################################
+    bus=redys.v2.AClient()
+
+    def log(*a):
+        txt=f"-ORCHESTRATOR- %s" % (" ".join([str(i) for i in a]))
+        print(txt,flush=True,file=sys.stdout)
+        logger.info(txt)
+
+
+    # prevent multiple orchestrators
+    if await bus.get("hrserver_orchestrator_running")==True:
+        log("already running")
+        return
+    else:
+        log("started")
+        await bus.set("hrserver_orchestrator_running",True)
+
+    # register its main event
+    await bus.subscribe( EVENT_SERVER )
+
+    ps={}
+
+    def killall(ps:dict):
+        # try to send a EXIT CMD to all running ps
+        for hid,infos in ps.items():
+            ps[hid]["process"].kill()
+
+    while 1:
+        params = await bus.get_event( EVENT_SERVER )
+        if params is not None:
+            if params.get("cmd") == CMD_EXIT:
+                log(EVENT_SERVER, params.get("cmd") )
+                break
+            elif params.get("cmd") == "CLEAN":
+                log(EVENT_SERVER, params.get("cmd") )
+                killall(ps)
+                continue
+            elif params.get("cmd") == "PS":
+                log(EVENT_SERVER, params.get("cmd") )
+                log(ps)
+                continue
+
+            hid=params["hid"]
+            key_init=str(params["init"])
+
+            if hid in ps and ps[hid]["process"].is_alive():
+                # process is already running
+
+                if params["force"] or key_init != ps[hid]["key"]:
+                    # kill itself because it's not the same init params, or force recreate
+                    if params["force"]:
+                        log("Destroy/Recreate a new process (forced)",hid)
+                    else:
+                        log("Destroy/Recreate a new process (qp changed)",hid)
+                    ps[hid]["process"].kill()
+                    # and recreate another one later
+                else:
+                    # it's the same initialization process
+
+                    log("Reuse process",hid)
+                    # so ask process to send back its render
+                    assert await bus.publish(params["event_interact"],dict(cmd=CMD_RENDER))
+                    continue
+            else:
+                log("Start a new process",hid)
+
+            # create the process
+            p=multiprocessing.Process(target=process, args=[],kwargs=params)
+            p.start()
+
+            # and save it in pool ps
+            ps[hid]=dict( process=p, key=key_init, event_interact=params["event_interact"])
+
+        await asyncio.sleep(0.1)
+
+    assert await bus.unsubscribe( EVENT_SERVER )
+
+    killall(ps)
+
+    log("stopped")
 
 async def wait_redys():
     bus=redys.v2.AClient()

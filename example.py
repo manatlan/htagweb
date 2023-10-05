@@ -50,6 +50,7 @@ class App(Tag.body):
         self <= Tag.button("inc integer",_onclick=inc_test_session)
         self <= Tag.button("add list",_onclick=addd)
         self <= Tag.button("clear",_onclick=clllll)
+        self <= Tag.button("X",_onclick=lambda o: self.exit(),_style="float:right")
         self <= TagSession()
 
         self+=Tag.li(Tag.a("t0",_href="/"))
@@ -57,6 +58,7 @@ class App(Tag.body):
         self+=Tag.li(Tag.a("t2",_href="/?v=2"))
         self+=Tag.li(Tag.a("Other app",_href="/jo"))
         self+=self.place
+
 
     async def loop_timer(self):
         while 1:
