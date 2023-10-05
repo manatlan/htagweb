@@ -27,6 +27,7 @@ jobs:
     - name: Install pytest + dependancies
       run: |
           python -m pip install --upgrade pip poetry
+          poetry lock
           poetry install --with dev
 
     # - name: Add "shared_memory_dict" for python>3.7
