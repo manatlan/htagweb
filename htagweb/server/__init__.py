@@ -116,6 +116,9 @@ def process(uid,hid,event_response,event_interact,fqn,js,init,sesprovidername,fo
                         #-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
 
                         actions = await hr.interact(**params)
+                        
+                        # always save session after interaction 
+                        hr.session._save()
 
                         assert await bus.publish(event_response+"_interact",actions)
 
