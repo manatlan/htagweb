@@ -7,7 +7,7 @@
 # https://github.com/manatlan/htagweb
 # #############################################################################
 
-import asyncio
+import asyncio,traceback
 import redys
 import redys.v2
 import os,sys,importlib,inspect
@@ -81,7 +81,7 @@ def process(uid,hid,event_response,event_interact,fqn,js,init,sesprovidername,fo
             if os.getcwd() not in sys.path: sys.path.insert(0,os.getcwd())
             klass=importClassFromFqn(fqn)
         except Exception as e:
-            log("importClassFromFqn -->",e)
+            log("importClassFromFqn ERROR",traceback.format_exc())
             #TODO: do better here
             assert await bus.publish(event_response,str(e))
             return
