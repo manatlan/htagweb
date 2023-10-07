@@ -34,7 +34,7 @@ from htag.runners import commons
 from . import crypto
 import redys.v2
 
-from htagweb.server import hrserver, hrserver_orchestrator, kill_hrserver, wait_hrserver
+from htagweb.server import Hid, hrserver_orchestrator, kill_hrserver, wait_hrserver
 from htagweb.server.client import HrClient
 
 logger = logging.getLogger(__name__)
@@ -150,7 +150,7 @@ class HRSocket(WebSocketEndpoint):
         #====================================================== get the event
         fqn=websocket.path_params.get("fqn","")
         uid=websocket.scope["uid"]
-        event=HrClient(uid,fqn).event_response+"_update"
+        event=Hid.create(uid,fqn).event_response_update
         #======================================================
         self.is_parano="parano" in websocket.query_params.keys()
 
@@ -177,7 +177,7 @@ class HRSocket(WebSocketEndpoint):
         #====================================================== get the event
         fqn=websocket.path_params.get("fqn","")
         uid=websocket.scope["uid"]
-        event=HrClient(uid,fqn).event_response+"_update"
+        event=Hid.create(uid,fqn).event_response_update
         #======================================================
 
         with redys.v2.AClient() as bus:

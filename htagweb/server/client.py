@@ -10,7 +10,7 @@
 import uuid,asyncio,time,sys
 import redys
 import redys.v2
-from htagweb.server import EVENT_SERVER
+from htagweb.server import EVENT_SERVER,Hid
 import logging
 logger = logging.getLogger(__name__)
 
@@ -20,19 +20,15 @@ TIMEOUT=2*60 # A interaction can take 2min max
 class HrClient:
     def __init__(self,uid:str,fqn:str,js:str=None,sesprovidername=None,recreate=False):
         """ !!!!!!!!!!!!!!!!!!!! if js|sesprovidername is None : can't do a start() !!!!!!!!!!!!!!!!!!!!!!"""
-        self.uid=uid
-        self.fqn=fqn
         self.js=js
         self.bus = redys.v2.AClient()
         self.sesprovidername=sesprovidername
         self.recreate=recreate
 
-        self.hid=f"{uid}_{fqn}"
-        self.event_response = f"response_{self.hid}"
-        self.event_interact = f"interact_{self.hid}"
+        self.hid=Hid.create(uid,fqn)
 
     def error(self, *a):
-        txt=f".HrClient {self.uid} {self.fqn}: %s" % (" ".join([str(i) for i in a]))
+        txt=f".HrClient {self.hid.uid} {self.hid.fqn}: %s" % (" ".join([str(i) for i in a]))
         print(txt,flush=True,file=sys.stderr)
         logger.error(txt)
 
@@ -55,15 +51,11 @@ class HrClient:
         assert self.js, "You should define the js in HrPilot() !!!!!!"
 
         # subscribe for response
-        await self.bus.subscribe( self.event_response )
+        await self.bus.subscribe( self.hid.event_response )
 
         # start the process app
         assert await self.bus.publish( EVENT_SERVER , dict(
-            uid=self.uid,
             hid=self.hid,
-            event_response=self.event_response,
-            event_interact=self.event_interact,
-            fqn=self.fqn,
             js=self.js,
             init= (a,k),
             sesprovidername=self.sesprovidername,
@@ -71,13 +63,7 @@ class HrClient:
         ))
 
         # wait 1st rendering
-        return await self._wait(self.event_response) or "?!"
-
-    # async def kill(self):
-    #     """ Kill the process
-    #         (dialog with process event)
-    #     """
-    #     assert await self.bus.publish( self.event_interact, dict(cmd="EXIT") )
+        return await self._wait(self.hid.event_response) or "?!"
 
 
     async def interact(self,**params) -> dict:
@@ -85,32 +71,15 @@ class HrClient:
             (dialog with process event)
         """
         # subscribe for response
-        await self.bus.subscribe( self.event_response+"_interact" )
+        await self.bus.subscribe( self.hid.event_interact_response )
 
         # post the interaction
-        if await self.bus.publish( self.event_interact, params ):
+        if await self.bus.publish( self.hid.event_interact, params ):
             # wait actions
-            return await self._wait(self.event_response+"_interact") or {}
+            return await self._wait(self.hid.event_interact_response) or {}
         else:
-            self.error(f"Can't publish {self.event_interact} !!!")
+            self.error(f"Can't publish {self.hid.event_interact} !!!")
 
-
-
-    @staticmethod
-    async def list():
-        """ SERVER COMMAND
-            (dialog with server event)
-        """
-        with redys.v2.AClient() as bus:
-            assert await bus.publish( EVENT_SERVER, dict(cmd="PS") )
-
-    @staticmethod
-    async def clean():
-        """ SERVER COMMAND
-            (dialog with server event)
-        """
-        with redys.v2.AClient() as bus:
-            assert await bus.publish( EVENT_SERVER, dict(cmd="CLEAN") )
 
 
 async def main():

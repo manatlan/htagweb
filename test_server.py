@@ -4,7 +4,7 @@ import pytest,sys,io
 import multiprocessing,threading
 import time
 from htagweb.appserver import processHrServer,lifespan
-from htagweb.server import kill_hrserver, wait_hrserver
+from htagweb.server import ServerClient, kill_hrserver, wait_hrserver
 from htagweb.server.client import HrClient
 import threading
 
@@ -40,6 +40,13 @@ async def test_base( server ):
 
     actions=await p.interact( oid="ut", method_name="doit", args=[], kargs={}, event={} )
     assert "update" in actions
+
+
+    s=ServerClient()
+    ll=await s.list()
+    assert len(ll)==1
+    assert ll[0].uid == uid
+    assert ll[0].fqn == "test_hr:App"
 
 
 

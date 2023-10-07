@@ -24,6 +24,8 @@ EVENT_SERVER="EVENT_SERVER"
 CMD_EXIT="EXIT"
 CMD_RENDER="RENDER"
 
+KEYAPPS="htagweb.apps"
+
 def importClassFromFqn(fqn_norm:str) -> type:
     assert ":" in fqn_norm
     #--------------------------- fqn -> module, name
@@ -50,17 +52,38 @@ def importClassFromFqn(fqn_norm:str) -> type:
         klass.imports=[]
     return klass
 
-
-
-##################################################################################
-def process(uid,hid,event_response,event_interact,fqn,js,init,sesprovidername,force):
-##################################################################################
-    #''''''''''''''''''''''''''''''''''''''''''''''''''''
-    if sesprovidername is None:
-        sesprovidername="MemDict"
+def importFactorySession( sesprovidername=None ):
     import htagweb.sessions
-    FactorySession=getattr(htagweb.sessions,sesprovidername)
-    #''''''''''''''''''''''''''''''''''''''''''''''''''''
+    return getattr(htagweb.sessions,sesprovidername or "MemDict")
+
+class Hid:
+    def __init__(self,hid:str):
+        uid,fqn=hid.split("_",1)
+        self.uid=uid
+        self.fqn=fqn
+        self.hid=hid
+
+        self.event_interact = "interact_"+hid
+        self.event_interact_response = self.event_interact+"_response"
+
+        self.event_response = "response_"+hid
+        self.event_response_update = self.event_response+"_update"
+
+        self.key_sesprovider = "sesprovider_"+hid
+
+    @staticmethod
+    def create(uid:str,fqn:str):
+        return Hid(uid+"_"+fqn)
+
+    def __str__(self):
+        return self.hid
+    def __repr__(self):
+        return self.hid
+
+##################################################################################
+def process(hid:Hid,js,init,sesprovidername,force):
+##################################################################################
+    FactorySession=importFactorySession(sesprovidername)
 
     pid = os.getpid()
 
@@ -79,14 +102,21 @@ def process(uid,hid,event_response,event_interact,fqn,js,init,sesprovidername,fo
         bus = redys.v2.AClient()
         try:
             if os.getcwd() not in sys.path: sys.path.insert(0,os.getcwd())
-            klass=importClassFromFqn(fqn)
+            klass=importClassFromFqn(hid.fqn)
         except Exception as e:
             log("importClassFromFqn ERROR",traceback.format_exc())
             #TODO: do better here
-            assert await bus.publish(event_response,str(e))
+            assert await bus.publish(hid.event_response,str(e))
             return
 
-        session = FactorySession(uid)
+        # register hid in redys "apps"
+        await bus.sadd(KEYAPPS,str(hid))
+
+        # save sesprovider for this hid
+        await bus.set(hid.key_sesprovider, FactorySession.__name__)
+
+
+        session = FactorySession(hid.uid)
 
         styles=Tag.style("body.htagoff * {cursor:not-allowed !important;}")
 
@@ -96,16 +126,16 @@ def process(uid,hid,event_response,event_interact,fqn,js,init,sesprovidername,fo
 
 
         # subscribe for interaction
-        await bus.subscribe( event_interact )
+        await bus.subscribe( hid.event_interact )
 
         # publish the 1st rendering
-        assert await bus.publish(event_response,str(hr))
+        assert await bus.publish(hid.event_response,str(hr))
 
         # register tag.update feature
         #======================================
         async def update(actions):
             try:
-                r=await bus.publish(event_response+"_update",actions)
+                r=await bus.publish(hid.event_response_update,actions)
             except:
                 log("!!! concurrent write/read on redys !!!")
                 r=False
@@ -115,13 +145,15 @@ def process(uid,hid,event_response,event_interact,fqn,js,init,sesprovidername,fo
         #======================================
 
         while RRR:
-            params = await bus.get_event( event_interact )
+            params = await bus.get_event( hid.event_interact )
             if params is not None:  # sometimes it's not a dict ?!? (bool ?!)
-                if params.get("cmd") == CMD_RENDER:
+                if params.get("cmd") == CMD_EXIT:
+                    break
+                elif params.get("cmd") == CMD_RENDER:
                     # just a false start, just need the current render
                     log("RERENDER")
-                    hr.session = FactorySession(uid)    # reload session
-                    assert await bus.publish(event_response,str(hr))
+                    hr.session = FactorySession(hid.uid)    # reload session
+                    assert await bus.publish(hid.event_response,str(hr))
                 else:
                     log("INTERACT")
                     #-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\- UT
@@ -133,12 +165,19 @@ def process(uid,hid,event_response,event_interact,fqn,js,init,sesprovidername,fo
                     # always save session after interaction
                     hr.session._save()
 
-                    assert await bus.publish(event_response+"_interact",actions)
+                    assert await bus.publish(hid.event_interact_response,actions)
 
             await asyncio.sleep(0.1)
 
+        # remove hid in redys "apps"
+        await bus.srem(KEYAPPS,str(hid))
+
+        # delete sesprovider for this hid
+        await bus.delete(hid.key_sesprovider)
+
+
         #consume all pending events
-        assert await bus.unsubscribe( event_interact )
+        assert await bus.unsubscribe( hid.event_interact )
 
     asyncio.run( loop() )
     log("end")
@@ -169,10 +208,13 @@ async def hrserver_orchestrator():
 
     ps={}
 
-    def killall(ps:dict):
+    async def killall(ps:dict):
         # try to send a EXIT CMD to all running ps
         for hid,infos in ps.items():
             ps[hid]["process"].kill()
+            # remove hid in redys "apps"
+            await bus.srem(KEYAPPS,hid)
+
 
     while 1:
         params = await bus.get_event( EVENT_SERVER )
@@ -182,33 +224,37 @@ async def hrserver_orchestrator():
                 break
             elif params.get("cmd") == "CLEAN":
                 log(EVENT_SERVER, params.get("cmd") )
-                killall(ps)
-                continue
-            elif params.get("cmd") == "PS":
-                log(EVENT_SERVER, params.get("cmd") )
-                log(ps)
+                await killall(ps)
                 continue
 
-            hid=params["hid"]
+            hid:Hid=params["hid"]
             key_init=str(params["init"])
 
-            if hid in ps and ps[hid]["process"].is_alive():
+            #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+            # TODO: this code will be changed soon ;-)
+            #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+            shid=hid.hid
+            if shid in ps and ps[shid]["process"].is_alive():
                 # process is already running
 
-                if params["force"] or key_init != ps[hid]["key"]:
+                if params["force"] or key_init != ps[shid]["key"]:
                     # kill itself because it's not the same init params, or force recreate
                     if params["force"]:
                         log("Destroy/Recreate a new process (forced)",hid)
                     else:
                         log("Destroy/Recreate a new process (qp changed)",hid)
-                    ps[hid]["process"].kill()
+                    ps[shid]["process"].kill()
+
+                    # remove hid in redys "apps"
+                    await bus.srem(KEYAPPS,str(hid))
+
                     # and recreate another one later
                 else:
                     # it's the same initialization process
 
                     log("Reuse process",hid)
                     # so ask process to send back its render
-                    assert await bus.publish(params["event_interact"],dict(cmd=CMD_RENDER))
+                    assert await bus.publish(hid.event_interact,dict(cmd=CMD_RENDER))
                     continue
             else:
                 log("Start a new process",hid)
@@ -218,13 +264,14 @@ async def hrserver_orchestrator():
             p.start()
 
             # and save it in pool ps
-            ps[hid]=dict( process=p, key=key_init, event_interact=params["event_interact"])
+            ps[shid]=dict( process=p, key=key_init, event_interact=hid.event_interact)
+            #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
 
         await asyncio.sleep(0.1)
 
     assert await bus.unsubscribe( EVENT_SERVER )
 
-    killall(ps)
+    await killall(ps)
 
     log("stopped")
 
@@ -237,6 +284,34 @@ async def wait_redys():
         except:
             pass
         await asyncio.sleep(0.1)
+
+
+##################################################################################
+class ServerClient:
+##################################################################################
+    """ to expose server features """
+    def __init__(self):
+        self._bus=redys.v2.AClient()
+
+    async def list(self) -> list:
+        """ list all process uid&fqn """
+        ll = sorted(await self._bus.get(KEYAPPS))
+        return [Hid(hid) for hid in ll]
+
+    async def kill(self,hid:Hid):
+        """ kill a process (process event)"""
+        await self._bus.publish(hid.event_interact,dict(cmd=CMD_EXIT))
+
+    async def killall(self):
+        """ killall process (server event)"""
+        await self._bus.publish(EVENT_SERVER,dict(cmd="CLEAN"))
+
+    async def session(self,hid:Hid) -> dict:
+        """ get session for hid"""
+        sesprovidername=await self._bus.get(hid.key_sesprovider)
+        FactorySession=importFactorySession(sesprovidername)
+        return FactorySession(hid.uid)
+
 
 async def wait_hrserver():
     bus=redys.v2.AClient()
@@ -254,7 +329,9 @@ async def kill_hrserver():
     await bus.publish( EVENT_SERVER, dict(cmd=CMD_EXIT) )   # kill orchestrator loop
 
 
+##################################################################################
 async def hrserver():
+##################################################################################
     s=redys.v2.Server()
     s.start()
 
