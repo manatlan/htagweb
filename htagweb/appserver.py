@@ -139,13 +139,16 @@ class HRSocket(WebSocketEndpoint):
         with redys.v2.AClient() as bus:
             await bus.subscribe(event)
 
-            ok=True
-            while ok:
-                actions = await bus.get_event( event )
-                if actions is not None:
-                    ok=await self._sendback(websocket,json.dumps(actions))
-                await asyncio.sleep(0.1)
-
+            try:
+                ok=True
+                while ok:
+                    actions = await bus.get_event( event )
+                    if actions is not None:
+                        ok=await self._sendback(websocket,json.dumps(actions))
+                    await asyncio.sleep(0.1)
+            except:
+                print("**loop_tag_update, broken bus, will stop the loop_tag_update !**")
+                
     async def on_connect(self, websocket):
         #====================================================== get the event
         fqn=websocket.path_params.get("fqn","")
