@@ -254,7 +254,9 @@ async def hrserver_orchestrator():
             running_hids:list=await bus.get(KEYAPPS) or []
             if str(hid) in running_hids:
                 log("Try to reuse process",hid)
-                assert await bus.publish(hid.event_interact,dict(cmd=CMD_REUSE,params=params))
+                can = await bus.publish(hid.event_interact,dict(cmd=CMD_REUSE,params=params))
+                if not can:
+                    log("Can't answer the interaction REUSE !!!!")
             else:
                 p=multiprocessing.Process(target=process, args=[],kwargs=params)
                 p.start()

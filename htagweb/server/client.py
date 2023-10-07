@@ -68,16 +68,19 @@ class HrClient:
         """ return htag'actions or None (if process doesn't answer, after timeout)
             (dialog with process event)
         """
-        # subscribe for response
-        await self.bus.subscribe( self.hid.event_interact_response )
+        try:
+            # subscribe for response
+            await self.bus.subscribe( self.hid.event_interact_response )
 
-        # post the interaction
-        if await self.bus.publish( self.hid.event_interact, params ):
-            # wait actions
-            return await self._wait(self.hid.event_interact_response) or {}
-        else:
-            self.error(f"Can't publish {self.hid.event_interact} !!!")
-
+            # post the interaction
+            if await self.bus.publish( self.hid.event_interact, params ):
+                # wait actions
+                return await self._wait(self.hid.event_interact_response) or {}
+            else:
+                self.error(f"Can't publish {self.hid.event_interact} !!!")
+        except Exception as e:
+            self.error("***HrClient.interact error***",e)
+            return {}
 
 
 async def main():
