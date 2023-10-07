@@ -34,7 +34,7 @@ async def test_base( server ):
     html=await p.start()
     assert html.startswith("<!DOCTYPE html><html>")
 
-    p=HrClient(uid,"test_hr:App","//",recreate=True)
+    p=HrClient(uid,"test_hr:App","//")
     html=await p.start()
     assert html.startswith("<!DOCTYPE html><html>")
 

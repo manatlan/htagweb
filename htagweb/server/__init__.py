@@ -7,7 +7,8 @@
 # https://github.com/manatlan/htagweb
 # #############################################################################
 
-import asyncio,traceback
+import asyncio,traceback,os
+from more_itertools import last
 import redys
 import redys.v2
 import os,sys,importlib,inspect
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 EVENT_SERVER="EVENT_SERVER"
 
 CMD_EXIT="EXIT"
-CMD_RENDER="RENDER"
+CMD_REUSE="RENDER"
 
 KEYAPPS="htagweb.apps"
 
@@ -81,7 +82,7 @@ class Hid:
         return self.hid
 
 ##################################################################################
-def process(hid:Hid,js,init,sesprovidername,force):
+def process(hid:Hid,js,init,sesprovidername):
 ##################################################################################
     FactorySession=importFactorySession(sesprovidername)
 
@@ -109,6 +110,8 @@ def process(hid:Hid,js,init,sesprovidername,force):
             assert await bus.publish(hid.event_response,str(e))
             return
 
+        last_mod_time=os.path.getmtime(inspect.getfile(klass))
+
         # register hid in redys "apps"
         await bus.sadd(KEYAPPS,str(hid))
 
@@ -122,8 +125,9 @@ def process(hid:Hid,js,init,sesprovidername,force):
 
         hr=HRenderer( klass ,js, init=init, exit_callback=suicide, fullerror=True, statics=[styles,],session = session)
 
-        log(f"Start with params:",init)
+        key_init=str(init)
 
+        log(f"Start with params:",init)
 
         # subscribe for interaction
         await bus.subscribe( hid.event_interact )
@@ -143,19 +147,36 @@ def process(hid:Hid,js,init,sesprovidername,force):
 
         hr.sendactions=update
         #======================================
+        recreate={}
 
         while RRR:
             params = await bus.get_event( hid.event_interact )
             if params is not None:  # sometimes it's not a dict ?!? (bool ?!)
                 if params.get("cmd") == CMD_EXIT:
-                    break
-                elif params.get("cmd") == CMD_RENDER:
-                    # just a false start, just need the current render
-                    log("RERENDER")
-                    hr.session = FactorySession(hid.uid)    # reload session
-                    assert await bus.publish(hid.event_response,str(hr))
+                    log("Exit explicit")
+                    recreate={}
+                    break   # <- destroy itself
+                elif params.get("cmd") == CMD_REUSE:
+                    # event REUSE
+                    params=params.get("params")
+                    if str(params['init'])!=key_init or os.path.getmtime(inspect.getfile(klass))!=last_mod_time:
+                        # ask server/orchestrator to recreate me
+                        log("RECREATE")
+                        recreate=dict(
+                                    hid=hid,                                    # reuse current
+                                    js=js,                                      # reuse current
+                                    init= params["init"],                       # use new
+                                    sesprovidername=FactorySession.__name__,    # reuse current
+                                )
+                        break   # <- destroy itself
+                    else:
+                        log("REUSE")
+                        recreate={}
+                        hr.session = FactorySession(hid.uid)    # reload session
+                        assert await bus.publish(hid.event_response,str(hr))
                 else:
                     log("INTERACT")
+                    recreate={}
                     #-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\- UT
                     if params["oid"]=="ut": params["oid"]=id(hr.tag)
                     #-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
@@ -175,9 +196,12 @@ def process(hid:Hid,js,init,sesprovidername,force):
         # delete sesprovider for this hid
         await bus.delete(hid.key_sesprovider)
 
-
         #consume all pending events
-        assert await bus.unsubscribe( hid.event_interact )
+        await bus.unsubscribe( hid.event_interact )
+
+        if recreate:
+            assert await bus.publish( EVENT_SERVER , recreate )
+
 
     asyncio.run( loop() )
     log("end")
@@ -206,15 +230,14 @@ async def hrserver_orchestrator():
     # register its main event
     await bus.subscribe( EVENT_SERVER )
 
-    ps={}
-
-    async def killall(ps:dict):
+    async def killall():
         # try to send a EXIT CMD to all running ps
-        for hid,infos in ps.items():
-            ps[hid]["process"].kill()
-            # remove hid in redys "apps"
-            await bus.srem(KEYAPPS,hid)
-
+        running_hids = await bus.get(KEYAPPS) or []
+        while running_hids:
+            for hid in running_hids:
+                await bus.publish(Hid(hid).event_interact,dict(cmd=CMD_EXIT))
+            running_hids = await bus.get(KEYAPPS) or []
+            await asyncio.sleep(0.1)
 
     while 1:
         params = await bus.get_event( EVENT_SERVER )
@@ -224,54 +247,27 @@ async def hrserver_orchestrator():
                 break
             elif params.get("cmd") == "CLEAN":
                 log(EVENT_SERVER, params.get("cmd") )
-                await killall(ps)
+                await killall()
                 continue
 
             hid:Hid=params["hid"]
-            key_init=str(params["init"])
 
-            #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
-            # TODO: this code will be changed soon ;-)
-            #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
-            shid=hid.hid
-            if shid in ps and ps[shid]["process"].is_alive():
-                # process is already running
-
-                if params["force"] or key_init != ps[shid]["key"]:
-                    # kill itself because it's not the same init params, or force recreate
-                    if params["force"]:
-                        log("Destroy/Recreate a new process (forced)",hid)
-                    else:
-                        log("Destroy/Recreate a new process (qp changed)",hid)
-                    ps[shid]["process"].kill()
-
-                    # remove hid in redys "apps"
-                    await bus.srem(KEYAPPS,str(hid))
-
-                    # and recreate another one later
-                else:
-                    # it's the same initialization process
-
-                    log("Reuse process",hid)
-                    # so ask process to send back its render
-                    assert await bus.publish(hid.event_interact,dict(cmd=CMD_RENDER))
-                    continue
+            running_hids:list=await bus.get(KEYAPPS) or []
+            if str(hid) in running_hids:
+                log("Try to reuse process",hid)
+                assert await bus.publish(hid.event_interact,dict(cmd=CMD_REUSE,params=params))
             else:
-                log("Start a new process",hid)
-
-            # create the process
-            p=multiprocessing.Process(target=process, args=[],kwargs=params)
-            p.start()
-
-            # and save it in pool ps
-            ps[shid]=dict( process=p, key=key_init, event_interact=hid.event_interact)
-            #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+                p=multiprocessing.Process(target=process, args=[],kwargs=params)
+                p.start()
+                log("Start a new process",hid,"in",p.pid)
 
         await asyncio.sleep(0.1)
 
     assert await bus.unsubscribe( EVENT_SERVER )
 
-    await killall(ps)
+    await bus.set("hrserver_orchestrator_running",False)
+
+    await killall()
 
     log("stopped")
 
@@ -321,12 +317,14 @@ async def wait_hrserver():
                 break
         except Exception as e:
             print(e)
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.1)
 
 
 async def kill_hrserver():
     bus=redys.v2.AClient()
     await bus.publish( EVENT_SERVER, dict(cmd=CMD_EXIT) )   # kill orchestrator loop
+
+    await asyncio.sleep(1)
 
 
 ##################################################################################

@@ -249,16 +249,14 @@ class AppServer(Starlette):
     # new method
     async def handle(self, request,
                     obj:"htag.Tag class|fqn",
-                    recreate:bool=False,
                     http_only:"bool|None"=None,
                     parano:"bool|None"=None ) -> HTMLResponse:
-        return await self.serve(request,obj,recreate,http_only,parano)
+        return await self.serve(request,obj,http_only,parano)
 
 
     # DEPRECATED
     async def serve(self, request,
                     obj:"htag.Tag class|fqn",
-                    force:bool=False,
                     http_only:"bool|None"=None,
                     parano:"bool|None"=None ) -> HTMLResponse:
 
@@ -341,7 +339,7 @@ class AppServer(Starlette):
             connect();
             """ % locals()
 
-        p = HrClient(uid,fqn,js,self.sesprovider.__name__,recreate=force)
+        p = HrClient(uid,fqn,js,self.sesprovider.__name__)
         html=await p.start(*args,**kargs)
         return HTMLResponse(html)
 

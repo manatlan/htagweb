@@ -18,12 +18,11 @@ TIMEOUT=2*60 # A interaction can take 2min max
 
 
 class HrClient:
-    def __init__(self,uid:str,fqn:str,js:str=None,sesprovidername=None,recreate=False):
+    def __init__(self,uid:str,fqn:str,js:str=None,sesprovidername=None):
         """ !!!!!!!!!!!!!!!!!!!! if js|sesprovidername is None : can't do a start() !!!!!!!!!!!!!!!!!!!!!!"""
         self.js=js
         self.bus = redys.v2.AClient()
         self.sesprovidername=sesprovidername
-        self.recreate=recreate
 
         self.hid=Hid.create(uid,fqn)
 
@@ -59,7 +58,6 @@ class HrClient:
             js=self.js,
             init= (a,k),
             sesprovidername=self.sesprovidername,
-            force=self.recreate,
         ))
 
         # wait 1st rendering

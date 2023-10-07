@@ -79,8 +79,11 @@ class Jo(Tag.body):
         self <= Tag.button("A",_onclick=test)
         self <= Tag.button("B",_onclick=test)
 
+
+
 async def handleJo(req):
     return await req.app.handle(req,Jo,http_only=True,parano=True)
+
 
 #------------------------------------------------------
 from htagweb import SimpleServer,AppServer
