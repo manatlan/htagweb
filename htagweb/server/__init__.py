@@ -8,7 +8,6 @@
 # #############################################################################
 
 import asyncio,traceback,os
-from more_itertools import last
 import redys
 import redys.v2
 import os,sys,importlib,inspect
