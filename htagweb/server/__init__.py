@@ -172,7 +172,9 @@ def process(hid:Hid,js,init,sesprovidername):
                         log("REUSE")
                         recreate={}
                         hr.session = FactorySession(hid.uid)    # reload session
-                        assert await bus.publish(hid.event_response,str(hr))
+                        can = await bus.publish(hid.event_response,str(hr))
+                        if not can:
+                            log("Can't answer the response for the REUSE !!!!")
                 else:
                     log("INTERACT")
                     recreate={}
@@ -185,7 +187,9 @@ def process(hid:Hid,js,init,sesprovidername):
                     # always save session after interaction
                     hr.session._save()
 
-                    assert await bus.publish(hid.event_interact_response,actions)
+                    can = await bus.publish(hid.event_interact_response,actions)
+                    if not can:
+                        log("Can't answer the interact_response for the INTERACT !!!!")
 
             await asyncio.sleep(0.1)
 
