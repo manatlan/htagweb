@@ -25,11 +25,12 @@ def startProcess(params:dict):
 
 
 class HrClient:
-    def __init__(self,uid:str,fqn:str,js:str=None,sesprovidername=None):
+    def __init__(self,uid:str,fqn:str,js:str=None,sesprovidername=None,http_only=False):
         """ !!!!!!!!!!!!!!!!!!!! if js|sesprovidername is None : can't do a start() !!!!!!!!!!!!!!!!!!!!!!"""
         self.js=js
         self.bus = redys.v2.AClient()
         self.sesprovidername=sesprovidername
+        self.useUpdate = not http_only
 
         self.hid=Hid.create(uid,fqn)
 
@@ -59,6 +60,7 @@ class HrClient:
             js=self.js,
             init= (a,k),
             sesprovidername=self.sesprovidername,
+            useUpdate = self.useUpdate,
         )
 
         running_hids:list=await self.bus.get(KEYAPPS) or []

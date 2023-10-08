@@ -83,7 +83,7 @@ class Hid:
         return self.hid
 
 ##################################################################################
-def hrprocess(hid:Hid,js,init,sesprovidername):
+def hrprocess(hid:Hid,js,init,sesprovidername,useUpdate):
 ##################################################################################
     FactorySession=importFactorySession(sesprovidername)
 
@@ -139,14 +139,20 @@ def hrprocess(hid:Hid,js,init,sesprovidername):
         # register tag.update feature
         #======================================
         async def update(actions):
+            """ return always True !!
+                IRL: it should wait an hrclient response to return true/false according
+                the fact it reachs to send back on socket.
+            """
             try:
-                r=await bus.publish(hid.event_response_update,actions)
+                await bus.publish(hid.event_response_update,actions)
             except:
                 log("!!! concurrent write/read on redys !!!")
-                r=False
-            return r
-
-        hr.sendactions=update
+            return True
+        if useUpdate:
+            log("tag.update enabled")
+            hr.sendactions=update
+        else:
+            log("tag.update not possible (http only)")
         #======================================
         recreate={}
 

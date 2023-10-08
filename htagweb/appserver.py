@@ -326,7 +326,7 @@ class AppServer(Starlette):
             connect();
             """ % locals()
 
-        p = HrClient(uid,fqn,js,self.sesprovider.__name__)
+        p = HrClient(uid,fqn,js,self.sesprovider.__name__,http_only=is_http_only)
         html=await p.start(*args,**kargs)
         return HTMLResponse(html)
 
