@@ -8,6 +8,7 @@
 # #############################################################################
 
 import asyncio,traceback,os
+import signal
 import redys
 import redys.v2
 import os,sys,importlib,inspect
@@ -71,7 +72,7 @@ class Hid:
         self.event_response = "response_"+hid
         self.event_response_update = self.event_response+"_update"
 
-        self.key_sesprovider = "sesprovider_"+hid
+        self.key_sesinfo = "sesprovider_"+hid
 
     @staticmethod
     def create(uid:str,fqn:str):
@@ -113,12 +114,6 @@ def hrprocess(hid:Hid,js,init,sesprovidername,useUpdate):
 
         last_mod_time=os.path.getmtime(inspect.getfile(klass))
 
-        # register hid in redys "apps"
-        await bus.sadd(KEYAPPS,str(hid))
-
-        # save sesprovider for this hid
-        await bus.set(hid.key_sesprovider, FactorySession.__name__)
-
 
         session = FactorySession(hid.uid)
 
@@ -129,6 +124,12 @@ def hrprocess(hid:Hid,js,init,sesprovidername,useUpdate):
         key_init=str(init)
 
         log(f"Start with params:",init)
+
+        # register hid in redys "apps"
+        await bus.sadd(KEYAPPS,str(hid))
+
+        # save sesprovider for this hid
+        await bus.set(hid.key_sesinfo, dict(sesprovider=FactorySession.__name__, pid=pid))
 
         # subscribe for interaction
         await bus.subscribe( hid.event_interact )
@@ -205,7 +206,7 @@ def hrprocess(hid:Hid,js,init,sesprovidername,useUpdate):
         await bus.srem(KEYAPPS,str(hid))
 
         # delete sesprovider for this hid
-        await bus.delete(hid.key_sesprovider)
+        await bus.delete(hid.key_sesinfo)
 
         #consume all pending events
         await bus.unsubscribe( hid.event_interact )
@@ -221,14 +222,38 @@ def hrprocess(hid:Hid,js,init,sesprovidername,useUpdate):
 
 
 async def killall():
+    """ killall running hrprocess (soft and hard if it can't)"""
     bus=redys.v2.AClient()
 
     # try to send a EXIT CMD to all running ps
-    running_hids = await bus.get(KEYAPPS) or []
-    while running_hids:
-        for hid in running_hids:
-            await bus.publish(Hid(hid).event_interact,dict(cmd=CMD_PS_EXIT))
+    while 1:
         running_hids = await bus.get(KEYAPPS) or []
+        if not running_hids:
+            break
+        else:
+            for hid in running_hids:
+                # try a soft kill (tell him to suicide itself)
+                can = await bus.publish(Hid(hid).event_interact,dict(cmd=CMD_PS_EXIT))
+                if not can:
+                    # force kill by using its pid
+                    sesinfo = await bus.get(hid.key_sesinfo)
+                    pid=sesinfo["pid"]
+                    print("killall() FORCE KILL",hid,"on pid",pid, flush=True)
+                    try:
+                        os.kill(pid, signal.SIGKILL)
+
+                        # remove hid in redys "apps"
+                        await bus.srem(KEYAPPS,str(hid))
+
+                        # delete sesprovider for this hid
+                        await bus.delete(hid.key_sesinfo)
+
+                        #consume all pending events
+                        await bus.unsubscribe( hid.event_interact )
+
+                    except ProcessLookupError:
+                        pass
+
         await asyncio.sleep(0.1)
 
 
@@ -254,7 +279,8 @@ class ServerClient:
 
     async def session(self,hid:Hid) -> dict:
         """ get session for hid"""
-        sesprovidername=await self._bus.get(hid.key_sesprovider)
+        sesinfo=await self._bus.get(hid.key_sesinfo)
+        sesprovidername=sesinfo["sesprovider"]
         FactorySession=importFactorySession(sesprovidername)
         return FactorySession(hid.uid)
 
