@@ -7,14 +7,21 @@
 # https://github.com/manatlan/htagweb
 # #############################################################################
 
+import multiprocessing
 import uuid,asyncio,time,sys
 import redys
 import redys.v2
-from htagweb.server import EVENT_SERVER,Hid
+from htagweb.server import CMD_RESP_RECREATE, CMD_RESP_RENDER, CMD_PS_REUSE, KEYAPPS,Hid, hrprocess
 import logging
 logger = logging.getLogger(__name__)
 
 TIMEOUT=2*60 # A interaction can take 2min max
+
+
+def startProcess(params:dict):
+    p=multiprocessing.Process(target=hrprocess, args=[],kwargs=params)
+    p.start()
+    return p
 
 
 class HrClient:
@@ -31,17 +38,11 @@ class HrClient:
         print(txt,flush=True,file=sys.stderr)
         logger.error(txt)
 
+    def log(self, *a):
+        txt=f".HrClient {self.hid.uid} {self.hid.fqn}: %s" % (" ".join([str(i) for i in a]))
+        print(txt,flush=True,file=sys.stderr)
+        logger.info(txt)
 
-    async def _wait(self,event, s=TIMEOUT):
-        # wait for a response
-        t1=time.monotonic()
-        while time.monotonic() - t1 < s:
-            message = await self.bus.get_event( event )
-            if message is not None:
-                return message
-
-        self.error(f"Event TIMEOUT ({s}s) on {event} !!!")
-        return None
 
     async def start(self,*a,**k) -> str:
         """ Start the defined app with this params (a,k)
@@ -52,16 +53,41 @@ class HrClient:
         # subscribe for response
         await self.bus.subscribe( self.hid.event_response )
 
-        # start the process app
-        assert await self.bus.publish( EVENT_SERVER , dict(
+        #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+        params=dict(
             hid=self.hid,
             js=self.js,
             init= (a,k),
             sesprovidername=self.sesprovidername,
-        ))
+        )
 
-        # wait 1st rendering
-        return await self._wait(self.hid.event_response) or "?!"
+        running_hids:list=await self.bus.get(KEYAPPS) or []
+        if str(self.hid) in running_hids:
+            self.log("Try to reuse process",self.hid)
+            can = await self.bus.publish(self.hid.event_interact,dict(cmd=CMD_PS_REUSE,params=params))
+            if not can:
+                self.log("Can't answer the interaction REUSE !!!!")
+        else:
+            p=startProcess(params)
+            self.log("Start a new process",self.hid,"in",p.pid)
+        #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+
+        # wait for a response
+        t1=time.monotonic()
+        while time.monotonic() - t1 < TIMEOUT:
+            message = await self.bus.get_event( self.hid.event_response )
+            if message is not None:
+                if message.get("cmd")==CMD_RESP_RECREATE:
+                    # the current process ask hrclient to recreate a new process
+                    p=startProcess(params)
+                    self.log("Start a new process",self.hid,"in",p.pid)
+                elif message.get("cmd")==CMD_RESP_RENDER:
+                    # the process has giver a right answer ... return the rendering
+                    return message.get("render")
+
+        self.error(f"Event TIMEOUT ({TIMEOUT}s) on {self.hid.event_response} !!!")
+        return "?!"
+
 
 
     async def interact(self,**params) -> dict:
@@ -82,23 +108,13 @@ class HrClient:
             self.error("***HrClient.interact error***",e)
             return {}
 
+    async def _wait(self,event, s=TIMEOUT):
+        # wait for a response
+        t1=time.monotonic()
+        while time.monotonic() - t1 < s:
+            message = await self.bus.get_event( event )
+            if message is not None:
+                return message
 
-async def main():
-    uid ="u1"
-    p=HrClient(uid,"obj:App","//")
-    #~ html=await p.start()
-    #~ print(html)
-
-    #~ actions=await p.interact( oid="ut", method_name="doit", args=[], kargs={}, event={} )
-    #~ print(actions)
-
-    await p.kill()
-    await p.kill()
-    await p.kill()
-    #~ await p.kill()
-    #~ await p.kill()
-    #~ await HrPilot.list()
-    #~ await HrPilot.clean()
-
-if __name__=="__main__":
-    asyncio.run( main() )
+        self.error(f"Event TIMEOUT ({s}s) on {event} !!!")
+        return None

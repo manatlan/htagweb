@@ -3,8 +3,9 @@ import asyncio
 import pytest,sys,io
 import multiprocessing,threading
 import time
-from htagweb.appserver import processHrServer,lifespan
-from htagweb.server import ServerClient, kill_hrserver, wait_hrserver
+
+import redys.v2
+from htagweb.server import ServerClient, killall, startServer, stopServer
 from htagweb.server.client import HrClient
 import threading
 
@@ -12,18 +13,11 @@ import threading
 @pytest.fixture()
 def server(): # nearly "same code" as lifespan
     # start a process loop (with redys + hrserver)
-    process_hrserver=multiprocessing.Process(target=processHrServer)
-    process_hrserver.start()
-
-    # wait hrserver ready
-    asyncio.run( wait_hrserver() )
+    s=asyncio.run( startServer())
 
     yield "x"
-    # stop hrserver
-    asyncio.run( kill_hrserver() )
 
-    # wait process to finnish gracefully
-    process_hrserver.join()
+    asyncio.run( stopServer(s))
 
 
 @pytest.mark.asyncio
@@ -48,16 +42,15 @@ async def test_base( server ):
     assert ll[0].uid == uid
     assert ll[0].fqn == "test_hr:App"
 
-
+    await killall()
 
 
 if __name__=="__main__":
-    pass
-    # p=multiprocessing.Process(target=processHrServer)
-    # try:
-    #     p.start()
-    #     time.sleep(1)
+    s=asyncio.run( startServer())
 
-    #     asyncio.run( test_base(42) )
-    # finally:
-    #     asyncio.run( kill_hrserver() )
+    asyncio.run( test_base("x") )
+
+    asyncio.run( stopServer(s))
+
+
+

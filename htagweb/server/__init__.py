@@ -18,11 +18,13 @@ from htag.render import HRenderer
 import logging
 logger = logging.getLogger(__name__)
 
+# input command in hrprocess
+CMD_PS_EXIT="EXIT"
+CMD_PS_REUSE="REUSE"
 
-EVENT_SERVER="EVENT_SERVER"
-
-CMD_EXIT="EXIT"
-CMD_REUSE="RENDER"
+# output command from hrprocess to hrclient
+CMD_RESP_RENDER="RENDER"
+CMD_RESP_RECREATE="RECREATE"
 
 KEYAPPS="htagweb.apps"
 
@@ -81,7 +83,7 @@ class Hid:
         return self.hid
 
 ##################################################################################
-def process(hid:Hid,js,init,sesprovidername):
+def hrprocess(hid:Hid,js,init,sesprovidername):
 ##################################################################################
     FactorySession=importFactorySession(sesprovidername)
 
@@ -93,11 +95,11 @@ def process(hid:Hid,js,init,sesprovidername):
         logger.info(txt)
 
     async def loop():
-        RRR={"1":"1"} #TODO: find something better ;-)
+        running={"1":"1"} #TODO: find something better ;-)
 
         def suicide():
             log("suicide")
-            RRR.clear()
+            running.clear()
 
         bus = redys.v2.AClient()
         try:
@@ -132,7 +134,7 @@ def process(hid:Hid,js,init,sesprovidername):
         await bus.subscribe( hid.event_interact )
 
         # publish the 1st rendering
-        assert await bus.publish(hid.event_response,str(hr))
+        assert await bus.publish(hid.event_response,dict( cmd=CMD_RESP_RENDER,render=str(hr)))
 
         # register tag.update feature
         #======================================
@@ -148,18 +150,18 @@ def process(hid:Hid,js,init,sesprovidername):
         #======================================
         recreate={}
 
-        while RRR:
+        while running:
             params = await bus.get_event( hid.event_interact )
             if params is not None:  # sometimes it's not a dict ?!? (bool ?!)
-                if params.get("cmd") == CMD_EXIT:
+                if params.get("cmd") == CMD_PS_EXIT:
                     log("Exit explicit")
                     recreate={}
                     break   # <- destroy itself
-                elif params.get("cmd") == CMD_REUSE:
+                elif params.get("cmd") == CMD_PS_REUSE:
                     # event REUSE
                     params=params.get("params")
                     if str(params['init'])!=key_init or os.path.getmtime(inspect.getfile(klass))!=last_mod_time:
-                        # ask server/orchestrator to recreate me
+                        # ask hrclient to destroy/recreate me
                         log("RECREATE")
                         recreate=dict(
                                     hid=hid,                                    # reuse current
@@ -172,7 +174,7 @@ def process(hid:Hid,js,init,sesprovidername):
                         log("REUSE")
                         recreate={}
                         hr.session = FactorySession(hid.uid)    # reload session
-                        can = await bus.publish(hid.event_response,str(hr))
+                        can = await bus.publish(hid.event_response,dict( cmd=CMD_RESP_RENDER, render=str(hr)))
                         if not can:
                             log("Can't answer the response for the REUSE !!!!")
                 else:
@@ -203,7 +205,7 @@ def process(hid:Hid,js,init,sesprovidername):
         await bus.unsubscribe( hid.event_interact )
 
         if recreate:
-            assert await bus.publish( EVENT_SERVER , recreate )
+            assert await bus.publish( hid.event_response , dict(cmd=CMD_RESP_RECREATE,params=recreate) )
 
 
     asyncio.run( loop() )
@@ -211,79 +213,16 @@ def process(hid:Hid,js,init,sesprovidername):
 
 
 
-##################################################################################
-async def hrserver_orchestrator():
-##################################################################################
+
+async def killall():
     bus=redys.v2.AClient()
 
-    def log(*a):
-        txt=f"-ORCHESTRATOR- %s" % (" ".join([str(i) for i in a]))
-        print(txt,flush=True,file=sys.stdout)
-        logger.info(txt)
-
-
-    # prevent multiple orchestrators
-    if await bus.get("hrserver_orchestrator_running")==True:
-        log("already running")
-        return
-    else:
-        log("started")
-        await bus.set("hrserver_orchestrator_running",True)
-
-    # register its main event
-    await bus.subscribe( EVENT_SERVER )
-
-    async def killall():
-        # try to send a EXIT CMD to all running ps
+    # try to send a EXIT CMD to all running ps
+    running_hids = await bus.get(KEYAPPS) or []
+    while running_hids:
+        for hid in running_hids:
+            await bus.publish(Hid(hid).event_interact,dict(cmd=CMD_PS_EXIT))
         running_hids = await bus.get(KEYAPPS) or []
-        while running_hids:
-            for hid in running_hids:
-                await bus.publish(Hid(hid).event_interact,dict(cmd=CMD_EXIT))
-            running_hids = await bus.get(KEYAPPS) or []
-            await asyncio.sleep(0.1)
-
-    while 1:
-        params = await bus.get_event( EVENT_SERVER )
-        if params is not None:
-            if params.get("cmd") == CMD_EXIT:
-                log(EVENT_SERVER, params.get("cmd") )
-                break
-            elif params.get("cmd") == "CLEAN":
-                log(EVENT_SERVER, params.get("cmd") )
-                await killall()
-                continue
-
-            hid:Hid=params["hid"]
-
-            running_hids:list=await bus.get(KEYAPPS) or []
-            if str(hid) in running_hids:
-                log("Try to reuse process",hid)
-                can = await bus.publish(hid.event_interact,dict(cmd=CMD_REUSE,params=params))
-                if not can:
-                    log("Can't answer the interaction REUSE !!!!")
-            else:
-                p=multiprocessing.Process(target=process, args=[],kwargs=params)
-                p.start()
-                log("Start a new process",hid,"in",p.pid)
-
-        await asyncio.sleep(0.1)
-
-    assert await bus.unsubscribe( EVENT_SERVER )
-
-    await bus.set("hrserver_orchestrator_running",False)
-
-    await killall()
-
-    log("stopped")
-
-async def wait_redys():
-    bus=redys.v2.AClient()
-    while 1:
-        try:
-            if await bus.ping()=="pong":
-                break
-        except:
-            pass
         await asyncio.sleep(0.1)
 
 
@@ -301,11 +240,11 @@ class ServerClient:
 
     async def kill(self,hid:Hid):
         """ kill a process (process event)"""
-        await self._bus.publish(hid.event_interact,dict(cmd=CMD_EXIT))
+        await self._bus.publish(hid.event_interact,dict(cmd=CMD_PS_EXIT))
 
     async def killall(self):
-        """ killall process (server event)"""
-        await self._bus.publish(EVENT_SERVER,dict(cmd="CLEAN"))
+        """ killall processes"""
+        await killall()
 
     async def session(self,hid:Hid) -> dict:
         """ get session for hid"""
@@ -314,38 +253,35 @@ class ServerClient:
         return FactorySession(hid.uid)
 
 
-async def wait_hrserver():
+##################################################################################
+async def startServer():
+##################################################################################
+    # start a redys server (only one will win)
+    s=redys.v2.ServerProcess()
+
+    # wait redys up
     bus=redys.v2.AClient()
     while 1:
         try:
-            if await bus.get("hrserver_orchestrator_running"):
+            if await bus.ping()=="pong":
                 break
-        except Exception as e:
-            print(e)
+        except:
+            pass
         await asyncio.sleep(0.1)
 
-
-async def kill_hrserver():
-    bus=redys.v2.AClient()
-    await bus.publish( EVENT_SERVER, dict(cmd=CMD_EXIT) )   # kill orchestrator loop
-
-    await asyncio.sleep(1)
+    return s
 
 
 ##################################################################################
-async def hrserver():
+async def stopServer(s):
 ##################################################################################
-    s=redys.v2.Server()
-    s.start()
+    # clean all running process
+    await killall()
 
-    await wait_redys()
-
-    await hrserver_orchestrator()
-
+    # before stopping
     s.stop()
 
 
-
-
 if __name__=="__main__":
-    asyncio.run( hrserver() )
+    # asyncio.run( hrserver() )
+    pass

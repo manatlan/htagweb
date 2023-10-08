@@ -34,7 +34,7 @@ from htag.runners import commons
 from . import crypto
 import redys.v2
 
-from htagweb.server import Hid, hrserver_orchestrator, kill_hrserver, wait_hrserver
+from htagweb.server import Hid, startServer, stopServer
 from htagweb.server.client import HrClient
 
 logger = logging.getLogger(__name__)
@@ -148,7 +148,7 @@ class HRSocket(WebSocketEndpoint):
                     await asyncio.sleep(0.1)
             except:
                 print("**loop_tag_update, broken bus, will stop the loop_tag_update !**")
-                
+
     async def on_connect(self, websocket):
         #====================================================== get the event
         fqn=websocket.path_params.get("fqn","")
@@ -187,27 +187,11 @@ class HRSocket(WebSocketEndpoint):
             await bus.unsubscribe(event)
 
 
-def processHrServer():
-    asyncio.run( redys.v2.loop(hrserver_orchestrator()) )
-
 
 async def lifespan(app):
-    # start a process loop (with redys + hrserver)
-    process_hrserver=multiprocessing.Process(target=processHrServer)
-    process_hrserver.start()
-
-    # wait hrserver ready
-    await wait_hrserver()
-
+    s=await startServer()
     yield
-
-    # stop hrserver
-    loop = asyncio.get_event_loop()
-    await kill_hrserver()
-
-    # wait process to finnish gracefully
-    process_hrserver.join()
-
+    await stopServer(s)
 
 class AppServer(Starlette):
     def __init__(self,
