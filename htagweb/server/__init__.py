@@ -20,7 +20,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 # input command in hrprocess
-CMD_PS_EXIT="EXIT"
 CMD_PS_REUSE="REUSE"
 
 # output command from hrprocess to hrclient
@@ -125,18 +124,6 @@ def hrprocess(hid:Hid,js,init,sesprovidername,useUpdate):
 
         log(f"Start with params:",init)
 
-        # register hid in redys "apps"
-        await bus.sadd(KEYAPPS,str(hid))
-
-        # save sesprovider for this hid
-        await bus.set(hid.key_sesinfo, dict(sesprovider=FactorySession.__name__, pid=pid))
-
-        # subscribe for interaction
-        await bus.subscribe( hid.event_interact )
-
-        # publish the 1st rendering
-        assert await bus.publish(hid.event_response,dict( cmd=CMD_RESP_RENDER,render=str(hr)))
-
         # register tag.update feature
         #======================================
         async def update(actions):
@@ -155,104 +142,96 @@ def hrprocess(hid:Hid,js,init,sesprovidername,useUpdate):
         else:
             log("tag.update not possible (http only)")
         #======================================
-        recreate={}
 
-        while running:
-            params = await bus.get_event( hid.event_interact )
-            if params is not None:  # sometimes it's not a dict ?!? (bool ?!)
-                if params.get("cmd") == CMD_PS_EXIT:
-                    log("Exit explicit")
-                    recreate={}
-                    break   # <- destroy itself
-                elif params.get("cmd") == CMD_PS_REUSE:
-                    # event REUSE
-                    params=params.get("params")
-                    if str(params['init'])!=key_init or os.path.getmtime(inspect.getfile(klass))!=last_mod_time:
-                        # ask hrclient to destroy/recreate me
-                        log("RECREATE")
-                        recreate=dict(
-                                    hid=hid,                                    # reuse current
-                                    js=js,                                      # reuse current
-                                    init= params["init"],                       # use new
-                                    sesprovidername=FactorySession.__name__,    # reuse current
-                                )
-                        break   # <- destroy itself
+        await registerHrProcess(bus,hid,FactorySession.__name__,pid)
+        try:
+
+            # publish the 1st rendering
+            assert await bus.publish(hid.event_response,dict( cmd=CMD_RESP_RENDER,render=str(hr)))
+
+            recreate={}
+
+            while running:
+                params = await bus.get_event( hid.event_interact )
+                if params is not None:  # sometimes it's not a dict ?!? (bool ?!)
+                    if params.get("cmd") == CMD_PS_REUSE:
+                        # event REUSE
+                        params=params.get("params")
+                        if str(params['init'])!=key_init or os.path.getmtime(inspect.getfile(klass))!=last_mod_time:
+                            # ask hrclient to destroy/recreate me
+                            log("RECREATE")
+                            recreate=dict(
+                                        hid=hid,                                    # reuse current
+                                        js=js,                                      # reuse current
+                                        init= params["init"],                       # use new
+                                        sesprovidername=FactorySession.__name__,    # reuse current
+                                    )
+                            break   # <- destroy itself
+                        else:
+                            log("REUSE")
+                            recreate={}
+                            hr.session = FactorySession(hid.uid)    # reload session
+                            can = await bus.publish(hid.event_response,dict( cmd=CMD_RESP_RENDER, render=str(hr)))
+                            if not can:
+                                log("Can't answer the response for the REUSE !!!!")
                     else:
-                        log("REUSE")
+                        log("INTERACT")
                         recreate={}
-                        hr.session = FactorySession(hid.uid)    # reload session
-                        can = await bus.publish(hid.event_response,dict( cmd=CMD_RESP_RENDER, render=str(hr)))
+                        #-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\- UT
+                        if params["oid"]=="ut": params["oid"]=id(hr.tag)
+                        #-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
+
+                        actions = await hr.interact(**params)
+
+                        # always save session after interaction
+                        hr.session._save()
+
+                        can = await bus.publish(hid.event_interact_response,actions)
                         if not can:
-                            log("Can't answer the response for the REUSE !!!!")
-                else:
-                    log("INTERACT")
-                    recreate={}
-                    #-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\- UT
-                    if params["oid"]=="ut": params["oid"]=id(hr.tag)
-                    #-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
+                            log("Can't answer the interact_response for the INTERACT !!!!")
 
-                    actions = await hr.interact(**params)
+                await asyncio.sleep(0.1)
 
-                    # always save session after interaction
-                    hr.session._save()
+            if recreate:
+                await bus.publish( hid.event_response , dict(cmd=CMD_RESP_RECREATE,params=recreate) )
 
-                    can = await bus.publish(hid.event_interact_response,actions)
-                    if not can:
-                        log("Can't answer the interact_response for the INTERACT !!!!")
-
-            await asyncio.sleep(0.1)
-
-        # remove hid in redys "apps"
-        await bus.srem(KEYAPPS,str(hid))
-
-        # delete sesprovider for this hid
-        await bus.delete(hid.key_sesinfo)
-
-        #consume all pending events
-        await bus.unsubscribe( hid.event_interact )
-
-        if recreate:
-            assert await bus.publish( hid.event_response , dict(cmd=CMD_RESP_RECREATE,params=recreate) )
-
+        finally:
+            await unregisterHrProcess(bus,hid)
 
     asyncio.run( loop() )
     log("end")
 
+async def registerHrProcess(bus,hid:Hid,sesprovider:str,pid:int):
+    # register hid in redys "apps"
+    await bus.sadd(KEYAPPS,str(hid))
 
+    # save sesprovider for this hid
+    await bus.set(hid.key_sesinfo, dict(sesprovider=sesprovider,pid=pid))
+
+    # subscribe for interaction
+    await bus.subscribe( hid.event_interact )
+
+async def unregisterHrProcess(bus,hid:Hid):
+    # remove hid in redys "apps"
+    await bus.srem(KEYAPPS,str(hid))
+
+    # delete sesprovider for this hid
+    await bus.delete(hid.key_sesinfo)
+
+    #consume all pending events
+    await bus.unsubscribe( hid.event_interact )
 
 
 async def killall():
-    """ killall running hrprocess (soft and hard if it can't)"""
-    bus=redys.v2.AClient()
-
-    # try to send a EXIT CMD to all running ps
+    """ killall running hrprocess, and wait until all dead"""
+    s=ServerClient()
     while 1:
-        running_hids = await bus.get(KEYAPPS) or []
+        running_hids = await s.list()
         if not running_hids:
             break
         else:
             for hid in running_hids:
-                # try a soft kill (tell him to suicide itself)
-                can = await bus.publish(Hid(hid).event_interact,dict(cmd=CMD_PS_EXIT))
-                if not can:
-                    # force kill by using its pid
-                    sesinfo = await bus.get(hid.key_sesinfo)
-                    pid=sesinfo["pid"]
-                    print("killall() FORCE KILL",hid,"on pid",pid, flush=True)
-                    try:
-                        os.kill(pid, signal.SIGKILL)
-
-                        # remove hid in redys "apps"
-                        await bus.srem(KEYAPPS,str(hid))
-
-                        # delete sesprovider for this hid
-                        await bus.delete(hid.key_sesinfo)
-
-                        #consume all pending events
-                        await bus.unsubscribe( hid.event_interact )
-
-                    except ProcessLookupError:
-                        pass
+                await s.kill(hid)
 
         await asyncio.sleep(0.1)
 
@@ -266,16 +245,25 @@ class ServerClient:
 
     async def list(self) -> list:
         """ list all process uid&fqn """
-        ll = sorted(await self._bus.get(KEYAPPS))
+        ll = sorted(await self._bus.get(KEYAPPS) or [])
         return [Hid(hid) for hid in ll]
 
     async def kill(self,hid:Hid):
-        """ kill a process (process event)"""
-        await self._bus.publish(hid.event_interact,dict(cmd=CMD_PS_EXIT))
+        """ kill a process (process event), return True if killed something"""
+        # force kill by using its pid
+        sesinfo = await self._bus.get(hid.key_sesinfo)
+        if sesinfo is not None:
+            pid=sesinfo["pid"]
+            print(f"ServerClient.kill({hid}), kill pid={pid}", flush=True)
+            os.kill(pid, signal.SIGKILL)
+
+            await unregisterHrProcess(self._bus,hid)
+            return True
 
     async def killall(self):
         """ killall processes"""
-        await killall()
+        for hid in await self.list():
+            await self.kill(hid)
 
     async def session(self,hid:Hid) -> dict:
         """ get session for hid"""

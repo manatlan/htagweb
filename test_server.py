@@ -5,7 +5,7 @@ import multiprocessing,threading
 import time
 
 import redys.v2
-from htagweb.server import ServerClient, killall, startServer, stopServer
+from htagweb.server import ServerClient, startServer, stopServer
 from htagweb.server.client import HrClient
 import threading
 
@@ -42,7 +42,7 @@ async def test_base( server ):
     assert ll[0].uid == uid
     assert ll[0].fqn == "test_hr:App"
 
-    await killall()
+
 
 
 if __name__=="__main__":
