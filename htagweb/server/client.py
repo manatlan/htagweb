@@ -11,11 +11,11 @@ import multiprocessing
 import uuid,asyncio,time,sys
 import redys
 import redys.v2
-from htagweb.server import CMD_RESP_RECREATE, CMD_RESP_RENDER, CMD_PS_REUSE, KEYAPPS,Hid, hrprocess
+from htagweb.server import CMD_RESP_RECREATE, CMD_RESP_RENDER, CMD_PS_REUSE, KEYAPPS,Hid, hrprocess, ServerClient
 import logging
 logger = logging.getLogger(__name__)
 
-TIMEOUT=2*60 # A interaction can take 2min max
+TIMEOUT=1*60 # A interaction can take 1min max
 
 
 def startProcess(params:dict):
@@ -87,8 +87,10 @@ class HrClient:
                     # the process has giver a right answer ... return the rendering
                     return message.get("render")
 
+        
         self.error(f"Event TIMEOUT ({TIMEOUT}s) on {self.hid.event_response} !!!")
-        return "?!"
+        await ServerClient().kill(self.hid)
+        return f"Timeout: App {self.hid.fqn} killed !"
 
 
 
@@ -103,7 +105,7 @@ class HrClient:
             # post the interaction
             if await self.bus.publish( self.hid.event_interact, params ):
                 # wait actions
-                return await self._wait(self.hid.event_interact_response) or {}
+                return await self._wait(self.hid.event_interact_response) or dict(error=f"Timeout: App {self.hid.fqn} killed !")
             else:
                 self.error(f"Can't publish {self.hid.event_interact} !!!")
         except Exception as e:
@@ -119,4 +121,5 @@ class HrClient:
                 return message
 
         self.error(f"Event TIMEOUT ({s}s) on {event} !!!")
+        await ServerClient().kill(self.hid)
         return None
