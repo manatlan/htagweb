@@ -14,6 +14,16 @@ class App(Tag.body):
         self.session['interacted']=True
         self+="hello" +Tag.cpt2(self.session['cpt'])
 
+class AppFuck(Tag.body):
+    def init(self):
+        self.b=Tag.Button("say hello",_onclick=self.bind.doit() )
+        self+=self.b
+    def doit(self):
+        while 1:
+            pass
+
+
+
 @pytest.mark.asyncio
 async def test_hr():
     ses=dict(cpt=1)

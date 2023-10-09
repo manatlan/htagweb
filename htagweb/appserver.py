@@ -134,57 +134,33 @@ class HRSocket(WebSocketEndpoint):
             logger.error("Can't send to socket, error: %s",e)
             return False
 
-    async def loop_tag_update(self, event, websocket):
-        #TODO: there is trouble here sometimes ... to fix !
-        with redys.v2.AClient() as bus:
-            await bus.subscribe(event)
-
-            try:
-                ok=True
-                while ok:
-                    actions = await bus.get_event( event )
-                    if actions is not None:
-                        ok=await self._sendback(websocket,json.dumps(actions))
-                    await asyncio.sleep(0.1)
-            except:
-                print("**loop_tag_update, broken bus, will stop the loop_tag_update !**")
-
     async def on_connect(self, websocket):
-        #====================================================== get the event
         fqn=websocket.path_params.get("fqn","")
         uid=websocket.scope["uid"]
-        event=Hid.create(uid,fqn).event_response_update
-        #======================================================
+
+        # define hrclient for this socket
+        self.hr=HrClient(uid,fqn)
+
+        # define parano mode for this socket
         self.is_parano="parano" in websocket.query_params.keys()
 
         await websocket.accept()
 
         # add the loop to tag.update feature
-        asyncio.ensure_future(self.loop_tag_update(event,websocket))
+        asyncio.ensure_future(self.hr.loop_tag_update(self, websocket))
 
     async def on_receive(self, websocket, data):
-        fqn=websocket.path_params.get("fqn","")
-        uid=websocket.scope["uid"]
-
         if self.is_parano:
-            data = crypto.decrypt(data.encode(),parano_seed( uid )).decode()
+            data = crypto.decrypt(data.encode(),parano_seed( self.hr.hid.uid )).decode()
         data=json.loads(data)
 
-        p=HrClient(uid,fqn)
-
-        actions=await p.interact( oid=data["id"], method_name=data["method"], args=data["args"], kargs=data["kargs"], event=data.get("event") )
+        actions=await self.hr.interact( oid=data["id"], method_name=data["method"], args=data["args"], kargs=data["kargs"], event=data.get("event") )
 
         await self._sendback( websocket, json.dumps(actions) )
 
     async def on_disconnect(self, websocket, close_code):
-        #====================================================== get the event
-        fqn=websocket.path_params.get("fqn","")
-        uid=websocket.scope["uid"]
-        event=Hid.create(uid,fqn).event_response_update
-        #======================================================
-
         with redys.v2.AClient() as bus:
-            await bus.unsubscribe(event)
+            await bus.unsubscribe(self.hr.hid.EVENT_RESPONSE_UPDATE)
 
 
 
@@ -201,10 +177,12 @@ class AppServer(Starlette):
                 ssl:bool=False,
                 parano:bool=False,
                 http_only:bool=False,
+                timeout_interaction=120,
             ):
         self.ssl=ssl
         self.parano = parano
         self.http_only = http_only
+        self.timeout_interaction = timeout_interaction
 
         if session_factory is None:
             self.sesprovider = sessions.MemDict
@@ -233,24 +211,21 @@ class AppServer(Starlette):
                 return await self.handle(request,obj)
             self.add_route( '/', handleHome )
 
+    # DEPRECATED
+    async def serve(self, request,obj:"htag.Tag|fqn",) -> HTMLResponse:
+        return await self.handle( request, obj)
+
     # new method
     async def handle(self, request,
-                    obj:"htag.Tag class|fqn",
+                    obj:"htag.Tag|fqn",
                     http_only:"bool|None"=None,
-                    parano:"bool|None"=None ) -> HTMLResponse:
-        return await self.serve(request,obj,http_only,parano)
-
-
-    # DEPRECATED
-    async def serve(self, request,
-                    obj:"htag.Tag class|fqn",
-                    http_only:"bool|None"=None,
-                    parano:"bool|None"=None ) -> HTMLResponse:
-
+                    parano:"bool|None"=None,
+                    timeout_interaction:"int|None"=None,
+                    ) -> HTMLResponse:
         # take default behaviour if not present
         is_parano = self.parano if parano is None else parano
         is_http_only = self.http_only if http_only is None else http_only
-
+        the_timeout_interaction = self.timeout_interaction if timeout_interaction is None else timeout_interaction
 
         uid = request.scope["uid"]
         args,kargs = commons.url2ak(str(request.url))
@@ -326,9 +301,12 @@ class AppServer(Starlette):
             connect();
             """ % locals()
 
-        p = HrClient(uid,fqn,js,self.sesprovider.__name__,http_only=is_http_only)
-        html=await p.start(*args,**kargs)
+        hr = HrClient(uid,fqn,js,self.sesprovider.__name__,http_only=is_http_only,timeout_interaction=the_timeout_interaction)
+        html=await hr.start(*args,**kargs)
         return HTMLResponse(html)
+
+
+
 
     async def HRHttp(self,request) -> PlainTextResponse:
         uid = request.scope["uid"]
@@ -336,14 +314,14 @@ class AppServer(Starlette):
         is_parano="parano" in request.query_params.keys()
         seed = parano_seed( uid )
 
-        p=HrClient(uid,fqn)
+        hr=HrClient(uid,fqn)
         data = await request.body()
 
         if is_parano:
             data = crypto.decrypt(data,seed).decode()
 
         data=json.loads(data)
-        actions=await p.interact( oid=data["id"], method_name=data["method"], args=data["args"], kargs=data["kargs"], event=data.get("event") )
+        actions=await hr.interact( oid=data["id"], method_name=data["method"], args=data["args"], kargs=data["kargs"], event=data.get("event") )
         txt=json.dumps(actions)
 
         if is_parano:

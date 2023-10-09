@@ -8,14 +8,11 @@
 # #############################################################################
 
 import multiprocessing
-import uuid,asyncio,time,sys
-import redys
-import redys.v2
-from htagweb.server import CMD_RESP_RECREATE, CMD_RESP_RENDER, CMD_PS_REUSE, KEYAPPS,Hid, hrprocess
+import asyncio,time,sys
+import json
+from htagweb.server import CMD_RESP_RECREATE, CMD_RESP_RENDER, CMD_PS_REUSE, KEYAPPS,Hid, hrprocess, ServerClient
 import logging
 logger = logging.getLogger(__name__)
-
-TIMEOUT=2*60 # A interaction can take 2min max
 
 
 def startProcess(params:dict):
@@ -24,15 +21,17 @@ def startProcess(params:dict):
     return p
 
 
-class HrClient:
-    def __init__(self,uid:str,fqn:str,js:str=None,sesprovidername=None,http_only=False):
+class HrClient(ServerClient):
+    def __init__(self,uid:str,fqn:str,js:str=None,sesprovidername=None,http_only=False,timeout_interaction=60):
         """ !!!!!!!!!!!!!!!!!!!! if js|sesprovidername is None : can't do a start() !!!!!!!!!!!!!!!!!!!!!!"""
-        self.js=js
-        self.bus = redys.v2.AClient()
-        self.sesprovidername=sesprovidername
-        self.useUpdate = not http_only
+        ServerClient.__init__(self)
 
         self.hid=Hid.create(uid,fqn)
+
+        self.js=js
+        self.sesprovidername=sesprovidername
+        self.useUpdate = not http_only
+        self.timeout_interaction = timeout_interaction
 
     def error(self, *a):
         txt=f".HrClient {self.hid.uid} {self.hid.fqn}: %s" % (" ".join([str(i) for i in a]))
@@ -52,7 +51,7 @@ class HrClient:
         assert self.js, "You should define the js in HrPilot() !!!!!!"
 
         # subscribe for response
-        await self.bus.subscribe( self.hid.event_response )
+        await self._bus.subscribe( self.hid.EVENT_RESPONSE )
 
         #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
         params=dict(
@@ -63,10 +62,10 @@ class HrClient:
             useUpdate = self.useUpdate,
         )
 
-        running_hids:list=await self.bus.get(KEYAPPS) or []
+        running_hids:list=await self._bus.get(KEYAPPS) or []
         if str(self.hid) in running_hids:
             self.log("Try to reuse process",self.hid)
-            can = await self.bus.publish(self.hid.event_interact,dict(cmd=CMD_PS_REUSE,params=params))
+            can = await self._bus.publish(self.hid.EVENT_INTERACT,dict(cmd=CMD_PS_REUSE,params=params))
             if not can:
                 self.log("Can't answer the interaction REUSE !!!!")
         else:
@@ -76,8 +75,8 @@ class HrClient:
 
         # wait for a response
         t1=time.monotonic()
-        while time.monotonic() - t1 < TIMEOUT:
-            message = await self.bus.get_event( self.hid.event_response )
+        while time.monotonic() - t1 < self.timeout_interaction:
+            message = await self._bus.get_event( self.hid.EVENT_RESPONSE )
             if message is not None:
                 if message.get("cmd")==CMD_RESP_RECREATE:
                     # the current process ask hrclient to recreate a new process
@@ -87,8 +86,10 @@ class HrClient:
                     # the process has giver a right answer ... return the rendering
                     return message.get("render")
 
-        self.error(f"Event TIMEOUT ({TIMEOUT}s) on {self.hid.event_response} !!!")
-        return "?!"
+        
+        self.error(f"Event TIMEOUT ({self.timeout_interaction}s) on {self.hid.EVENT_RESPONSE} !!!")
+        await self.kill(self.hid)
+        return f"Timeout: App {self.hid.fqn} killed !"
 
 
 
@@ -98,25 +99,42 @@ class HrClient:
         """
         try:
             # subscribe for response
-            await self.bus.subscribe( self.hid.event_interact_response )
+            await self._bus.subscribe( self.hid.EVENT_INTERACT_RESPONSE )
 
             # post the interaction
-            if await self.bus.publish( self.hid.event_interact, params ):
+            if await self._bus.publish( self.hid.EVENT_INTERACT, params ):
                 # wait actions
-                return await self._wait(self.hid.event_interact_response) or {}
+
+                # wait for a response
+                t1=time.monotonic()
+                while time.monotonic() - t1 < self.timeout_interaction:
+                    message = await self._bus.get_event( self.hid.EVENT_INTERACT_RESPONSE )
+                    if message is not None:
+                        return message
+
+                self.error(f"Event TIMEOUT ({self.timeout_interaction}s) on {self.hid.EVENT_INTERACT_RESPONSE} !!!")
+                await self.kill(self.hid)
+                return dict(error=f"Timeout: App {self.hid.fqn} killed !")
             else:
-                self.error(f"Can't publish {self.hid.event_interact} !!!")
+                self.error(f"Can't publish {self.hid.EVENT_INTERACT} !!!")
         except Exception as e:
             self.error("***HrClient.interact error***",e)
             return {}
 
-    async def _wait(self,event, s=TIMEOUT):
-        # wait for a response
-        t1=time.monotonic()
-        while time.monotonic() - t1 < s:
-            message = await self.bus.get_event( event )
-            if message is not None:
-                return message
+    async def loop_tag_update(self, hrsocket, websocket):
+        event=self.hid.EVENT_RESPONSE_UPDATE
 
-        self.error(f"Event TIMEOUT ({s}s) on {event} !!!")
-        return None
+        #TODO: there is trouble here sometimes ... to fix !
+        await self._bus.subscribe(event)
+
+        try:
+            while 1:
+                actions = await self._bus.get_event( event )
+                if actions is not None:
+                    can = await hrsocket._sendback(websocket,json.dumps(actions))
+                    if not can:
+                        break
+                await asyncio.sleep(0.1)
+        except:
+            print("**loop_tag_update, broken bus, will stop the loop_tag_update !**")
+

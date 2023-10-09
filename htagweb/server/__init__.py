@@ -8,7 +8,7 @@
 # #############################################################################
 
 import asyncio,traceback,os
-import signal
+import signal,platform
 import redys
 import redys.v2
 import os,sys,importlib,inspect
@@ -65,13 +65,13 @@ class Hid:
         self.fqn=fqn
         self.hid=hid
 
-        self.event_interact = "interact_"+hid
-        self.event_interact_response = self.event_interact+"_response"
+        self.EVENT_INTERACT = "interact_"+hid
+        self.EVENT_INTERACT_RESPONSE = self.EVENT_INTERACT+"_response"
 
-        self.event_response = "response_"+hid
-        self.event_response_update = self.event_response+"_update"
+        self.EVENT_RESPONSE = "response_"+hid
+        self.EVENT_RESPONSE_UPDATE = self.EVENT_RESPONSE+"_update"
 
-        self.key_sesinfo = "sesprovider_"+hid
+        self.KEY_SYSINFO = "sesprovider_"+hid
 
     @staticmethod
     def create(uid:str,fqn:str):
@@ -108,7 +108,7 @@ def hrprocess(hid:Hid,js,init,sesprovidername,useUpdate):
         except Exception as e:
             log("importClassFromFqn ERROR",traceback.format_exc())
             #TODO: do better here
-            assert await bus.publish(hid.event_response,str(e))
+            assert await bus.publish(hid.EVENT_RESPONSE,str(e))
             return
 
         last_mod_time=os.path.getmtime(inspect.getfile(klass))
@@ -132,7 +132,7 @@ def hrprocess(hid:Hid,js,init,sesprovidername,useUpdate):
                 the fact it reachs to send back on socket.
             """
             try:
-                await bus.publish(hid.event_response_update,actions)
+                await bus.publish(hid.EVENT_RESPONSE_UPDATE,actions)
             except:
                 log("!!! concurrent write/read on redys !!!")
             return True
@@ -147,12 +147,12 @@ def hrprocess(hid:Hid,js,init,sesprovidername,useUpdate):
         try:
 
             # publish the 1st rendering
-            assert await bus.publish(hid.event_response,dict( cmd=CMD_RESP_RENDER,render=str(hr)))
+            assert await bus.publish(hid.EVENT_RESPONSE,dict( cmd=CMD_RESP_RENDER,render=str(hr)))
 
             recreate={}
 
             while running:
-                params = await bus.get_event( hid.event_interact )
+                params = await bus.get_event( hid.EVENT_INTERACT )
                 if params is not None:  # sometimes it's not a dict ?!? (bool ?!)
                     if params.get("cmd") == CMD_PS_REUSE:
                         # event REUSE
@@ -171,7 +171,7 @@ def hrprocess(hid:Hid,js,init,sesprovidername,useUpdate):
                             log("REUSE")
                             recreate={}
                             hr.session = FactorySession(hid.uid)    # reload session
-                            can = await bus.publish(hid.event_response,dict( cmd=CMD_RESP_RENDER, render=str(hr)))
+                            can = await bus.publish(hid.EVENT_RESPONSE,dict( cmd=CMD_RESP_RENDER, render=str(hr)))
                             if not can:
                                 log("Can't answer the response for the REUSE !!!!")
                     else:
@@ -186,14 +186,14 @@ def hrprocess(hid:Hid,js,init,sesprovidername,useUpdate):
                         # always save session after interaction
                         hr.session._save()
 
-                        can = await bus.publish(hid.event_interact_response,actions)
+                        can = await bus.publish(hid.EVENT_INTERACT_RESPONSE,actions)
                         if not can:
                             log("Can't answer the interact_response for the INTERACT !!!!")
 
                 await asyncio.sleep(0.1)
 
             if recreate:
-                await bus.publish( hid.event_response , dict(cmd=CMD_RESP_RECREATE,params=recreate) )
+                await bus.publish( hid.EVENT_RESPONSE , dict(cmd=CMD_RESP_RECREATE,params=recreate) )
 
         finally:
             await unregisterHrProcess(bus,hid)
@@ -206,20 +206,20 @@ async def registerHrProcess(bus,hid:Hid,sesprovider:str,pid:int):
     await bus.sadd(KEYAPPS,str(hid))
 
     # save sesprovider for this hid
-    await bus.set(hid.key_sesinfo, dict(sesprovider=sesprovider,pid=pid))
+    await bus.set(hid.KEY_SYSINFO, dict(sesprovider=sesprovider,pid=pid))
 
     # subscribe for interaction
-    await bus.subscribe( hid.event_interact )
+    await bus.subscribe( hid.EVENT_INTERACT )
 
 async def unregisterHrProcess(bus,hid:Hid):
     # remove hid in redys "apps"
     await bus.srem(KEYAPPS,str(hid))
 
     # delete sesprovider for this hid
-    await bus.delete(hid.key_sesinfo)
+    await bus.delete(hid.KEY_SYSINFO)
 
     #consume all pending events
-    await bus.unsubscribe( hid.event_interact )
+    await bus.unsubscribe( hid.EVENT_INTERACT )
 
 
 async def killall():
@@ -251,11 +251,14 @@ class ServerClient:
     async def kill(self,hid:Hid):
         """ kill a process (process event), return True if killed something"""
         # force kill by using its pid
-        sesinfo = await self._bus.get(hid.key_sesinfo)
+        sesinfo = await self._bus.get(hid.KEY_SYSINFO)
         if sesinfo is not None:
             pid=sesinfo["pid"]
             print(f"ServerClient.kill({hid}), kill pid={pid}", flush=True)
-            os.kill(pid, signal.SIGKILL)
+            if platform.system() == "Windows":
+                os.kill(pid, signal.CTRL_BREAK_EVENT)
+            else:
+                os.kill(pid, signal.SIGKILL)
 
             await unregisterHrProcess(self._bus,hid)
             return True
@@ -267,7 +270,7 @@ class ServerClient:
 
     async def session(self,hid:Hid) -> dict:
         """ get session for hid"""
-        sesinfo=await self._bus.get(hid.key_sesinfo)
+        sesinfo=await self._bus.get(hid.KEY_SYSINFO)
         sesprovidername=sesinfo["sesprovider"]
         FactorySession=importFactorySession(sesprovidername)
         return FactorySession(hid.uid)
@@ -298,9 +301,17 @@ async def stopServer(s):
     # clean all running process
     await killall()
 
+
     # before stopping
     s.stop()
 
+    bus=redys.v2.AClient()
+    while 1:
+        try:
+            await bus.ping()
+        except:
+            break
+        await asyncio.sleep(0.1)
 
 if __name__=="__main__":
     # asyncio.run( hrserver() )

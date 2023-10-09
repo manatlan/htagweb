@@ -77,6 +77,11 @@ this parameter is available on `app.handle(request, obj, ... parano=True|False .
 
 this parameter is available on `app.handle(request, obj, ... http_only=True|False ...)` too, to override defaults !
 
+#### timeout_interaction (int)
+
+It's the time (in seconds) for an interaction (or an initialization) for answering. If the timeout happens : the process/instance is killed.
+By default, it's 120 seconds (2 minutes).
+
 #### session_factory (htagweb.sessions)
 
 You can provide a Session Factory to handle the session in different modes.
