@@ -43,7 +43,7 @@ async def test_base( server ):
     actions=await p.interact( oid="ut", method_name="doit", args=[], kargs={}, event={} )
     assert "update" in actions
     update_rendering = list(actions["update"].values())[0]
-    
+
     # session.cpt was incremented at "1"
     assert ">1</cpt2>" in update_rendering
 
@@ -69,6 +69,30 @@ async def test_app_block_killed( server ):
     assert fqn in [i.fqn for i in await p.list()]
 
     await p.interact( oid="ut", method_name="doit", args=[], kargs={}, event={} )
+
+    # app was killed
+    assert fqn not in [i.fqn for i in await p.list()]
+
+
+@pytest.mark.asyncio
+async def test_app_suicide( server ):
+    # test that a blocking interaction will be stopped
+    # and app killed
+
+    uid ="u2"
+    fqn="test_hr:App"
+    p=HrClient(uid,fqn,"//",timeout_inactivity=1)
+    html=await p.start()
+    assert html.startswith("<!DOCTYPE html><html>")
+
+
+    # app is running
+    assert fqn in [i.fqn for i in await p.list()]
+
+
+    # app will suicide during this period
+    await asyncio.sleep(2)
+
 
     # app was killed
     assert fqn not in [i.fqn for i in await p.list()]

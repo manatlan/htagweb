@@ -81,14 +81,11 @@ class Jo(Tag.body):
 
 
 
-async def handleJo(req):
-    return await req.app.handle(req,Jo,http_only=True,parano=True)
-
 
 #------------------------------------------------------
 from htagweb import SimpleServer,AppServer
-app=AppServer( App )
-app.add_route("/jo", handleJo )
+app=AppServer( App, timeout_inactivity=0 )
+app.add_route("/jo", lambda req: req.app.handle(req,Jo,http_only=True,parano=True) )
 
 if __name__=="__main__":
     #~ import logging

@@ -171,18 +171,20 @@ async def lifespan(app):
 
 class AppServer(Starlette):
     def __init__(self,
-                obj:"htag.Tag class|fqn|None"=None,
+                obj:"Tag|fqn|None"=None,
                 session_factory:"sessions.MemDict|sessions.FileDict|sessions.FilePersistentDict|None"=None,
                 debug:bool=True,
                 ssl:bool=False,
                 parano:bool=False,
                 http_only:bool=False,
-                timeout_interaction=120,
+                timeout_interaction:int=60,
+                timeout_inactivity:int=0,
             ):
         self.ssl=ssl
         self.parano = parano
         self.http_only = http_only
         self.timeout_interaction = timeout_interaction
+        self.timeout_inactivity = timeout_inactivity
 
         if session_factory is None:
             self.sesprovider = sessions.MemDict
@@ -212,20 +214,22 @@ class AppServer(Starlette):
             self.add_route( '/', handleHome )
 
     # DEPRECATED
-    async def serve(self, request,obj:"htag.Tag|fqn",) -> HTMLResponse:
+    async def serve(self, request,obj:"Tag|fqn",) -> HTMLResponse:
         return await self.handle( request, obj)
 
     # new method
     async def handle(self, request,
-                    obj:"htag.Tag|fqn",
+                    obj:"Tag|fqn",
                     http_only:"bool|None"=None,
                     parano:"bool|None"=None,
                     timeout_interaction:"int|None"=None,
+                    timeout_inactivity:"int|None"=None,
                     ) -> HTMLResponse:
         # take default behaviour if not present
         is_parano = self.parano if parano is None else parano
         is_http_only = self.http_only if http_only is None else http_only
         the_timeout_interaction = self.timeout_interaction if timeout_interaction is None else timeout_interaction
+        the_timeout_inactivity = self.timeout_inactivity if timeout_inactivity is None else timeout_inactivity
 
         uid = request.scope["uid"]
         args,kargs = commons.url2ak(str(request.url))
@@ -301,7 +305,13 @@ class AppServer(Starlette):
             connect();
             """ % locals()
 
-        hr = HrClient(uid,fqn,js,self.sesprovider.__name__,http_only=is_http_only,timeout_interaction=the_timeout_interaction)
+        hr = HrClient(uid,fqn,
+                      js = js,
+                      sesprovidername = self.sesprovider.__name__,
+                      http_only = is_http_only,
+                      timeout_interaction = the_timeout_interaction,
+                      timeout_inactivity = the_timeout_inactivity
+        )
         html=await hr.start(*args,**kargs)
         return HTMLResponse(html)
 

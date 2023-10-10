@@ -26,7 +26,7 @@ Process live as long as the server live (TODO: a TIMEOUT will be back soon)
 **Features**
 
  * based on [starlette](https://pypi.org/project/starlette/)
- * multiple ways to handle sessions (file, mem, etc ...)
+ * use sessions (multiple ways to handle sessions (file, mem, etc ...))
  * compatible with **uvloop** !!!
  * compatible with multiple gunicorn/uvicorn/webworkers !!!
  * compatible with [tag.update()](https://manatlan.github.io/htag/tag_update/)
@@ -80,7 +80,14 @@ this parameter is available on `app.handle(request, obj, ... http_only=True|Fals
 #### timeout_interaction (int)
 
 It's the time (in seconds) for an interaction (or an initialization) for answering. If the timeout happens : the process/instance is killed.
-By default, it's 120 seconds (2 minutes).
+By default, it's `60` seconds (1 minute).
+
+#### timeout_inactivity (int)
+
+It's the time (in seconds) of inactivities, after that : the process is detroyed.
+By default, it's `0` (process lives as long as the server lives).
+
+IMPORTANT : the "tag.update" feature doesn't reset the inactivity timeout !
 
 #### session_factory (htagweb.sessions)
 

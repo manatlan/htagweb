@@ -22,7 +22,14 @@ def startProcess(params:dict):
 
 
 class HrClient(ServerClient):
-    def __init__(self,uid:str,fqn:str,js:str=None,sesprovidername=None,http_only=False,timeout_interaction=60):
+    def __init__(self,uid:str,
+                 fqn:str,
+                 js:str=None,
+                 sesprovidername:str=None,
+                 http_only:bool=False,
+                 timeout_interaction:int=0,
+                 timeout_inactivity:int=0
+                 ):
         """ !!!!!!!!!!!!!!!!!!!! if js|sesprovidername is None : can't do a start() !!!!!!!!!!!!!!!!!!!!!!"""
         ServerClient.__init__(self)
 
@@ -31,7 +38,8 @@ class HrClient(ServerClient):
         self.js=js
         self.sesprovidername=sesprovidername
         self.useUpdate = not http_only
-        self.timeout_interaction = timeout_interaction
+        self.timeout_interaction = timeout_interaction or 60
+        self.timeout_inactivity = timeout_inactivity
 
     def error(self, *a):
         txt=f".HrClient {self.hid.uid} {self.hid.fqn}: %s" % (" ".join([str(i) for i in a]))
@@ -60,6 +68,7 @@ class HrClient(ServerClient):
             init= (a,k),
             sesprovidername=self.sesprovidername,
             useUpdate = self.useUpdate,
+            timeout_inactivity = self.timeout_inactivity
         )
 
         running_hids:list=await self._bus.get(KEYAPPS) or []
@@ -86,7 +95,7 @@ class HrClient(ServerClient):
                     # the process has giver a right answer ... return the rendering
                     return message.get("render")
 
-        
+
         self.error(f"Event TIMEOUT ({self.timeout_interaction}s) on {self.hid.EVENT_RESPONSE} !!!")
         await self.kill(self.hid)
         return f"Timeout: App {self.hid.fqn} killed !"

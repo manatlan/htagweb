@@ -12,7 +12,7 @@ import signal,platform
 import redys
 import redys.v2
 import os,sys,importlib,inspect
-import multiprocessing
+import time
 from htag import Tag
 from htag.render import HRenderer
 
@@ -83,7 +83,7 @@ class Hid:
         return self.hid
 
 ##################################################################################
-def hrprocess(hid:Hid,js,init,sesprovidername,useUpdate):
+def hrprocess(hid:Hid,js,init,sesprovidername,useUpdate,timeout_inactivity):            #TODO: continue here
 ##################################################################################
     FactorySession=importFactorySession(sesprovidername)
 
@@ -144,6 +144,7 @@ def hrprocess(hid:Hid,js,init,sesprovidername,useUpdate):
         #======================================
 
         await registerHrProcess(bus,hid,FactorySession.__name__,pid)
+        time_activity = time.monotonic()
         try:
 
             # publish the 1st rendering
@@ -154,6 +155,7 @@ def hrprocess(hid:Hid,js,init,sesprovidername,useUpdate):
             while running:
                 params = await bus.get_event( hid.EVENT_INTERACT )
                 if params is not None:  # sometimes it's not a dict ?!? (bool ?!)
+                    time_activity = time.monotonic()
                     if params.get("cmd") == CMD_PS_REUSE:
                         # event REUSE
                         params=params.get("params")
@@ -189,6 +191,12 @@ def hrprocess(hid:Hid,js,init,sesprovidername,useUpdate):
                         can = await bus.publish(hid.EVENT_INTERACT_RESPONSE,actions)
                         if not can:
                             log("Can't answer the interact_response for the INTERACT !!!!")
+
+                if timeout_inactivity:
+                    if time.monotonic() - time_activity > timeout_inactivity:
+                        log(f"TIMEOUT inactivity ({timeout_inactivity}s), suicide !")
+                        recreate={}
+                        break
 
                 await asyncio.sleep(0.1)
 
