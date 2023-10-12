@@ -147,7 +147,7 @@ class HRSocket(WebSocketEndpoint):
         await websocket.accept()
 
         # add the loop to tag.update feature
-        asyncio.ensure_future(self.hr.loop_tag_update(self, websocket))
+        self.task = asyncio.create_task(self.hr.loop_tag_update(self, websocket))
 
     async def on_receive(self, websocket, data):
         if self.is_parano:
@@ -159,6 +159,7 @@ class HRSocket(WebSocketEndpoint):
         await self._sendback( websocket, json.dumps(actions) )
 
     async def on_disconnect(self, websocket, close_code):
+        self.task.cancel()
         with redys.v2.AClient() as bus:
             await bus.unsubscribe(self.hr.hid.EVENT_RESPONSE_UPDATE)
 

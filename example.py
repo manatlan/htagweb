@@ -80,12 +80,12 @@ class Jo(Tag.body):
         self <= Tag.button("B",_onclick=test)
 
 
-
-
+async def serve(req):
+    return await req.app.handle(req,Jo,http_only=True,parano=True) 
 #------------------------------------------------------
 from htagweb import SimpleServer,AppServer
 app=AppServer( App, timeout_inactivity=0 )
-app.add_route("/jo", lambda req: req.app.handle(req,Jo,http_only=True,parano=True) )
+app.add_route("/jo", serve)
 
 if __name__=="__main__":
     #~ import logging

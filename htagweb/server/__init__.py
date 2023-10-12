@@ -309,17 +309,9 @@ async def stopServer(s):
     # clean all running process
     await killall()
 
-
     # before stopping
     s.stop()
 
-    bus=redys.v2.AClient()
-    while 1:
-        try:
-            await bus.ping()
-        except:
-            break
-        await asyncio.sleep(0.1)
 
 if __name__=="__main__":
     # asyncio.run( hrserver() )
