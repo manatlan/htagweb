@@ -48,7 +48,6 @@ async def test_sessions_mem( server ):  # need redys.v2 runned
 def test_sessions_file():
     session_test( FileDict )
 
-@pytest.mark.asyncio
 def test_sessions_filepersitent():
     session_test( FilePersistentDict )
 
