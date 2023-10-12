@@ -15,7 +15,7 @@ def test_HtagServer_index():
 
         print(response.text)
 
-        with client.websocket_connect('/_/htagweb.htagserver.IndexApp') as websocket:
+        with client.websocket_connect('/_/htagweb.tags.IndexApp') as websocket:
 
             # assert 1st connect send back the full html page
             html = websocket.receive_text()
@@ -82,4 +82,5 @@ def test_simpleserver():
 if __name__=="__main__":
     # test_basic()
     # test_a_full_fqn()
-    test_simpleserver()
+    #test_simpleserver()
+    test_HtagServer_index()

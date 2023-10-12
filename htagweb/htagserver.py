@@ -27,44 +27,12 @@ from .simpleserver import SimpleServer
 from .server import importClassFromFqn
 
 class HtagServer(SimpleServer):
-
-    class IndexApp(Tag.body):
-        statics="""
-        * {font-family: sans-serif;}
-        .file,.folder {margin-left:8px}
-        .file *,.folder * {text-decoration: none}
-        .folder * {font-weight:800}
-        """
-        imports=[]
-    
-        def init(self,path="."):
-            if path.strip().startswith( ("/","\\" )) or ".." in path:
-                self += "?!"
-            else:
-                olist=Tag.div()
-    
-                folders=[]
-                files=[]
-                for i in os.listdir(path):
-                    if i.startswith( (".","_") ): continue
-                    if os.path.isdir( os.path.join(path,i) ):
-                        folders.append( (i,os.path.join(path,i)) )
-                    elif i.lower().endswith(".py"):
-                        files.append( (i, f"{path.replace(os.sep,'.')}.{i[:-3]}".strip(".")))
-    
-                for i,fp in sorted(folders):
-                    olist+= Tag.div( Tag.a( f"📂 {i}",_href="?"+fp ), _class="folder")
-                for i,fp in sorted(files):
-                    olist+= Tag.div( Tag.a(i,_href=fp), _class="file")
-    
-                self+= Tag.h3(f"Folder {path}")
-                self+= olist
     
     
-    
-    def __init__(self,obj:"htag.Tag class|fqn|None"=None, *a,**k):
+    def __init__(self,obj:"htag.Tag|fqn|None"=None, *a,**k):
         if obj is None:
-            obj = HtagServer.IndexApp
+            from htagweb.tags import IndexApp
+            obj = IndexApp
         SimpleServer.__init__(self,obj,*a,**k)
 
         self.add_route('/{path}', self._serve)
