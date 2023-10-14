@@ -306,11 +306,13 @@ async def startServer():
 ##################################################################################
 async def stopServer(s):
 ##################################################################################
-    # clean all running process
-    await killall()
+    try:
+        # clean all running process
+        await killall()
 
-    # before stopping
-    s.stop()
+    finally:
+        # before stopping
+        s.stop()
 
 
 if __name__=="__main__":

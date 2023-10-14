@@ -145,6 +145,6 @@ class HrClient(ServerClient):
                         break
                 await asyncio.sleep(0.1)
         except Exception as e:
-            print("**loop_tag_update, broken bus, will stop the loop_tag_update !**")
+            print(f"**loop_tag_update, broken bus, will stop the loop_tag_update (often a cancel error)!**")
         finally:
             await self._bus.unsubscribe(event)

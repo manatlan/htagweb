@@ -92,5 +92,9 @@ if __name__=="__main__":
     #~ logging.basicConfig(format='[%(levelname)-5s] %(name)s: %(message)s',level=logging.DEBUG)
     #~ logging.getLogger("redys.servone").setLevel( logging.INFO )
 
+    # or with gunicorn :
+    #> gunicorn -w 4 -k uvicorn.workers.UvicornWorker -b localhost:8000 example:app
+    # or with uvicorn :
+    #> uvicorn example:app --workers 4
 
     app.run(openBrowser=True)

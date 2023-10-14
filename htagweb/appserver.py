@@ -160,6 +160,11 @@ class HRSocket(WebSocketEndpoint):
 
     async def on_disconnect(self, websocket, close_code):
         self.task.cancel()
+        try:
+            await self.task
+        except asyncio.CancelledError:
+            pass        
+        
         with redys.v2.AClient() as bus:
             await bus.unsubscribe(self.hr.hid.EVENT_RESPONSE_UPDATE)
 
