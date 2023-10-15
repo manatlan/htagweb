@@ -9,7 +9,6 @@
 
 import asyncio,traceback,os
 import signal,platform
-import redys
 import redys.v2
 import os,sys,importlib,inspect
 import time
@@ -143,8 +142,17 @@ def hrprocess(hid:Hid,js,init,sesprovidername,useUpdate,timeout_inactivity):    
             log("tag.update not possible (http only)")
         #======================================
 
-        await registerHrProcess(bus,hid,FactorySession.__name__,pid)
         time_activity = time.monotonic()
+
+        await registerHrProcess(bus,hid,dict(
+                sesprovider=FactorySession.__name__,
+                pid=pid,
+                timeout_inactivity=timeout_inactivity,
+                http_only = not useUpdate,
+                timestamp = time_activity,
+            )
+        )
+        
         try:
 
             # publish the 1st rendering
@@ -209,12 +217,12 @@ def hrprocess(hid:Hid,js,init,sesprovidername,useUpdate,timeout_inactivity):    
     asyncio.run( loop() )
     log("end")
 
-async def registerHrProcess(bus,hid:Hid,sesprovider:str,pid:int):
+async def registerHrProcess(bus,hid:Hid,info:dict):
     # register hid in redys "apps"
     await bus.sadd(KEYAPPS,str(hid))
 
     # save sesprovider for this hid
-    await bus.set(hid.KEY_SYSINFO, dict(sesprovider=sesprovider,pid=pid))
+    await bus.set(hid.KEY_SYSINFO, info)
 
     # subscribe for interaction
     await bus.subscribe( hid.EVENT_INTERACT )
@@ -282,6 +290,10 @@ class ServerClient:
         sesprovidername=sesinfo["sesprovider"]
         FactorySession=importFactorySession(sesprovidername)
         return FactorySession(hid.uid)
+
+    async def info(self,hid:Hid) -> dict:
+        """ get infos from hid"""
+        return await self._bus.get(hid.KEY_SYSINFO)
 
 
 ##################################################################################
