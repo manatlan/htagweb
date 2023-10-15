@@ -32,7 +32,6 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from htag.runners import commons
 from . import crypto
-import redys.v2
 
 from htagweb.server import Hid, startServer, stopServer
 from htagweb.server.client import HrClient
