@@ -122,16 +122,13 @@ class HRSocket(WebSocketEndpoint):
     encoding = "text"
 
     async def _sendback(self,websocket, txt:str) -> bool:
-        try:
+        if self.is_ws_connected:
             if self.is_parano:
                 seed = parano_seed( websocket.scope["uid"])
                 txt = crypto.encrypt(txt.encode(),seed)
 
             await websocket.send_text( txt )
-            return True
-        except Exception as e:
-            logger.error("Can't send to socket, error: %s",e)
-            return False
+        return self.is_ws_connected
 
     async def on_connect(self, websocket):
         fqn=websocket.path_params.get("fqn","")
@@ -144,7 +141,8 @@ class HRSocket(WebSocketEndpoint):
         self.is_parano="parano" in websocket.query_params.keys()
 
         await websocket.accept()
-
+        self.is_ws_connected=True
+        
         # add the loop to tag.update feature
         self.task = asyncio.create_task(self.hr.loop_tag_update(self, websocket))
 
@@ -158,7 +156,8 @@ class HRSocket(WebSocketEndpoint):
         await self._sendback( websocket, json.dumps(actions) )
 
     async def on_disconnect(self, websocket, close_code):
-        self.hr.stop_loop_tag_update(self.task)
+        self.is_ws_connected=False
+        #self.hr.stop_loop_tag_update(self.task)
 
 
 
