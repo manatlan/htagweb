@@ -9,7 +9,6 @@
 
 import asyncio,traceback,os
 import signal,platform
-import redys
 import redys.v2
 import os,sys,importlib,inspect
 import time
