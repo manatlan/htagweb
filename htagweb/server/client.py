@@ -131,6 +131,9 @@ class HrClient(ServerClient):
             return {}
 
     async def loop_tag_update(self, hrsocket, websocket):
+        """ this is a task (for tag.update feature)
+            see hrsocket on_connect
+        """
         event=self.hid.EVENT_RESPONSE_UPDATE
 
         #TODO: there is trouble here sometimes ... to fix !
@@ -148,3 +151,15 @@ class HrClient(ServerClient):
             print(f"**loop_tag_update, broken bus, will stop the loop_tag_update (often a cancel error)!**")
         finally:
             await self._bus.unsubscribe(event)
+
+    async def stop_loop_tag_update(self, task):
+        """ this will stop the task (for tag.update feature)
+            see hrsocket on_disconnect
+        """
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass        
+        
+        await self._bus.unsubscribe(self.hid.EVENT_RESPONSE_UPDATE)
