@@ -282,6 +282,13 @@ class ServerClient:
         FactorySession=importFactorySession(sesprovidername)
         return FactorySession(hid.uid)
 
+    async def info(self,hid:Hid) -> dict:
+        """ get info from hid"""
+        sesinfo=await self._bus.get(hid.KEY_SYSINFO)
+        return dict(
+                pid=sesinfo["pid"],
+        )
+
 
 ##################################################################################
 async def startServer():
