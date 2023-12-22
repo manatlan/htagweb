@@ -21,7 +21,7 @@ It's the real runner to expose htag apps in a real production environment, and p
 all features, while maintaining tag instances like classical/desktop htag runners.
 
 All htag apps are runned in its own process, and an user can only have an instance of an htag app. (so process are recreated when query params changes)
-Process live as long as the server live (TODO: a TIMEOUT will be back soon)
+Process live as long as the server live
 
 **Features**
 
@@ -119,13 +119,10 @@ It uses the SimpleServer, so it does'nt provide all features (parano mode, ssl, 
 
 ## Roadmap / futur
 
- - make it works with gunicorn again !!!!!!!!!!!!!!!!!!!!!!!!!
+
  - better unittests !!!!!!!!!!!!!!!!
  - better logging !!!!!!!!!!!!!!!!
- - process lives : timeout !
  - parano mode : use public/private keys ?
-
-
 
 
 ## Examples
