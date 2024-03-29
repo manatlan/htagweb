@@ -70,7 +70,7 @@ class WebServerSession:  # ASGI Middleware, for starlette
         self.session_cookie = "session"
         self.max_age = 0
         self.path = "/"
-        self.security_flags = "httponly; samesite=lax"
+        self.security_flags = "httponly; samesite=none"
         if https_only:  # Secure flag can be used with HTTPS only
             self.security_flags += "; secure"
         self.cbsesprovider=sesprovider
@@ -262,7 +262,7 @@ class AppServer(Starlette):
 
             async function interact( o ) {
                 let body = await _write_(JSON.stringify(o));
-                let req=await window.fetch("/_/%(fqn)s%(pparano)s",{method:"POST", body: body});
+                let req=await window.fetch("/_/%(fqn)s%(pparano)s",{method:"POST", body: body, mode: 'cors', credentials: 'include', referrerPolicy: "origin"});
                 let actions=await req.text();
                 action( await _read_(actions) );
             }
