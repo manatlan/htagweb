@@ -4,16 +4,41 @@ import pytest
 from htagweb.hrclient import HrClient
 import re
 
+@pytest.mark.asyncio
+async def test_new1( ):
+    try:
+        hr=HrClient("ut1","main")
+        with pytest.raises(Exception):
+            await hr.create("//ddd")
+
+        hr=HrClient("ut1","main.AppUnknown")
+        with pytest.raises(Exception):
+            await hr.create("//ddd")
+
+        hr=HrClient("ut1","main:App")
+        with pytest.raises(Exception):
+            await hr.create("//ddd")
+
+        hr=HrClient("ut1","mainUnknown.AppUnknown")
+        with pytest.raises(Exception):
+            await hr.create("//ddd")
+
+        hr=HrClient("ut1","examples.simple.App")
+        html = await hr.create("//ddd")
+        assert "<!DOCTYPE html>" in html
+        assert "function action" in html
+    finally:
+        await HrClient.clean()
 
 @pytest.mark.asyncio
-async def test_new( ):
+async def test_new2( ):
     # hr2=HrClient("u2","main.App")
     # await hr2.create("//js")
     try:
-        hr=HrClient("ut1","examples.simple.App")
+        hr=HrClient("ut2","examples.simple.App")
 
-        htm=await hr.create("//js")
-        htm=await hr.create("//js")
+        htm=await hr.create("//js") # will create fifo/process
+        htm=await hr.create("//js") # will reuse fifo and reuse process
         #print(htm)
         print("------------------------------------------------")
         id="12156456465456413"

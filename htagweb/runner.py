@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # #############################################################################
-# Copyright (C) 2023 manatlan manatlan[at]gmail(dot)com
+# Copyright (C) 2024 manatlan manatlan[at]gmail(dot)com
 #
 # MIT licence
 #

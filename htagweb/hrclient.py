@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # #############################################################################
-# Copyright (C) 2023 manatlan manatlan[at]gmail(dot)com
+# Copyright (C) 2024 manatlan manatlan[at]gmail(dot)com
 #
 # MIT licence
 #
@@ -14,16 +14,8 @@ import subprocess
 import aiofiles
 import inspect
 
-#TODO: to be runnable as is ;-(
-#TODO: move this tests in pytest, one day ! (and not be runnable as is !!!)
-try:
-    from . import hrprocess
-    from .fifo import Fifo
-except ImportError:
-    from htagweb import hrprocess
-    from htagweb.fifo import Fifo
-
-
+from . import hrprocess
+from .fifo import Fifo
 
 class HrClient:
     def __init__(self,uid:str, moduleapp:str, timeout_interaction:int=60, timeout_inactivity:int=None):
@@ -81,33 +73,3 @@ class HrClient:
             # kill hardly
             f.destroy()
 
-
-if __name__=="__main__":
-    import pytest
-    async def main():
-        hr=HrClient("ut1","main")
-        with pytest.raises(Exception):
-            await hr.create("//ddd")
-
-        hr=HrClient("ut1","main.AppUnknown")
-        with pytest.raises(Exception):
-            await hr.create("//ddd")
-
-        hr=HrClient("ut1","main:App")
-        with pytest.raises(Exception):
-            await hr.create("//ddd")
-
-        hr=HrClient("ut1","mainUnknown.AppUnknown")
-        with pytest.raises(Exception):
-            await hr.create("//ddd")
-
-        hr=HrClient("ut1","examples.simple.App")
-        html = await hr.create("//ddd")
-        assert "<!DOCTYPE html>" in html
-        assert "function action" in html
-
-    async def runner():
-        await main()
-        await HrClient.clean()
-
-    asyncio.run( runner() )
