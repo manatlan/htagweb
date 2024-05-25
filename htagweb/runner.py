@@ -128,7 +128,8 @@ class HRSocket(WebSocketEndpoint):
 
         async def looper():
             async for actions in self.hr.updater():
-                await self._sendback( websocket, json.dumps(actions) )
+                x=await self._sendback( websocket, json.dumps(actions) )
+                if not x: break
 
         self.task = asyncio.ensure_future( looper() )
 
