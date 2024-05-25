@@ -18,11 +18,11 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.7"
-redys = "^0.9"
 htag = ">= 0.51"
 starlette = "0.29.0"
 pycryptodomex = "^3.19.0"
 uvicorn = {version = "0.22.0", extras = ["standard"]}
+aiofiles = "^23.2.1"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -30,6 +30,7 @@ pytest = "^7.4.2"
 pytest-asyncio = "^0.21.1"
 pytest-cov = "^4.1.0"
 httpx = "0.24.0"
+gunicorn = "^22.0.0"
 
 [build-system]
 requires = ["poetry-core"]

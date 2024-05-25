@@ -83,8 +83,8 @@ class Jo(Tag.body):
 async def serve(req):
     return await req.app.handle(req,Jo,http_only=True,parano=True) 
 #------------------------------------------------------
-from htagweb import SimpleServer,AppServer
-app=AppServer( App, timeout_inactivity=0 )
+from htagweb import Runner
+app=Runner( App, timeout_inactivity=0 )
 app.add_route("/jo", serve)
 
 if __name__=="__main__":
