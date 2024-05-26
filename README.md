@@ -45,6 +45,14 @@ if __name__=="__main__":
 
 You can use the following parameters :
 
+#### host (str)
+
+The host to bind to. (default is "0.0.0.0")
+
+#### port (int)
+
+The port to bind to. (default is 8000)
+
 #### debug (bool)
 
 - When False: (default) no debugging facilities
@@ -104,7 +112,7 @@ from htag import Tag
 
 class App(Tag.div):
     def init(self):
-        self+= "hello world"
+        self<= "hello world"
 
 from htagweb import Runner
 Runner( App ).run()
@@ -117,7 +125,7 @@ from htag import Tag
 
 class App(Tag.div):
     def init(self):
-        self+= "hello world"
+        self<= "hello world"
 
 from htagweb import Runner
 app=Runner( App )

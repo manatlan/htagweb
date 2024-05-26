@@ -165,6 +165,8 @@ class Runner(Starlette):
     def __init__(self,
                 obj:"Tag|fqn|None"=None,
                 # session_factory:"sessions.MemDict|sessions.FileDict|sessions.FilePersistentDict|None"=None,
+                host="0.0.0.0",
+                port=8000,
                 debug:bool=False,
                 ssl:bool=False,
                 parano:bool=False,
@@ -172,6 +174,8 @@ class Runner(Starlette):
                 timeout_interaction:int=60,
                 timeout_inactivity:int=0,
             ):
+        self.host=host
+        self.port=port
         self.ssl=ssl
         self.parano = parano
         self.http_only = http_only
@@ -320,13 +324,13 @@ class Runner(Starlette):
 
         return PlainTextResponse(txt)
 
-    def run(self, host="0.0.0.0", port=8000, openBrowser=False):   # localhost, by default !!
+    def run(self, openBrowser=False):   # localhost, by default !!
         if openBrowser:
             import webbrowser
-            webbrowser.open_new_tab(f"http://localhost:{port}")
+            webbrowser.open_new_tab(f"http://localhost:{self.port}")
 
         try:
-            uvicorn.run(self, host=host, port=port)
+            uvicorn.run(self, host=self.host, port=self.port)
         except KeyboardInterrupt:
             print("---- CTRL-C")        
 
