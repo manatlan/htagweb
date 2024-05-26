@@ -78,5 +78,8 @@ class Fifo:
 
     def destroy(self):
         with open(self.PID_FILE,"r+") as fid:
-            os.kill(int(fid.readline().strip()),9)
+            try:
+                os.kill(int(fid.readline().strip()),9)
+            except ProcessLookupError:
+                pass
         self.removePipes()

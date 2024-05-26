@@ -19,7 +19,7 @@ def startHrProcess(uid,moduleapp,timeout_inactivity):
     queue = multiprocessing.Queue()
     p=multiprocessing.Process(target=process, args=[queue,uid,moduleapp,timeout_inactivity],kwargs={},daemon=True)
     p.start()
-    p.join(timeout=0.1)
+    p.join(timeout=0.2)
     return p,queue.get()
 
 

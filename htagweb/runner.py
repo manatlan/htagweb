@@ -27,6 +27,7 @@ from starlette.middleware import Middleware
 from starlette.requests import HTTPConnection
 from starlette.datastructures import MutableHeaders
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
+from starlette.websockets import WebSocketState
 
 from htag import Tag
 from htag.runners import commons
@@ -91,11 +92,11 @@ class WebServerSession:  # ASGI Middleware, for starlette
         await self.app(scope, receive, send_wrapper)
 
 
-def normalize(fqn):
-    if ":" not in fqn:
-        # replace last "." by ":"
-        fqn="".join( reversed("".join(reversed(fqn)).replace(".",":",1)))
-    return fqn
+# def normalize(fqn):
+#     if ":" not in fqn:
+#         # replace last "." by ":"
+#         fqn="".join( reversed("".join(reversed(fqn)).replace(".",":",1)))
+#     return fqn
 
 
 
@@ -126,13 +127,13 @@ class HRSocket(WebSocketEndpoint):
 
         await websocket.accept()
 
-        async def looper():
+        async def looper( websocket ):
             async for actions in self.hr.updater():
-                x=await self._sendback( websocket, json.dumps(actions) )
-                if not x:
-                    break
-
-        websocket.task = asyncio.ensure_future( looper() )
+                if websocket.application_state==WebSocketState.CONNECTED and websocket.client_state==WebSocketState.CONNECTED:
+                    x=await self._sendback( websocket, json.dumps(actions) )
+                    if not x:
+                        break
+        websocket.task = asyncio.ensure_future( looper(websocket) )
 
 
     async def on_receive(self, websocket, data):
@@ -155,6 +156,7 @@ class HRSocket(WebSocketEndpoint):
 
 async def lifespan(app):
     print("--- START")
+    await HrClient.clean()
     yield
     print("--- STOP")
     await HrClient.clean()

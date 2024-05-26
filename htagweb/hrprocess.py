@@ -53,6 +53,9 @@ async def main(f:Fifo,klass,timeout_inactivity):
             log("update fifo error:",e)
             return False
 
+    async def sendactions_close(actions:dict) -> bool:
+        return False
+
     async def cmd(cmd,**args) -> str:
         if cmd=="create":
             ia,ik = tuple(args["init"] or ([],{}))
@@ -60,6 +63,8 @@ async def main(f:Fifo,klass,timeout_inactivity):
             
             if sys.hr is not None and sys.hr.init != init:
                 log("recreate, because 'init' change")
+                sys.hr.sendactions = sendactions_close
+                del sys.hr.tag
                 del sys.hr
                 sys.hr=None
 
@@ -72,12 +77,11 @@ async def main(f:Fifo,klass,timeout_inactivity):
                     exit_callback=process_exit,
                     session=session.FileDict(f.uid)
                 )
+                sys.hr.sendactions = sendactions
                 log("create HRenderer")
             else:
                 log("reuse previous HRenderer")
 
-            sys.hr.sendactions = sendactions
-            # await sys.hr.tag.update()
             return str(sys.hr)
         elif cmd=="interact":
             log("interact with",args['id'],args['method'])
