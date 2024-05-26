@@ -1,8 +1,14 @@
+# -*- coding: utf-8 -*-
+# #############################################################################
+# Copyright (C) 2024 manatlan manatlan[at]gmail(dot)com
+#
+# MIT licence
+#
+# https://github.com/manatlan/htagweb
+# #############################################################################
 import asyncio
 import os
 import json
-import sys
-import subprocess
 import glob 
 import aiofiles
 
