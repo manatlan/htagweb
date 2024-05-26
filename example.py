@@ -84,7 +84,11 @@ async def serve(req):
     return await req.app.handle(req,Jo,http_only=True,parano=True) 
 #------------------------------------------------------
 from htagweb import Runner
-app=Runner( App, timeout_inactivity=0 )
+#/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+# **IMPORTANT** current host serving on SSL
+# on your localmachine, switch ssl to False !!!
+#/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+app=Runner( App, debug=True, ssl=True )
 app.add_route("/jo", serve)
 
 if __name__=="__main__":

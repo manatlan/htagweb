@@ -13,10 +13,11 @@ from htag import Tag
 
 
 def findfqn(x) -> str:
+    """ return string like "module.App"  (not with :)"""
     if isinstance(x,str):
         if ("." not in x) and (":" not in x):
             raise Exception(f"'{x}' is not a 'full qualified name' (expected 'module.name') of an App (htag.Tag class)")
-        return x    # /!\ x is a fqn /!\ DANGEROUS /!\
+        return x.replace(":",".")    # /!\ x is a fqn /!\ DANGEROUS /!\
     elif isinstance(x, ModuleType):
         if hasattr(x,"App"):
             tagClass=getattr(x,"App")

@@ -1,10 +1,9 @@
-import os,sys; sys.path.insert(0,os.path.realpath(os.path.dirname(os.path.dirname(__file__))))
+import os
+from examples import app1
+from examples import app2
 
 from htagweb import Runner
 from starlette.responses import HTMLResponse
-
-import app1
-import app2
 
 #=-
 from htag import Tag
@@ -28,9 +27,9 @@ async def handlePath(request):
         """
         return HTMLResponse(h)
     elif p=="a1":
-        return await app.serve(request, "app1.App")
+        return await app.serve(request, "examples.app1.App")
     elif p=="a12":
-        return await app.serve(request, "app1:App")
+        return await app.serve(request, "examples.app1:App")
     elif p=="a2":
         return await app.serve(request, app2.App )
     elif p=="a22":
@@ -38,12 +37,15 @@ async def handlePath(request):
     elif p=="k1":
         return await app.serve(request, AppKo )
     elif p=="k2":
-        return await app.serve(request, "nimp_module.nimp_name" )
+        return await app.serve(request, "nimp_module:nimp_name" )
     else:
         return HTMLResponse("404",404)
 
-
-app=Runner()
+#/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+# **IMPORTANT** current host serving on SSL
+# on your localmachine, switch ssl to False !!!
+#/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+app=Runner(debug=True,ssl=True) 
 app.add_route("/{path:path}", handlePath )
 
 if __name__=="__main__":
