@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # #############################################################################
-# Copyright (C) 2023 manatlan manatlan[at]gmail(dot)com
+# Copyright (C) 2024 manatlan manatlan[at]gmail(dot)com
 #
 # MIT licence
 #
@@ -9,9 +9,8 @@
 
 __version__ = "0.0.0" # auto updated
 
-from .appserver import AppServer
-from .simpleserver import SimpleServer  # a completly different beast, but compatible with ^^
-from .htagserver import HtagServer  # a completly different beast.
+from .runners import Runner
+from .runners import Runner as AppServer # for compatibility with htagweb <=0.24
 
-__all__= ["AppServer","SimpleServer"]
 
+__all__= ["Runner"]

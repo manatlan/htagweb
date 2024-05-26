@@ -1,1 +1,1 @@
- uvicorn.exe main:app --workers 4
+ uvicorn.exe examples.main:app --workers 4

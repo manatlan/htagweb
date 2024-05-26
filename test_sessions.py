@@ -1,6 +1,5 @@
 import pytest,asyncio,sys
-from htagweb.sessions import FileDict,FilePersistentDict,MemDict
-from test_server import server
+from htagweb.session import FileDict,FilePersistentDict
 
 
 def session_test(factory):
@@ -40,10 +39,6 @@ def session_test(factory):
 
     finally:
         session.clear()
-
-@pytest.mark.asyncio
-async def test_sessions_mem( server ):  # need redys.v2 runned
-    session_test( MemDict )
 
 def test_sessions_file():
     session_test( FileDict )
