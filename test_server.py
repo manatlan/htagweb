@@ -4,8 +4,37 @@ import pytest
 from htagweb.hrclient import HrClient
 import re
 
+class Fucked(Tag.body):
+    def init(self):
+        a=42/0
+
 @pytest.mark.asyncio
-async def test_new1( ):
+async def test_process_trouble_bad_moduleapp():
+    hr=HrClient("u1","crash")
+    try:
+        await hr.create("//ddd")
+    except Exception as e:
+        assert "miss" in str(e)
+
+@pytest.mark.asyncio
+async def test_process_trouble_bad_app(): # but existing module
+    hr=HrClient("u1","examples.simple.UNKOWN")
+    try:
+        await hr.create("//ddd")
+    except Exception as e:
+        assert "has no attribute" in str(e)
+
+@pytest.mark.asyncio
+async def test_process_trouble_App_crash(): # at start
+    hr=HrClient("u1","test_server.Fucked")
+    try:
+        html = await hr.create("//ddd")
+        assert 'division by zero' in html
+    finally:
+        await HrClient.clean()
+
+@pytest.mark.asyncio
+async def test_crashes( ): # no start !
     try:
         hr=HrClient("ut1","main")
         with pytest.raises(Exception):
@@ -23,15 +52,11 @@ async def test_new1( ):
         with pytest.raises(Exception):
             await hr.create("//ddd")
 
-        hr=HrClient("ut1","examples.simple.App")
-        html = await hr.create("//ddd")
-        assert "<!DOCTYPE html>" in html
-        assert "function action" in html
     finally:
         await HrClient.clean()
 
 @pytest.mark.asyncio
-async def test_new2( ):
+async def test_ok( ):
     # hr2=HrClient("u2","main.App")
     # await hr2.create("//js")
     try:

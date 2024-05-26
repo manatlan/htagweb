@@ -129,9 +129,10 @@ class HRSocket(WebSocketEndpoint):
         async def looper():
             async for actions in self.hr.updater():
                 x=await self._sendback( websocket, json.dumps(actions) )
-                if not x: break
+                if not x:
+                    break
 
-        self.task = asyncio.ensure_future( looper() )
+        websocket.task = asyncio.ensure_future( looper() )
 
 
     async def on_receive(self, websocket, data):
@@ -145,9 +146,9 @@ class HRSocket(WebSocketEndpoint):
         await self._sendback( websocket, json.dumps(actions) )
 
     async def on_disconnect(self, websocket, close_code):
-        self.task.cancel()
+        websocket.task.cancel()
         try:
-            await self.task
+            await websocket.task
         except asyncio.CancelledError:
             pass        
 

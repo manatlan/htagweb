@@ -23,8 +23,8 @@ class TagSession(Tag.div):  #dynamic component (compliant htag >= 0.30) !!!! FIR
         self+=self.orendu
 
     def render(self):
-        self.otitle.set( "Live Session" )
-        self.orendu.set( json.dumps( dict(self.session.items()), indent=1))
+        self.otitle.clear( "Live Session" )
+        self.orendu.clear( json.dumps( dict(self.session.items()), indent=1))
 
 class App(Tag.body):
     imports=[TagSession]
@@ -63,7 +63,7 @@ class App(Tag.body):
     async def loop_timer(self):
         while 1:
             await asyncio.sleep(0.5)
-            self.place.set(time.time() )
+            self.place.clear(time.time() )
             if not await self.place.update(): # update component using current websocket
                 # break if can't (<- good practice to kill this asyncio/loop)
                 break

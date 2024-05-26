@@ -6,23 +6,21 @@
 #
 # https://github.com/manatlan/htagweb
 # #############################################################################
-
-import asyncio
 import json
-import sys
-import subprocess
 import aiofiles
-import inspect
 
-from . import hrprocess
+from .hrprocess import process
 from .fifo import Fifo
 
+import multiprocessing
 
-# import multiprocessing
-# def startProcess(params:dict):
-#     p=multiprocessing.Process(target=hrprocess, args=[],kwargs=params)
-#     p.start()
-#     return p
+def startHrProcess(uid,moduleapp,timeout_inactivity) -> str:
+    """ return '' if ok, or the start error """
+    queue = multiprocessing.Queue()
+    p=multiprocessing.Process(target=process, args=[queue,uid,moduleapp,timeout_inactivity],kwargs={},daemon=True)
+    p.start()
+    p.join(timeout=0.1)
+    return queue.get()
 
 
 class HrClient:
@@ -36,27 +34,26 @@ class HrClient:
                 async for message in fifo_update:
                     yield json.loads( message.strip() )
 
+    def log(self,*a):
+        msg = " ".join([str(i) for i in ["hrclient",self._fifo,":"] + list(a)])
+        # logging.warning( msg )
+        RED='\033[0;32m'
+        NC='\033[0m' # No Color        
+        print(RED,msg,NC,flush=True)
+
+
     async def create(self, js:str, init=None) -> str:
         # Assurez-vous que les pipes existent
         if self._fifo.exists():
-            print("Client: reuse",self._fifo)
-            feedback="ok"
+            self.log("reuse fifo process")
         else:
-            # TODO: the way to spawn the process is particular ;-)
-            hrprocess_py = inspect.getabsfile( hrprocess )
-            cmds=[sys.executable,hrprocess_py,self._fifo.uid,self._fifo.moduleapp,str(self.timeout_inactivity) ]
-            print("Client: run",self._fifo)
-            # ps=subprocess.Popen(cmds)
-            # await asyncio.sleep(1)
-            # feedback="ok"
-            ps=subprocess.Popen(cmds,stdout=subprocess.PIPE,bufsize=0)
-            feedback=ps.stdout.readline().decode().strip()
-            if feedback!="ok":
-                raise Exception(feedback)
+            self.log("start fifo process")
+            err = startHrProcess(self._fifo.uid,self._fifo.moduleapp,self.timeout_inactivity)
+            if err:
+                raise Exception(err)
 
-        h = await self._fifo.com("create",init=init, js=js,fullerror=False)
-        self._html =h
-        return h
+        self._html = await self._fifo.com("create",init=init, js=js,fullerror=False)
+        return self._html
 
     def __str__(self) -> str:
         return self._html

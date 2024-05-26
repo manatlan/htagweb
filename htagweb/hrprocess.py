@@ -76,7 +76,6 @@ async def main(f:Fifo,klass,timeout_inactivity):
             else:
                 log("reuse previous HRenderer")
 
-            log("(link sendactions)",sys.hr.tag._hr == sys.hr)
             sys.hr.sendactions = sendactions
             # await sys.hr.tag.update()
             return str(sys.hr)
@@ -94,8 +93,6 @@ async def main(f:Fifo,klass,timeout_inactivity):
             return "exiting"
         else:
             return f"unknown '{cmd}' ?!"
-
-
 
     try:
         time_activity=time.monotonic()
@@ -123,7 +120,6 @@ async def main(f:Fifo,klass,timeout_inactivity):
     except Exception as e:
         log("error",e)
     finally:
-        # x=sendactions( dict(cmd="exit") )   # tell client to close the loop
         log("ending (will remove namedPipes)")
         f.removePipes()
 
@@ -147,30 +143,18 @@ def normalize(fqn):
 def classname(klass:Tag) -> str:
     return klass.__module__+":"+klass.__qualname__
 
-# THE FUTURE ...
-def process(uid:str,moduleapp:str,timeout_inactivity:int):
-    klass=moduleapp2class(moduleapp)
 
-    f=Fifo(uid,moduleapp,None)  #None, coz it's not involved in hrprocess (don't use com itself, only client side)
-    f.createPipes()
-    print("ok",flush=True)
-
+def process(q, uid:str,moduleapp:str,timeout_inactivity:int):
     try:
-        asyncio.run( main(f,klass, timeout_inactivity ) )
-    except KeyboardInterrupt:
-        print("\nServeur: Arrêté par l'utilisateur.")
+        klass=moduleapp2class(moduleapp)
 
-if __name__ == "__main__":
-    # sys.argv=['','utest',"main.App","60"]
-    try:
-        assert len(sys.argv)==4,"bad call"
-        _,uid,moduleapp,timeout_inactivity = sys.argv
+        f=Fifo(uid,moduleapp,None)  #None, coz it's not involved in hrprocess (don't use com itself, only client side)
+        f.createPipes()
+        q.put("")
 
-        process(uid,moduleapp,int(timeout_inactivity))
-
+        try:
+            asyncio.run( main(f,klass, timeout_inactivity ) )
+        except KeyboardInterrupt:
+            print("\nServeur: Arrêté par l'utilisateur.")
     except Exception as e:
-        print("Server init error:",e,flush=True)
-        import traceback
-        traceback.print_exception(e)
-        sys.exit(-1)
-
+        q.put(str(e))
