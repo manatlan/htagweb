@@ -7,7 +7,8 @@ import glob
 import aiofiles
 
 class Fifo:
-    FOLDER="./ses"
+    # FOLDER="./ses"
+    FOLDER="/tmp"
     def __init__(self,uid:str,moduleapp:str,timeout_interaction:int):
         self.uid=uid
         self.moduleapp=moduleapp
