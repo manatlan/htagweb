@@ -14,13 +14,13 @@ from .fifo import Fifo
 
 import multiprocessing
 
-def startHrProcess(uid,moduleapp,timeout_inactivity) -> str:
+def startHrProcess(uid,moduleapp,timeout_inactivity):
     """ return '' if ok, or the start error """
     queue = multiprocessing.Queue()
     p=multiprocessing.Process(target=process, args=[queue,uid,moduleapp,timeout_inactivity],kwargs={},daemon=True)
     p.start()
     p.join(timeout=0.1)
-    return queue.get()
+    return p,queue.get()
 
 
 class HrClient:
@@ -48,7 +48,7 @@ class HrClient:
             self.log("reuse fifo process")
         else:
             self.log("start fifo process")
-            err = startHrProcess(self._fifo.uid,self._fifo.moduleapp,self.timeout_inactivity)
+            self._process, err = startHrProcess(self._fifo.uid,self._fifo.moduleapp,self.timeout_inactivity)
             if err:
                 raise Exception(err)
 
@@ -68,6 +68,7 @@ class HrClient:
         if self._fifo.exists():
             # kill softly
             assert await self._fifo.com("exit")
+            self._process.kill()
         else:
             raise Exception( f"App {self._fifo} is NOT RUNNING ! (can't exit)")
 
