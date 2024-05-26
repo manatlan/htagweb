@@ -147,21 +147,26 @@ def normalize(fqn):
 def classname(klass:Tag) -> str:
     return klass.__module__+":"+klass.__qualname__
 
+# THE FUTURE ...
+def process(uid:str,moduleapp:str,timeout_inactivity:int):
+    klass=moduleapp2class(moduleapp)
+
+    f=Fifo(uid,moduleapp,None)  #None, coz it's not involved in hrprocess (don't use com itself, only client side)
+    f.createPipes()
+    print("ok",flush=True)
+
+    try:
+        asyncio.run( main(f,klass, timeout_inactivity ) )
+    except KeyboardInterrupt:
+        print("\nServeur: Arrêté par l'utilisateur.")
 
 if __name__ == "__main__":
-    # sys.argv=['','utest',"main.App"]
+    # sys.argv=['','utest',"main.App","60"]
     try:
         assert len(sys.argv)==4,"bad call"
         _,uid,moduleapp,timeout_inactivity = sys.argv
 
-        klass=moduleapp2class(moduleapp)
-
-        f=Fifo(uid,moduleapp,None)  #None, coz it's not involved in hrprocess (don't use com itself, only client side)
-        f.createPipes()
-
-        import stat
-        assert stat.S_ISFIFO(os.stat(f.UPDATE_FIFO).st_mode)
-        print("ok",flush=True)
+        process(uid,moduleapp,int(timeout_inactivity))
 
     except Exception as e:
         print("Server init error:",e,flush=True)
@@ -169,7 +174,3 @@ if __name__ == "__main__":
         traceback.print_exception(e)
         sys.exit(-1)
 
-    try:
-        asyncio.run( main(f,klass, int(timeout_inactivity) ) )
-    except KeyboardInterrupt:
-        print("\nServeur: Arrêté par l'utilisateur.")

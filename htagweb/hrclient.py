@@ -17,6 +17,14 @@ import inspect
 from . import hrprocess
 from .fifo import Fifo
 
+
+# import multiprocessing
+# def startProcess(params:dict):
+#     p=multiprocessing.Process(target=hrprocess, args=[],kwargs=params)
+#     p.start()
+#     return p
+
+
 class HrClient:
     def __init__(self,uid:str, moduleapp:str, timeout_interaction:int=60, timeout_inactivity:int=None):
         self._fifo=Fifo(uid,moduleapp,timeout_interaction)
