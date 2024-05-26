@@ -324,7 +324,7 @@ class Runner(Starlette):
 
         return PlainTextResponse(txt)
 
-    def run(self, openBrowser=False):   # localhost, by default !!
+    def run(self, openBrowser=False):
         if openBrowser:
             import webbrowser
             webbrowser.open_new_tab(f"http://localhost:{self.port}")
