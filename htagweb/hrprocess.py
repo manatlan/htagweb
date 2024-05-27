@@ -8,6 +8,7 @@
 # #############################################################################
 
 import sys
+import signal
 import os
 import time
 import json
@@ -18,8 +19,8 @@ from htag import Tag
 from htag.render import HRenderer
 import aiofiles
 
-from htagweb import session
-from htagweb.fifo import Fifo
+from . import session
+from .fifo import Fifo
 
 import logging
 logger = logging.getLogger(__name__)
@@ -29,6 +30,8 @@ async def main(f:Fifo,klass,timeout_inactivity):
 
     with open(f.PID_FILE,"w+") as fid:
         fid.write(str(os.getpid()))
+
+    last_mod_time=os.path.getmtime(inspect.getfile(klass))
 
     sys.hr=None             # save as global, in sys module (bad practice !!! but got sense)
     sys.running=True
@@ -61,8 +64,8 @@ async def main(f:Fifo,klass,timeout_inactivity):
             ia,ik = tuple(args["init"] or ([],{}))
             init=(tuple(ia),dict(ik))
             
-            if sys.hr is not None and sys.hr.init != init:
-                log("recreate, because 'init' change")
+            if sys.hr is not None and (sys.hr.init != init or os.path.getmtime(inspect.getfile(klass))!=last_mod_time):
+                log("recreate, because 'init or file change' differ")
                 sys.hr.sendactions = sendactions_close
                 del sys.hr.tag
                 del sys.hr
@@ -150,6 +153,8 @@ def classname(klass:Tag) -> str:
 
 def process(q, uid:str,moduleapp:str,timeout_inactivity:int):
     try:
+        signal.signal(signal.SIGCHLD, signal.SIG_IGN)    
+        
         klass=moduleapp2class(moduleapp)
 
         f=Fifo(uid,moduleapp,None)  #None, coz it's not involved in hrprocess (don't use com itself, only client side)
