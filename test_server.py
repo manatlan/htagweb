@@ -56,6 +56,17 @@ async def test_crashes( ): # no start !
         await HrClient.clean()
 
 @pytest.mark.asyncio
+async def test_killing_itself( ):
+    hr=HrClient("ut2","examples.simple.App")
+
+    htm=await hr.create("//js") # will create fifo/process
+    htm=await hr.create("//js") # will reuse fifo and reuse process
+    await hr.exit()
+    with pytest.raises(Exception):
+        await hr.exit()
+
+
+@pytest.mark.asyncio
 async def test_ok( ):
     # hr2=HrClient("u2","main.App")
     # await hr2.create("//js")
