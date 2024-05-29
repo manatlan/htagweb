@@ -46,7 +46,11 @@ async def main(f:Fifo,klass,timeout_inactivity):
         print(RED,msg,NC,flush=True,file=sys.stderr)
 
     async def sendactions(actions:dict) -> bool:
+        # create the fifo on the first tag.update !
         try:
+            if not os.path.exists(f.UPDATE_FIFO):
+                os.mkfifo(f.UPDATE_FIFO)
+
             async with aiofiles.open(f.UPDATE_FIFO, mode='w') as fifo_update:
                 log("sendactions (update):",actions)
                 await fifo_update.write(json.dumps(actions) + '\n')
@@ -127,8 +131,8 @@ async def main(f:Fifo,klass,timeout_inactivity):
     except Exception as e:
         log("error",e)
     finally:
-        log("ending (will remove namedPipes)")
         f.removePipes()
+        log("EXITED (no more pipes)")
 
 
 def moduleapp2class(moduleapp:str):

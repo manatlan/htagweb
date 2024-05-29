@@ -6,7 +6,7 @@
 #
 # https://github.com/manatlan/htagweb
 # #############################################################################
-import json
+import json,os,asyncio
 import aiofiles
 
 from .hrprocess import process
@@ -29,10 +29,12 @@ class HrClient:
         self.timeout_inactivity=timeout_inactivity or 0
 
     async def updater(self):
-        async with aiofiles.open(self._fifo.UPDATE_FIFO, mode='r') as fifo_update:
-            while 1:
-                async for message in fifo_update:
-                    yield json.loads( message.strip() )
+        """ async generator for "runner loop" (ws update for tag.update)"""
+        if os.path.exists(self._fifo.UPDATE_FIFO):
+            async with aiofiles.open(self._fifo.UPDATE_FIFO, mode='r') as fifo_update:
+                while 1:
+                    async for message in fifo_update:
+                        yield json.loads( message.strip() )
 
     def log(self,*a):
         msg = " ".join([str(i) for i in ["hrclient",self._fifo,":"] + list(a)])
@@ -57,6 +59,8 @@ class HrClient:
 
     def __str__(self) -> str:
         return self._html
+    def __repr__(self) -> str:
+        return str(self._fifo)
 
     async def interact(self,id:int,method:str,args:list,kargs:dict,event=None) -> dict:
         if self._fifo.exists():
@@ -64,18 +68,22 @@ class HrClient:
         else:
             raise Exception( f"App {self._fifo} is NOT RUNNING ! (can't interact)")
 
-    async def exit(self):
-        if self._fifo.exists():
-            # kill softly
-            assert await self._fifo.com("exit")
-            self._process.kill()
-        else:
-            raise Exception( f"App {self._fifo} is NOT RUNNING ! (can't exit)")
+    # async def exit(self):
+    #     if self._fifo.exists():
+    #         # kill softly
+    #         # assert await self._fifo.com("exit")
+    #         self.log(f"kill via fifo")
+    #         self._process.kill()
+    #         self._process.join()
+    #         self._fifo.removePipes()
+    #     else:
+    #         raise Exception( f"App {self._fifo} is NOT RUNNING ! (can't exit)")
 
     @classmethod
     async def clean(cls):
+        print(f"Clean clients",flush=True)
         for f in Fifo.childs():
-            print(f"Client '{f}' is running, will kill it")
+            print(f"- Client '{f}' was running -> kill it",flush=True)
             # kill hardly
             f.destroy()
 

@@ -12,7 +12,7 @@
 #from shared_memory_dict import SharedMemoryDict
 
 import asyncio
-import os
+import os,sys
 import sys
 import json
 import uuid
@@ -42,6 +42,8 @@ from .hrclient import HrClient
 logger = logging.getLogger(__name__)
 ####################################################
 
+import logging
+logging.basicConfig(format='[%(levelname)-7s] --- %(message)s',level=logging.INFO)
 
 
 parano_seed = lambda uid: hashlib.md5(uid.encode()).hexdigest()
@@ -112,7 +114,7 @@ class HRSocket(WebSocketEndpoint):
             await websocket.send_text( txt )
             return True
         except Exception as e:
-            logger.error("Can't send to socket, error: %s",e)
+            logger.error("%s: ws sendback, error: %s",repr(self.hr),e)
             return False
 
     async def on_connect(self, websocket):
@@ -126,13 +128,28 @@ class HRSocket(WebSocketEndpoint):
         self.is_parano="parano" in websocket.query_params.keys()
 
         await websocket.accept()
-
         async def looper( websocket ):
-            async for actions in self.hr.updater():
-                if websocket.application_state==WebSocketState.CONNECTED and websocket.client_state==WebSocketState.CONNECTED:
-                    x=await self._sendback( websocket, json.dumps(actions) )
-                    if not x:
+            try:
+                logger.info("%s: WS Runner-LOOP started",repr(self.hr))
+                await asyncio.sleep(0.5)    # wait (give the time to establish the connection)
+                async for actions in self.hr.updater():
+                    if not actions:
+                        logger.warning("%s: WS Runner-LOOP breaked (coz empty fifo)",repr(self.hr))
                         break
+                    if websocket.application_state==WebSocketState.CONNECTED and websocket.client_state==WebSocketState.CONNECTED:
+                        x=await self._sendback( websocket, json.dumps(actions) )
+                        if not x:
+                            logger.warning("%s: WS Runner-LOOP breaked (coz False response)",repr(self.hr))
+                            break
+                    else:
+                        logger.warning("%s: WS Runner-LOOP breaked (coz WS broken)",repr(self.hr))
+                        break
+
+            except Exception as e:
+                logger.info("%s: WS Runner-LOOP ERROR: %s",repr(self.hr),e)
+            finally:
+                logger.info("%s: WS Runner-LOOP stopped",repr(self.hr))
+
         websocket.task = asyncio.ensure_future( looper(websocket) )
 
 
@@ -148,10 +165,18 @@ class HRSocket(WebSocketEndpoint):
 
     async def on_disconnect(self, websocket, close_code):
         websocket.task.cancel()
-        try:
-            await websocket.task
-        except asyncio.CancelledError:
-            pass        
+        await asyncio.sleep(0.1)
+
+        # NO WAIT the cancellation of the task !!!!!!
+        # NO WAIT the cancellation of the task !!!!!!
+        # NO WAIT the cancellation of the task !!!!!!
+        # try:
+        #     await websocket.task
+        # except asyncio.CancelledError:
+        #     pass        
+        # NO WAIT the cancellation of the task !!!!!!
+        # NO WAIT the cancellation of the task !!!!!!
+        # NO WAIT the cancellation of the task !!!!!!
 
 
 async def lifespan(app):

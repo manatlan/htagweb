@@ -31,7 +31,7 @@ class App(Tag.body):
     statics=b"window.error=alert"
     def init(self,v="0"):
         self.place = Tag.div(js="console.log('I update myself')")
-        # asyncio.ensure_future( self.loop_timer() )
+        asyncio.ensure_future( self.loop_timer() )
 
         def inc_test_session(o):
             v=int(self.state.get("integer","0"))

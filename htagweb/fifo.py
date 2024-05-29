@@ -26,7 +26,8 @@ class Fifo:
         self.PID_FILE = f'{Fifo.FOLDER}/{uid}/{moduleapp}/PID'
     
     def __str__(self):
-        return f'{self.uid}.{self.moduleapp}'
+        # minimize uid (to be clearer in log output)
+        return f'{self.uid[:2]}~{self.uid[-2:]}.{self.moduleapp}'
 
     def exists(self) -> bool:
         return os.path.exists(self.CLIENT_TO_SERVER_FIFO) and os.path.exists(self.SERVER_TO_CLIENT_FIFO)
@@ -41,8 +42,6 @@ class Fifo:
             os.mkfifo(self.CLIENT_TO_SERVER_FIFO)
         if not os.path.exists(self.SERVER_TO_CLIENT_FIFO):
             os.mkfifo(self.SERVER_TO_CLIENT_FIFO)
-        if not os.path.exists(self.UPDATE_FIFO):
-            os.mkfifo(self.UPDATE_FIFO)
 
     def removePipes(self):  # for server
         if os.path.exists(self.CLIENT_TO_SERVER_FIFO):
@@ -56,7 +55,8 @@ class Fifo:
             os.unlink(self.PID_FILE)
 
         folder = os.path.dirname(self.SERVER_TO_CLIENT_FIFO)
-        os.removedirs(folder)
+        if os.path.isdir(folder):
+            os.removedirs(folder)   
 
     async def com(self,command:str,**args) -> "str|dict":  # for client only
         async with aiofiles.open(self.CLIENT_TO_SERVER_FIFO, mode='w') as fifo_out, aiofiles.open(self.SERVER_TO_CLIENT_FIFO, mode='r') as fifo_in:
@@ -84,9 +84,10 @@ class Fifo:
             yield Fifo(uid,moduleapp,60)
 
     def destroy(self):
-        with open(self.PID_FILE,"r+") as fid:
-            try:
-                os.kill(int(fid.readline().strip()),9)
-            except ProcessLookupError:
-                pass
+        if os.path.isfile(self.PID_FILE):
+            with open(self.PID_FILE,"r+") as fid:
+                try:
+                    os.kill(int(fid.readline().strip()),9)
+                except ProcessLookupError:
+                    pass
         self.removePipes()
