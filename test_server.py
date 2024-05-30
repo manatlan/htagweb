@@ -121,38 +121,6 @@ async def test_ok( ):
     finally:
         await HrClient.clean()
 
-# @pytest.mark.asyncio
-# async def test_base( ):
-
-#     ses={}
-
-#     uid ="u1"
-#     p=HrClient(uid,"test_hr:App","//",)
-#     html=await p.start()
-#     assert html.startswith("<!DOCTYPE html><html>")
-
-#     # session.cpt initialized at "0"
-#     assert ">0</cpt>" in html
-
-#     p=HrClient(uid,"test_hr:App","//")
-#     html=await p.start()
-#     assert html.startswith("<!DOCTYPE html><html>")
-
-#     # session.cpt stays at "0"
-#     assert ">0</cpt>" in html
-
-#     actions=await p.interact( oid="ut", method_name="doit", args=[], kargs={}, event={} )
-#     assert "update" in actions
-#     update_rendering = list(actions["update"].values())[0]
-
-#     # session.cpt was incremented at "1"
-#     assert ">1</cpt2>" in update_rendering
-
-#     # test a method inherited from serverclient
-#     ll=await p.list()
-#     assert len(ll)==1
-#     assert ll[0].uid == uid
-#     assert ll[0].fqn == "test_hr:App"
 
 
 @pytest.mark.asyncio
@@ -206,38 +174,23 @@ async def test_timeout_interaction_long( ):
 
 
 
-# @pytest.mark.asyncio
-# async def test_app_suicide( server ):
-#     # test that a blocking interaction will be stopped
-#     # and app killed
+@pytest.mark.asyncio
+async def test_timeout_inactivity( ):
+    try:
+        hr=HrClient("ut2","examples.simple.App",timeout_inactivity=1)
 
-#     uid ="u2"
-#     fqn="test_hr:App"
-#     p=HrClient(uid,fqn,"//",timeout_inactivity=1)
-#     html=await p.start()
-#     assert html.startswith("<!DOCTYPE html><html>")
+        htm=await hr.create("//js") # will create fifo/process
 
+        await asyncio.sleep(1.5)
 
-#     # app is running
-#     assert fqn in [i.fqn for i in await p.list()]
+        assert not hr._fifo.exists() # fifo is dead
 
+        id="12156456465456413"
+        datas={"id":int(id),"method":"__on__","args":["onclick-"+id],"kargs":{},"event":{}}
+        with pytest.raises(Exception): # App ut~t2.examples.simple.App is NOT RUNNING ! (can't interact)
+            await hr.interact(**datas)
 
-#     # app will suicide during this period
-#     await asyncio.sleep(2)
-
-
-#     # app was killed
-#     assert fqn not in [i.fqn for i in await p.list()]
-
-
-
-# if __name__=="__main__":
-#     s=asyncio.run( startServer())
-
-#     asyncio.run( test_base("x") )
-#     asyncio.run( test_app_block_killed("x") )
-
-#     asyncio.run( stopServer(s))
-
+    finally:
+        await HrClient.clean()
 
 
