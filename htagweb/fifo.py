@@ -15,10 +15,9 @@ import aiofiles
 class Fifo:
     # FOLDER="./ses"
     FOLDER="/tmp"
-    def __init__(self,uid:str,moduleapp:str,timeout_interaction:int):
+    def __init__(self,uid:str,moduleapp:str):
         self.uid=uid
         self.moduleapp=moduleapp
-        self.timeout_interaction=timeout_interaction    # in seconds
         
         self.CLIENT_TO_SERVER_FIFO = f'{Fifo.FOLDER}/{uid}/{moduleapp}/in'
         self.SERVER_TO_CLIENT_FIFO = f'{Fifo.FOLDER}/{uid}/{moduleapp}/out'
@@ -66,9 +65,7 @@ class Fifo:
             await fifo_out.flush()
 
             # Lire la réponse du process serveur
-            frame = await asyncio.wait_for(fifo_in.readline(), timeout=self.timeout_interaction)
-            if frame is None:
-                raise Exception(f"Timeout response (>{self.timeout_interaction})")
+            frame = await fifo_in.readline()
 
             #print("Client receive:",frame)
             c = json.loads(frame.strip())
@@ -81,7 +78,7 @@ class Fifo:
             fs=i.split("/")
             uid = fs[-3]
             moduleapp = fs[-2]
-            yield Fifo(uid,moduleapp,60)
+            yield Fifo(uid,moduleapp)
 
     def destroy(self):
         if os.path.isfile(self.PID_FILE):

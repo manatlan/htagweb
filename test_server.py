@@ -4,9 +4,26 @@ import pytest
 from htagweb.hrclient import HrClient
 import re
 
-class Fucked(Tag.body):
+class BugInit(Tag.body):
     def init(self):
         a=42/0
+
+import time
+
+class AppBlockInteraction(Tag.body):
+    def init(self,tempo):
+        async def doit(ev):
+            if tempo==-1:
+                while 1: 
+                    await asyncio.sleep(0.1)    # PERMIT THE LOOP to do its job
+                    pass
+            else:
+                await asyncio.sleep(tempo)
+            # time.sleep(tempo)
+            self <="!!"
+        self.b=Tag.Button("say hello",_onclick=doit )
+        self+=self.b
+
 
 @pytest.mark.asyncio
 async def test_process_trouble_bad_moduleapp():
@@ -26,7 +43,7 @@ async def test_process_trouble_bad_app(): # but existing module
 
 @pytest.mark.asyncio
 async def test_process_trouble_App_crash(): # at start
-    hr=HrClient("u1","test_server.Fucked")
+    hr=HrClient("u1","test_server.BugInit")
     try:
         html = await hr.create("//ddd")
         assert 'division by zero' in html
@@ -138,24 +155,55 @@ async def test_ok( ):
 #     assert ll[0].fqn == "test_hr:App"
 
 
-# @pytest.mark.asyncio
-# async def test_app_block_killed( server ):
-#     # test that a blocking interaction will be stopped
-#     # and app killed
+@pytest.mark.asyncio
+async def test_timeout_interaction0( ):
+    # test the interaction in 0s, with a timeout_interaction=1s
+    uid,fqn ="u2","test_server.AppBlockInteraction"
+    try:
+        p=HrClient(uid,fqn,timeout_interaction=1)
+        html=await p.create("//js",init=([0],{}))
+        assert html.startswith("<!DOCTYPE html><html>")
 
-#     uid ="u2"
-#     fqn="test_hr:AppFuck"
-#     p=HrClient(uid,fqn,"//",timeout_interaction=2)
-#     html=await p.start()
-#     assert html.startswith("<!DOCTYPE html><html>")
+        id=re.findall( r'id="(\d+)"',html )[-1]
+        datas={"id":int(id),"method":"__on__","args":["onclick-"+id],"kargs":{},"event":{}}
+        actions=await p.interact(**datas)
+        assert "update" in actions
+    finally:
+        await HrClient.clean()
 
-#     # app is running
-#     assert fqn in [i.fqn for i in await p.list()]
+@pytest.mark.asyncio
+async def test_timeout_interaction3( ):
+    # test the interaction in 3s, with a timeout_interaction=1s
+    uid,fqn ="u2","test_server.AppBlockInteraction"
+    try:
+        p=HrClient(uid,fqn,timeout_interaction=1)
+        html=await p.create("//js",init=([3],{}))
+        assert html.startswith("<!DOCTYPE html><html>")
 
-#     await p.interact( oid="ut", method_name="doit", args=[], kargs={}, event={} )
+        id=re.findall( r'id="(\d+)"',html )[-1]
+        datas={"id":int(id),"method":"__on__","args":["onclick-"+id],"kargs":{},"event":{}}
+        actions=await p.interact(**datas)
+        assert actions=={}  # process is killed
+    finally:
+        await HrClient.clean()
 
-#     # app was killed
-#     assert fqn not in [i.fqn for i in await p.list()]
+
+
+@pytest.mark.asyncio
+async def test_timeout_interaction_long( ):
+    uid,fqn ="u2","test_server.AppBlockInteraction"
+    try:
+        p=HrClient(uid,fqn,timeout_interaction=1)
+        html=await p.create("//js",init=([-1],{}))
+        assert html.startswith("<!DOCTYPE html><html>")
+
+        id=re.findall( r'id="(\d+)"',html )[-1]
+        datas={"id":int(id),"method":"__on__","args":["onclick-"+id],"kargs":{},"event":{}}
+        actions=await p.interact(**datas)
+        assert actions=={}  # process is killed
+    finally:
+        await HrClient.clean()
+
 
 
 # @pytest.mark.asyncio

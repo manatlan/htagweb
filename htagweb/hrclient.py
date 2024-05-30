@@ -14,10 +14,10 @@ from .fifo import Fifo
 
 import multiprocessing
 
-def startHrProcess(uid,moduleapp,timeout_inactivity):
+def startHrProcess(uid,moduleapp,timeout_interaction,timeout_inactivity):
     """ return '' if ok, or the start error """
     queue = multiprocessing.Queue()
-    p=multiprocessing.Process(target=process, args=[queue,uid,moduleapp,timeout_inactivity],kwargs={},daemon=True)
+    p=multiprocessing.Process(target=process, args=[queue,uid,moduleapp,timeout_interaction,timeout_inactivity],kwargs={},daemon=True)
     p.start()
     p.join(timeout=0.2)
     return p,queue.get()
@@ -25,7 +25,8 @@ def startHrProcess(uid,moduleapp,timeout_inactivity):
 
 class HrClient:
     def __init__(self,uid:str, moduleapp:str, timeout_interaction:int=60, timeout_inactivity:int=None):
-        self._fifo=Fifo(uid,moduleapp,timeout_interaction)
+        self._fifo=Fifo(uid,moduleapp)
+        self.timeout_interaction=timeout_interaction
         self.timeout_inactivity=timeout_inactivity or 0
 
     async def updater(self):
@@ -50,7 +51,7 @@ class HrClient:
             self.log("reuse fifo process")
         else:
             self.log("start fifo process")
-            self._process, err = startHrProcess(self._fifo.uid,self._fifo.moduleapp,self.timeout_inactivity)
+            self._process, err = startHrProcess(self._fifo.uid,self._fifo.moduleapp,self.timeout_interaction,self.timeout_inactivity)
             if err:
                 raise Exception(err)
 

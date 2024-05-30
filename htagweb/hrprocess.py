@@ -25,7 +25,7 @@ from .fifo import Fifo
 import logging
 logger = logging.getLogger(__name__)
 
-async def main(f:Fifo,klass,timeout_inactivity):
+async def main(f:Fifo,klass,timeout_interaction,timeout_inactivity):
     print("Serveur:",f)
 
     with open(f.PID_FILE,"w+") as fid:
@@ -92,8 +92,13 @@ async def main(f:Fifo,klass,timeout_inactivity):
             return str(sys.hr)
         elif cmd=="interact":
             log("interact with",args['id'],args['method'])
-            actions= await sys.hr.interact(args['id'],args['method'],args["args"],args["kargs"],args["event"])
-
+            coro=sys.hr.interact(args['id'],args['method'],args["args"],args["kargs"],args["event"])
+            try:
+                actions= await asyncio.wait_for(coro, timeout=timeout_interaction) 
+            except asyncio.TimeoutError:
+                log("timeout interaction > kill")
+                process_exit()
+                actions={}
             # always save session after interaction # ALWAYS NEEDED ?? (24/5/24)
             sys.hr.session._save()            
 
@@ -155,18 +160,18 @@ def classname(klass:Tag) -> str:
     return klass.__module__+":"+klass.__qualname__
 
 
-def process(q, uid:str,moduleapp:str,timeout_inactivity:int):
+def process(q, uid:str,moduleapp:str,timeout_interaction:int,timeout_inactivity:int):
     try:
         signal.signal(signal.SIGCHLD, signal.SIG_IGN)    
         
         klass=moduleapp2class(moduleapp)
 
-        f=Fifo(uid,moduleapp,None)  #None, coz it's not involved in hrprocess (don't use com itself, only client side)
+        f=Fifo(uid,moduleapp) 
         f.createPipes()
         q.put("")
 
         try:
-            asyncio.run( main(f,klass, timeout_inactivity ) )
+            asyncio.run( main(f,klass, timeout_interaction,timeout_inactivity ) )
         except KeyboardInterrupt:
             print("\nServeur: Arrêté par l'utilisateur.")
     except Exception as e:

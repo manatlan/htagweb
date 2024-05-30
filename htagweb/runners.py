@@ -122,7 +122,7 @@ class HRSocket(WebSocketEndpoint):
         uid=websocket.scope["uid"]
 
         # define hrclient for this socket
-        self.hr=HrClient(uid,fqn,websocket.app.timeout_interaction)
+        self.hr=HrClient(uid,fqn)
 
         # define parano mode for this socket
         self.is_parano="parano" in websocket.query_params.keys()
@@ -334,7 +334,7 @@ class Runner(Starlette):
         is_parano="parano" in request.query_params.keys()
         seed = parano_seed( uid )
 
-        hr=HrClient(uid,fqn,self.timeout_interaction)
+        hr=HrClient(uid,fqn,self.timeout_interaction,self.timeout_inactivity)
         data = await request.body()
 
         if is_parano:
