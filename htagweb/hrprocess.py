@@ -25,13 +25,12 @@ from .fifo import Fifo
 import logging
 logger = logging.getLogger(__name__)
 
-async def main(f:Fifo,klass,timeout_interaction,timeout_inactivity):
+async def main(f:Fifo,moduleapp:str,timeout_interaction,timeout_inactivity):
     print("Serveur:",f)
 
     with open(f.PID_FILE,"w+") as fid:
         fid.write(str(os.getpid()))
 
-    last_mod_time=os.path.getmtime(inspect.getfile(klass))
 
     sys.hr=None             # save as global, in sys module (bad practice !!! but got sense)
     sys.running=True
@@ -68,14 +67,23 @@ async def main(f:Fifo,klass,timeout_interaction,timeout_inactivity):
             ia,ik = tuple(args["init"] or ([],{}))
             init=(tuple(ia),dict(ik))
             
-            if sys.hr is not None and (sys.hr.init != init or os.path.getmtime(inspect.getfile(klass))!=last_mod_time):
-                log("recreate, because 'init or file change' differ")
-                sys.hr.sendactions = sendactions_close
-                del sys.hr.tag
-                del sys.hr
-                sys.hr=None
+            if sys.hr:
+                def destroy():
+                    sys.hr.sendactions = sendactions_close
+                    del sys.hr.tag
+                    del sys.hr
+                    sys.hr=None
+
+                if sys.hr.init != init:
+                    log("recreate, because params change")
+                    destroy()
+                elif sys.hr.timestamp != os.path.getmtime(sys.hr.klassfile):
+                    log("recreate, because filedate change")
+                    destroy()
+
 
             if sys.hr is None:
+                klass=moduleapp2class(moduleapp)
                 sys.hr=HRenderer(
                     klass,
                     js=args["js"],
@@ -84,6 +92,8 @@ async def main(f:Fifo,klass,timeout_interaction,timeout_inactivity):
                     exit_callback=process_exit,
                     session=session.FileDict(f.uid)
                 )
+                sys.hr.klassfile = inspect.getfile(klass)
+                sys.hr.timestamp=os.path.getmtime(sys.hr.klassfile)
                 sys.hr.sendactions = sendactions
                 log("create HRenderer")
             else:
@@ -144,6 +154,7 @@ def moduleapp2class(moduleapp:str):
     assert "." in moduleapp, f"miss '.' in moduleapp '{moduleapp}'"
     *module,app = moduleapp.split(".")
     module=importlib.import_module(".".join(module))
+    importlib.reload(module)
 
     klass= getattr(module,app)
     if not ( inspect.isclass(klass) and issubclass(klass,Tag) ):
@@ -164,6 +175,7 @@ def process(q, uid:str,moduleapp:str,timeout_interaction:int,timeout_inactivity:
     try:
         signal.signal(signal.SIGCHLD, signal.SIG_IGN)    
         
+        # test that in will workd further
         klass=moduleapp2class(moduleapp)
 
         f=Fifo(uid,moduleapp) 
@@ -171,7 +183,7 @@ def process(q, uid:str,moduleapp:str,timeout_interaction:int,timeout_inactivity:
         q.put("")
 
         try:
-            asyncio.run( main(f,klass, timeout_interaction,timeout_inactivity ) )
+            asyncio.run( main(f,moduleapp, timeout_interaction,timeout_inactivity ) )
         except KeyboardInterrupt:
             print("\nServeur: Arrêté par l'utilisateur.")
     except Exception as e:
