@@ -7,8 +7,8 @@ import time
 ##################################################################################################
 ## !!! important things to adapt to your needs !!!
 ##################################################################################################
-CLIENT_ID='xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com'
-CLIENT_SECRET='GOXXXX-xxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+GOOGLE_CLIENT_ID='xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com'
+GOOGLE_CLIENT_SECRET='GOXXXX-xxxxxxxxxxxxxxxxxxxxxxxxxxxx'
 REDIRECT_URI = "http://localhost:8000/oauth_auth"                       #<= should be declared in your console !!!
 ##################################################################################################
 
@@ -17,8 +17,8 @@ OAUTH_SESSION_NAME = "User" # name of the var in session for holding the userinf
 OAUTH = OAuth()
 OAUTH.register(
     name='google',
-    client_id=CLIENT_ID,
-    client_secret=CLIENT_SECRET,
+    client_id=GOOGLE_CLIENT_ID,
+    client_secret=GOOGLE_CLIENT_SECRET,
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
     client_kwargs={
         'scope': 'openid email profile',
@@ -59,13 +59,13 @@ class TagOAuth(Tag.span):
 
     def render(self): # dynamic rendering
         self.clear()
-        self+= self.title + self.btn
+        self <= self.title + self.btn
         if self.user:
-            self.title.set(self.user['name'])
-            self.btn.set("SignOut")
+            self.title.clear(self.user['name'])
+            self.btn.clear("SignOut")
         else:
-            self.title.set("")
-            self.btn.set("SignIn")
+            self.title.clear()
+            self.btn.clear("SignIn")
 
     def onclick(self,o:Tag.button):
         if self.user:
@@ -93,7 +93,7 @@ class App(Tag.body):
 # **IMPORTANT** current host serving on SSL
 # on your localmachine, switch ssl to False !!!
 #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
-app=Runner(App,ssl=True)
+app=Runner(App,ssl=False)
 
 app.add_route("/oauth_{action}", oauth_request_action )
 
