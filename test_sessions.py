@@ -1,5 +1,5 @@
 import pytest,asyncio,sys
-from htagweb.session import FileDict,FilePersistentDict
+from htagweb.session import FileDict,FilePersistentDict #,ShmDict
 
 
 def session_test(factory):
@@ -45,6 +45,9 @@ def test_sessions_file():
 
 def test_sessions_filepersitent():
     session_test( FilePersistentDict )
+
+# def test_sessions_ShmDict():
+#     session_test( ShmDict )
 
 
 

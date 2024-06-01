@@ -31,6 +31,7 @@ async def main(f:Fifo,moduleapp:str,timeout_interaction,timeout_inactivity):
     with open(f.PID_FILE,"w+") as fid:
         fid.write(str(os.getpid()))
 
+    ses=session.FileDict(f.uid)
 
     sys.hr=None             # save as global, in sys module (bad practice !!! but got sense)
     sys.running=True
@@ -90,7 +91,7 @@ async def main(f:Fifo,moduleapp:str,timeout_interaction,timeout_inactivity):
                     init=init,
                     fullerror=args["fullerror"],
                     exit_callback=process_exit,
-                    session=session.FileDict(f.uid)
+                    session=ses,
                 )
                 sys.hr.klassfile = inspect.getfile(klass)
                 sys.hr.timestamp=os.path.getmtime(sys.hr.klassfile)
@@ -105,12 +106,12 @@ async def main(f:Fifo,moduleapp:str,timeout_interaction,timeout_inactivity):
             coro=sys.hr.interact(args['id'],args['method'],args["args"],args["kargs"],args["event"])
             try:
                 actions= await asyncio.wait_for(coro, timeout=timeout_interaction) 
+                # always save session after interaction # ALWAYS NEEDED ?? (24/5/24)
+                sys.hr.session._save()     
             except asyncio.TimeoutError:
                 log("timeout interaction > kill")
                 process_exit()
                 actions={}
-            # always save session after interaction # ALWAYS NEEDED ?? (24/5/24)
-            sys.hr.session._save()            
 
             return actions
         elif cmd=="exit":

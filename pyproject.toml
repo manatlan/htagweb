@@ -23,6 +23,7 @@ starlette = "0.29.0"
 pycryptodomex = "^3.19.0"
 uvicorn = {version = "0.22.0", extras = ["standard"]}
 aiofiles = "^23.2.1"
+# shared-memory-dict = "^0.7.2"
 
 
 [tool.poetry.group.dev.dependencies]

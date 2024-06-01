@@ -130,3 +130,5 @@ dmypy.json
 
 uid_*.ses
 poetry.lock
+POETRY
+server_test
