@@ -1,5 +1,5 @@
 import pytest,asyncio,sys
-from htagweb.session import FileDict,FilePersistentDict #,ShmDict
+from htagweb.session import Session,FileDict,FilePersistentDict #,ShmDict
 
 
 def session_test(factory):
@@ -39,6 +39,9 @@ def session_test(factory):
 
     finally:
         session.clear()
+
+def test_sessions_file():
+    session_test( Session )
 
 def test_sessions_file():
     session_test( FileDict )

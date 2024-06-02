@@ -19,7 +19,7 @@ from htag import Tag
 from htag.render import HRenderer
 import aiofiles
 
-from . import session
+from .session import Session
 from .fifo import Fifo
 
 import logging
@@ -31,7 +31,7 @@ async def main(f:Fifo,moduleapp:str,timeout_interaction,timeout_inactivity):
     with open(f.PID_FILE,"w+") as fid:
         fid.write(str(os.getpid()))
 
-    ses=session.FileDict(f.uid)
+    ses=Session(f.uid)
 
     sys.hr=None             # save as global, in sys module (bad practice !!! but got sense)
     sys.running=True

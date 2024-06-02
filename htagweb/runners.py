@@ -34,7 +34,7 @@ from htag.runners import commons
 
 #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
 from . import crypto
-from . import session
+from .session import Session
 from .fqn import findfqn
 from .hrclient import HrClient
 #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
@@ -72,7 +72,7 @@ class WebServerSession:  # ASGI Middleware, for starlette
 
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
         scope["uid"]     = uid
-        scope["session"] = session.FileDict(uid)   # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        scope["session"] = Session(uid)   # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         logger.debug("request for %s, scope=%s",uid,scope)
