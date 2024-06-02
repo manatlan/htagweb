@@ -44,6 +44,7 @@ class FileDict(dict): # default
         if len(self):
             with open(self._file,"wb+") as fid:
                 pickle.dump(dict(self),fid, protocol=4)
+            os.chmod(self._file, 0o700)
         else:
             if os.path.isfile(self._file):
                 os.unlink(self._file)
