@@ -7,7 +7,7 @@
 # https://github.com/manatlan/htagweb
 # #############################################################################
 
-import os,pickle,tempfile
+import os,pickle,tempfile,fcntl
 
 from collections import UserDict
 class FileDict(dict): # default
@@ -42,14 +42,22 @@ class FileDict(dict): # default
 
     def _save(self):
         if len(self):
-            with open(self._file,"wb+") as fid:
-                pickle.dump(dict(self),fid, protocol=4)
+            while 1:
+                with open(self._file,"wb+") as fid:
+                    try:
+                        fcntl.flock(fid, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                        pickle.dump(dict(self),fid, protocol=4)
+                        break
+                    except BlockingIOError:
+                        pass
+                    finally:
+                        fcntl.flock(fid, fcntl.LOCK_UN)
             os.chmod(self._file, 0o700)
         else:
             if os.path.isfile(self._file):
                 os.unlink(self._file)
 
-
+            
 class FilePersistentDict(FileDict): # default
     def __init__(self,uid):
         FileDict.__init__(self,uid,persistent=True)
