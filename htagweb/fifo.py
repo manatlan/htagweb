@@ -68,7 +68,10 @@ class Fifo:
             frame = await fifo_in.readline()
 
             #print("Client receive:",frame)
-            c = json.loads(frame.strip())
+            try:
+                c = json.loads(frame.strip())
+            except Exception:
+                raise Exception(f"com error : {frame}")
             return c["response"]
 
 
