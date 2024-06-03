@@ -136,11 +136,18 @@ async def main(f:Fifo,moduleapp:str,timeout_interaction,timeout_inactivity):
 
                     # log("recept command:",frame)
                     c=json.loads(frame.strip())
-                    c["response"]=await cmd(**c)
+                    try:
+                        c["response"]=await cmd(**c)
+                    except Exception as e:
+                        c["err"]=str(e) #TODO: full error here ?
+                        
                     # Envoyer la réponse au client
                     await fifo_out.write(json.dumps(c) + '\n')
                     await fifo_out.flush()
                 
+                    if "err" in c:
+                        raise Exception(c["err"])
+
                 if timeout_inactivity: # if timeout_inactivity is set
                     if time.monotonic() - time_activity > timeout_inactivity:
                         # it suicides after the timeout
@@ -148,7 +155,7 @@ async def main(f:Fifo,moduleapp:str,timeout_interaction,timeout_inactivity):
                         break
 
     except Exception as e:
-        log("error",e)
+        log("error (EXIT)",e)
     finally:
         f.removePipes()
         log("EXITED (no more pipes)")
