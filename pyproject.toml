@@ -17,7 +17,7 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
 htag = ">= 0.51"
 starlette = "0.29.0"
 pycryptodomex = "^3.19.0"
