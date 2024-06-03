@@ -69,7 +69,8 @@ class ShmDict(SharedMemoryDict):
         self._uid=uid
         SharedMemoryDict.__init__(self,name=uid, size=10240)
 
-    def _save(self):
+    def _save(self): # for compatibility, see hrprocess after an interaction
         pass
 
+    
 Session = ShmDict

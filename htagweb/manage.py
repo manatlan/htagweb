@@ -35,6 +35,11 @@ class HUser:
     def session(self):
         return dict(Session(self.uid))
 
+    def kill(self):
+        for app in self._apps:
+            app.kill()
+        Session(self.uid).clear()
+
     def __str__(self):
         return f"{self.uid}"
 
