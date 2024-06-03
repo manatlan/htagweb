@@ -15,6 +15,7 @@ import json
 import asyncio
 import importlib
 import inspect
+import traceback
 from htag import Tag
 from htag.render import HRenderer
 import aiofiles
@@ -139,7 +140,12 @@ async def main(f:Fifo,moduleapp:str,timeout_interaction,timeout_inactivity):
                     try:
                         c["response"]=await cmd(**c)
                     except Exception as e:
-                        c["err"]=str(e) #TODO: full error here ?
+                        if hasattr( sys, "hr") and sys.hr and sys.hr.fullerror:
+                            #TODO: as is (see runner), fullerror is always false
+                            err=traceback.format_exc()
+                        else:
+                            err=str(e)
+                        c["err"]=err
                         
                     # Envoyer la réponse au client
                     await fifo_out.write(json.dumps(c) + '\n')
