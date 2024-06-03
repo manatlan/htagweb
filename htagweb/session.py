@@ -63,16 +63,13 @@ class FilePersistentDict(FileDict): # default
         FileDict.__init__(self,uid,persistent=True)
 
 
-try:
-    from shared_memory_dict import SharedMemoryDict
-    class ShmDict(SharedMemoryDict):
-        def __init__(self,uid):
-            self._uid=uid
-            SharedMemoryDict.__init__(self,name=uid, size=10240)
+from shared_memory_dict import SharedMemoryDict
+class ShmDict(SharedMemoryDict):
+    def __init__(self,uid):
+        self._uid=uid
+        SharedMemoryDict.__init__(self,name=uid, size=10240)
 
-        def _save(self):
-            pass
-except ImportError:
-    pass
+    def _save(self):
+        pass
 
-Session = FileDict
+Session = ShmDict

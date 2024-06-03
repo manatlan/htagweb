@@ -106,8 +106,11 @@ async def main(f:Fifo,moduleapp:str,timeout_interaction,timeout_inactivity):
             coro=sys.hr.interact(args['id'],args['method'],args["args"],args["kargs"],args["event"])
             try:
                 actions= await asyncio.wait_for(coro, timeout=timeout_interaction) 
-                # always save session after interaction # ALWAYS NEEDED ?? (24/5/24)
-                sys.hr.session._save()     
+                #=======================================
+                # always save session after interaction # (when using FileDict & co)
+                # not needed for shm
+                # sys.hr.session._save()     
+                #=======================================
             except asyncio.TimeoutError:
                 log("timeout interaction > kill")
                 process_exit()

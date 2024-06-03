@@ -34,6 +34,16 @@ async def test_process_trouble_bad_moduleapp():
         assert "miss" in str(e)
 
 @pytest.mark.asyncio
+async def test_process_kaputt():
+    hr=HrClient("u1","examples.kaputt.App")
+    try:
+        await hr.create("//ddd")
+    except Exception as e:
+        assert "invalid" in str(e)
+
+
+
+@pytest.mark.asyncio
 async def test_process_trouble_bad_app(): # but existing module
     hr=HrClient("u1","examples.simple.UNKOWN")
     try:

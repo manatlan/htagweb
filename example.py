@@ -53,10 +53,11 @@ class App(Tag.body):
         self <= Tag.button("X",_onclick=lambda o: self.exit(),_style="float:right")
         self <= TagSession()
 
-        self+=Tag.li(Tag.a("t0",_href="/"))
-        self+=Tag.li(Tag.a("t1",_href="/?v=1"))
-        self+=Tag.li(Tag.a("t2",_href="/?v=2"))
-        self+=Tag.li(Tag.a("Other app",_href="/jo"))
+        self+=Tag.li(Tag.a("t0",_href="/"))             # \
+        self+=Tag.li(Tag.a("t1",_href="/?v=1"))         #  |---> recreate the same app (param change)
+        self+=Tag.li(Tag.a("t2",_href="/?v=2"))         # /
+        self+=Tag.li(Tag.a("Other app",_href="/jo"))    # test an app with hhtp only, and parano mode
+        self+=Tag.li(Tag.a("kaputt",_href="/kaputt"))   # test a broken file app
         self+=self.place
 
 
@@ -82,14 +83,19 @@ class Jo(Tag.body):
 
 async def serve(req):
     return await req.app.handle(req,Jo,http_only=True,parano=True) 
+
+async def serve_kaputt(req):
+    return await req.app.handle(req, "examples.kaputt.App" )
+
 #------------------------------------------------------
 from htagweb import Runner
 #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
 # **IMPORTANT** current host serving on SSL
 # on your localmachine, switch ssl to False !!!
 #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
-app=Runner( App, debug=True, ssl=True )
+app=Runner( App, debug=False, ssl=True )
 app.add_route("/jo", serve)
+app.add_route("/kaputt", serve_kaputt)
 
 if __name__=="__main__":
     #~ import logging

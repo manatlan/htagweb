@@ -20,11 +20,11 @@ Process live as long as the server live
 **Features**
 
  * based on [starlette](https://pypi.org/project/starlette/)
- * use session (in file)
+ * use session
  * compatible with **uvloop** !!!
  * compatible with multiple gunicorn/uvicorn/webworkers !!!
  * compatible with [tag.update()](https://manatlan.github.io/htag/tag_update/)
- * works on gnu/linux, ios ~~or windows~~ (from py3.7 to py3.11)!
+ * works on gnu/linux, ios ~~or windows~~ (from py3.8 to py3.11)! (**not py3.7 anymore ;-(**)
  * real starlette session available (in tag.state, and starlette request.session)
  * compatible with oauth2 authent ( [authlib](https://pypi.org/project/Authlib/) )
  * 'parano mode' (can aes encrypt all communications between client & server ... to avoid mitm'proxies on ws/http interactions)
