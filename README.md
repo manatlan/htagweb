@@ -92,6 +92,28 @@ By default, it's `0` (process lives as long as the server lives).
 IMPORTANT : the "tag.update" feature doesn't reset the inactivity timeout !
 
 
+### to add an endpoint (add_route)
+
+Example to add a static endpoint :
+
+```python
+async def serve(req):
+    return open("...","r").read()
+
+app=Runner( App, debug=False, ssl=True )
+app.add_route("/my.css", serve)
+```
+
+Example to add another htag app on another endpoint :
+
+```python
+async def serve(req):
+    return await req.app.handle(req, App2 )
+
+app=Runner( App, debug=False, ssl=True )
+app.add_route("/my_other_app", serve)
+```
+
 
 -------------------------------
 
