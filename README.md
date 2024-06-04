@@ -119,8 +119,7 @@ app.add_route("/my_other_app", serve)
 
 ## Roadmap / futur
 
- - finnish this version ;-)
- - better unittests !!!!!!!!!!!!!!!!
+ - more unittests !!!!!!!!!!!!!!!!
  - better logging !!!!!!!!!!!!!!!!
  - parano mode : use public/private keys ?
 
