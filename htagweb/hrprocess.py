@@ -42,9 +42,7 @@ async def main(f:Fifo,moduleapp:str,timeout_interaction,timeout_inactivity):
     def log(*a):
         msg = " ".join([str(i) for i in ["hrprocess",f,":"] + list(a)])
         # logging.warning( msg )
-        RED='\033[0;33m'
-        NC='\033[0m' # No Color        
-        print(RED,msg,NC,flush=True,file=sys.stderr)
+        print(msg,flush=True,file=sys.stderr)
 
     async def sendactions(actions:dict) -> bool:
         # create the fifo on the first tag.update !
@@ -140,8 +138,8 @@ async def main(f:Fifo,moduleapp:str,timeout_interaction,timeout_inactivity):
                     try:
                         c["response"]=await cmd(**c)
                     except Exception as e:
+                        # HRenderer.interact has its own system, but needed for create ;-(
                         if hasattr( sys, "hr") and sys.hr and sys.hr.fullerror:
-                            #TODO: as is (see runner), fullerror is always false
                             err=traceback.format_exc()
                         else:
                             err=str(e)

@@ -206,6 +206,7 @@ class Runner(Starlette):
         self.http_only = http_only
         self.timeout_interaction = timeout_interaction
         self.timeout_inactivity = timeout_inactivity
+        self.fullerror = debug
 
         ###################################################################
 
@@ -321,7 +322,7 @@ class Runner(Starlette):
             """ % locals()
 
         hr = HrClient(uid,fqn, the_timeout_interaction, the_timeout_inactivity)
-        hr=await hr.create(js=js,init=init)
+        hr=await hr.create(js=js,init=init,fullerror=self.fullerror)
         html=str(hr)
         return HTMLResponse(html)
 

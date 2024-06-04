@@ -40,12 +40,10 @@ class HrClient:
     def log(self,*a):
         msg = " ".join([str(i) for i in ["hrclient",self._fifo,":"] + list(a)])
         # logging.warning( msg )
-        RED='\033[0;32m'
-        NC='\033[0m' # No Color        
-        print(RED,msg,NC,flush=True)
+        print(msg,flush=True)
 
 
-    async def create(self, js:str, init=None) -> str:
+    async def create(self, js:str, init=None, fullerror=False) -> str:
         # Assurez-vous que les pipes existent
         if self._fifo.exists():
             self.log("reuse fifo process")
@@ -55,7 +53,7 @@ class HrClient:
             if err:
                 raise Exception(err)
 
-        self._html = await self._fifo.com("create",init=init, js=js,fullerror=False)
+        self._html = await self._fifo.com("create",init=init, js=js,fullerror=fullerror)
         return self._html
 
     def __str__(self) -> str:
@@ -68,17 +66,6 @@ class HrClient:
             return await self._fifo.com("interact",id=id,method=method,args=args,kargs=kargs,event=event)
         else:
             raise Exception( f"App {self._fifo} is NOT RUNNING ! (can't interact)")
-
-    # async def exit(self):
-    #     if self._fifo.exists():
-    #         # kill softly
-    #         # assert await self._fifo.com("exit")
-    #         self.log(f"kill via fifo")
-    #         self._process.kill()
-    #         self._process.join()
-    #         self._fifo.removePipes()
-    #     else:
-    #         raise Exception( f"App {self._fifo} is NOT RUNNING ! (can't exit)")
 
     @classmethod
     async def clean(cls):
