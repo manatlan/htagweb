@@ -34,8 +34,9 @@ class Fifo:
 
     def dates(self) -> tuple:
         if self.exists():
-            stat = os.stat(self.CLIENT_TO_SERVER_FIFO)
+            stat = os.stat(self.PID_FILE)
             cdate = datetime.fromtimestamp(stat.st_ctime)
+            stat = os.stat(self.CLIENT_TO_SERVER_FIFO)
             mdate = datetime.fromtimestamp(stat.st_mtime)
             return (cdate,mdate)
         else:
