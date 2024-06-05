@@ -11,6 +11,7 @@ import os
 import json
 import glob 
 import aiofiles
+from datetime import datetime
 
 class Fifo:
     # FOLDER="./ses"
@@ -30,6 +31,15 @@ class Fifo:
 
     def exists(self) -> bool:
         return os.path.exists(self.CLIENT_TO_SERVER_FIFO) and os.path.exists(self.SERVER_TO_CLIENT_FIFO)
+
+    def dates(self) -> tuple:
+        if self.exists():
+            stat = os.stat(self.CLIENT_TO_SERVER_FIFO)
+            cdate = datetime.fromtimestamp(stat.st_ctime)
+            mdate = datetime.fromtimestamp(stat.st_mtime)
+            return (cdate,mdate)
+        else:
+            return (None,None)
 
     def createPipes(self):  # for server
         # Créer les named pipes

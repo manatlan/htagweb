@@ -18,6 +18,8 @@ async def test_manage():
 
         assert ll[0].uid == "ut2"
 
+        assert ll[0].apps[0].cdate
+        assert ll[0].apps[0].mdate
         ll[0].apps[0].kill()
 
         assert manage.users() == []
