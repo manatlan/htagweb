@@ -134,23 +134,24 @@ async def main(f:Fifo,moduleapp:str,timeout_interaction,timeout_inactivity):
                     time_activity=time.monotonic()
 
                     # log("recept command:",frame)
-                    c=json.loads(frame.strip())
+                    q=json.loads(frame.strip())
+                    r={}
                     try:
-                        c["response"]=await cmd(**c)
+                        r["response"]=await cmd(**q)
                     except Exception as e:
                         # HRenderer.interact has its own system, but needed for create ;-(
                         if hasattr( sys, "hr") and sys.hr and sys.hr.fullerror:
                             err=traceback.format_exc()
                         else:
                             err=str(e)
-                        c["err"]=err
+                        r["err"]=err
                         
                     # Envoyer la réponse au client
-                    await fifo_out.write(json.dumps(c) + '\n')
+                    await fifo_out.write(json.dumps(r) + '\n')
                     await fifo_out.flush()
                 
-                    if "err" in c:
-                        raise Exception(c["err"])
+                    if "err" in r:
+                        raise Exception(r["err"])
 
                 if timeout_inactivity: # if timeout_inactivity is set
                     if time.monotonic() - time_activity > timeout_inactivity:
