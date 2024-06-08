@@ -49,6 +49,8 @@ async def main(f:Fifo,moduleapp:str,timeout_interaction,timeout_inactivity):
         try:
             if not os.path.exists(f.UPDATE_FIFO):
                 os.mkfifo(f.UPDATE_FIFO)
+                os.chmod(f.UPDATE_FIFO, 0o700)
+
 
             async with aiofiles.open(f.UPDATE_FIFO, mode='w') as fifo_update:
                 log("sendactions (update):",actions)

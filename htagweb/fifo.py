@@ -50,8 +50,10 @@ class Fifo:
 
         if not os.path.exists(self.CLIENT_TO_SERVER_FIFO):
             os.mkfifo(self.CLIENT_TO_SERVER_FIFO)
+            os.chmod(self.CLIENT_TO_SERVER_FIFO, 0o700)
         if not os.path.exists(self.SERVER_TO_CLIENT_FIFO):
             os.mkfifo(self.SERVER_TO_CLIENT_FIFO)
+            os.chmod(self.SERVER_TO_CLIENT_FIFO, 0o700)
 
     def removePipes(self):  # for server
         if os.path.exists(self.CLIENT_TO_SERVER_FIFO):
