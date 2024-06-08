@@ -11,6 +11,7 @@
 
 #from shared_memory_dict import SharedMemoryDict
 
+import contextlib
 import asyncio
 import os,sys
 import sys
@@ -179,12 +180,14 @@ class HRSocket(WebSocketEndpoint):
         # NO WAIT the cancellation of the task !!!!!!
 
 
+@contextlib.asynccontextmanager
 async def lifespan(app):
     print("--- START")
     await HrClient.clean()
     yield
     print("--- STOP")
     await HrClient.clean()
+
 
 class Runner(Starlette):
     def __init__(self,

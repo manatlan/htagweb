@@ -79,7 +79,10 @@ class Fifo:
             frame = await fifo_in.readline()
 
             #print("Client receive:",frame)
-            c = json.loads(frame.strip())
+            try:
+                c = json.loads(frame.strip())
+            except json.decoder.JSONDecodeError as e:
+                raise Exception(f"fifo jcom json error '{e}' : '{frame}'")
             if "err" in c:
                 raise Exception(f"com error : {c['err']}")
             return c["response"]
