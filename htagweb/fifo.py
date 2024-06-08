@@ -82,9 +82,9 @@ class Fifo:
             try:
                 c = json.loads(frame.strip())
             except json.decoder.JSONDecodeError as e:
-                raise Exception(f"fifo jcom json error '{e}' : >>>{frame.strip()}<<<")
+                raise Exception(f"fifo com json error '{e}' : >>>{frame.strip()}<<<")
             if "err" in c:
-                raise Exception(f"com error : {c['err']}")
+                raise Exception(f"hrprocess error : {c['err']}")
             return c["response"]
 
 
