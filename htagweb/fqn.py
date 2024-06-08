@@ -37,7 +37,3 @@ def findfqn(x) -> str:
         return tagClass.__module__+"."+tagClass.__qualname__
 
 
-if __name__=="__main__":
-    class App(Tag.div):
-        pass
-    assert findfqn(App) == "htagweb.fqn.App" # not "__main__.App" !!!!!
