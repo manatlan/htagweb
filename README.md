@@ -97,8 +97,10 @@ IMPORTANT : the "tag.update" feature doesn't reset the inactivity timeout !
 Example to add a static endpoint :
 
 ```python
+from starlette.responses import PlainTextResponse
+
 async def serve(req):
-    return open("...","r").read()
+    return PlainTextResponse("body {}")
 
 app=Runner( App, debug=False, ssl=True )
 app.add_route("/my.css", serve)
