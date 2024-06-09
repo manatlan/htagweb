@@ -33,6 +33,7 @@ pytest-cov = "^4.1.0"
 httpx = "0.24.0"
 gunicorn = "^22.0.0"
 beautifulsoup4 = "^4.12.3"
+redys = "^0.9.20"
 
 [build-system]
 requires = ["poetry-core"]

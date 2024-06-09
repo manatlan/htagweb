@@ -34,10 +34,11 @@ from htag import Tag
 from htag.runners import commons
 
 #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
-from . import crypto
+from . import crypto,serverredys
 from .session import Session
 from .fqn import findfqn
 from .hrclient import HrClient
+
 #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
 
 logger = logging.getLogger(__name__)
@@ -183,10 +184,12 @@ class HRSocket(WebSocketEndpoint):
 @contextlib.asynccontextmanager
 async def lifespan(app):
     print("--- START")
+    await serverredys.start()
     await HrClient.clean()
     yield
     print("--- STOP")
     await HrClient.clean()
+    serverredys.stop()
 
 
 class Runner(Starlette):
