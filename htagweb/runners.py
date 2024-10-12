@@ -199,7 +199,7 @@ class Runner(Starlette):
                 host="0.0.0.0",
                 port=8000,
                 debug:bool=False,
-                ssl:bool=False,
+                ssl:bool=False, # now, Indicate that Secure flag should be set for middleware WebServerSession (cookies)
                 parano:bool=False,
                 http_only:bool=False,
                 timeout_interaction:int=60,
@@ -207,7 +207,6 @@ class Runner(Starlette):
             ):
         self.host=host
         self.port=port
-        self.ssl=ssl
         self.parano = parano
         self.http_only = http_only
         self.timeout_interaction = timeout_interaction
@@ -226,7 +225,7 @@ class Runner(Starlette):
         Starlette.__init__( self,
             debug=debug,
             routes=routes,
-            middleware=[Middleware(WebServerSession,https_only=self.ssl)],
+            middleware=[Middleware(WebServerSession,https_only=ssl)],
             lifespan=lifespan,
         )
 
@@ -272,6 +271,7 @@ class Runner(Starlette):
             pparano=""
 
 
+
         if is_http_only:
             # interactions use HTTP POST
             js = """%(jslib)s
@@ -287,7 +287,7 @@ class Runner(Starlette):
             """ % locals()
         else:
             # interactions use WS
-            protocol = "wss" if self.ssl else "ws"
+            protocol = "wss" if (request.url.scheme == "https") else "ws"
 
             js = """%(jslib)s
 
