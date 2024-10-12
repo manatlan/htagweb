@@ -60,8 +60,7 @@ The port to bind to. (default is 8000)
 
 #### ssl (bool)
 
-- When False: (default) use "ws://" to connect the websocket
-- When True: use "wss://" to connect the websocket
+Indicate that "Secure flag" should be set for middleware WebServerSession cookie only !!!!
 
 non-sense in http_only mode.
 
