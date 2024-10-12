@@ -199,7 +199,7 @@ class Runner(Starlette):
                 host="0.0.0.0",
                 port=8000,
                 debug:bool=False,
-                ssl:bool=False, # now, Indicate that Secure flag should be set for middleware WebServerSession (cookies)
+                ssl:bool=True, # now, Indicate that Secure flag should be set for middleware WebServerSession (cookies)
                 parano:bool=False,
                 http_only:bool=False,
                 timeout_interaction:int=60,

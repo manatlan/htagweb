@@ -93,7 +93,7 @@ from htagweb import Runner
 # **IMPORTANT** current host serving on SSL
 # on your localmachine, switch ssl to False !!!
 #/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
-app=Runner( App, debug=False, ssl=True )
+app=Runner( App, debug=False )
 app.add_route("/jo", serve)
 app.add_route("/kaputt", serve_kaputt)
 
