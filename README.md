@@ -61,7 +61,7 @@ The port to bind to. (default is 8000)
 #### ssl (bool)
 
 Indicate that "Secure flag" should be set for middleware WebServerSession cookie only !!!!
-(default is True)
+(default is False)
 
 non-sense in http_only mode.
 
