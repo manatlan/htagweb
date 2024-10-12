@@ -41,5 +41,5 @@ except ImportError:
     print("redys server not supported")
     async def start():
         pass
-    def stop(s):
+    def stop():
         pass
