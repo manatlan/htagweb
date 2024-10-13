@@ -290,8 +290,6 @@ class Runner(Starlette):
             """ % locals()
         else:
             # interactions use WS
-            protocol = "wss" if (request.url.scheme == "https") else "ws"
-
             js = """%(jslib)s
 
             async function interact( o ) {
@@ -303,7 +301,7 @@ class Runner(Starlette):
             let retryms=500;
 
             function connect() {
-                _WS_= new WebSocket("%(protocol)s://"+location.host+"/_/%(fqn)s%(pparano)s");
+                _WS_= new WebSocket("//"+location.host+"/_/%(fqn)s%(pparano)s");
                 _WS_.onopen=function(evt) {
                     console.log("** WS connected")
                     document.body.classList.remove("htagoff");
