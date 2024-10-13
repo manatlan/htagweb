@@ -8,9 +8,6 @@
 This module exposes htag's runners for the web. It's the official runners to expose
 htag apps on the web, to handle multiple clients/session in the right way.
 
-
-**LAST GREAT VERSION is "0.32.1"** (version 0.4x.x are a bit buggued)
-
 ## Runner
 
 It's the real runner to expose htag apps in a real production environment, and provide
