@@ -58,12 +58,6 @@ The port to bind to. (default is 8000)
 - When False: (default) no debugging facilities
 - When True: use starlette debugger.
 
-#### ssl (bool)
-
-Indicate that "Secure flag" should be set for middleware WebServerSession cookie only !!!!
-(default is False)
-
-non-sense in http_only mode.
 
 #### parano (bool)
 
@@ -102,7 +96,7 @@ from starlette.responses import PlainTextResponse
 async def serve(req):
     return PlainTextResponse("body {}")
 
-app=Runner( App, debug=False, ssl=True )
+app=Runner( App, debug=False )
 app.add_route("/my.css", serve)
 ```
 
@@ -112,7 +106,7 @@ Example to add another htag app on another endpoint :
 async def serve(req):
     return await req.app.handle(req, App2 )
 
-app=Runner( App, debug=False, ssl=True )
+app=Runner( App, debug=False )
 app.add_route("/my_other_app", serve)
 ```
 

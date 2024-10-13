@@ -51,14 +51,11 @@ logging.basicConfig(format='[%(levelname)-7s] --- %(message)s',level=logging.INF
 parano_seed = lambda uid: hashlib.md5(uid.encode()).hexdigest()
 
 class WebServerSession:  # ASGI Middleware, for starlette
-    def __init__(self, app:ASGIApp, https_only:bool = False ) -> None:
+    def __init__(self, app:ASGIApp ) -> None:
         self.app = app
         self.session_cookie = "session"
         self.max_age = 0
         self.path = "/"
-        self.security_flags = "httponly; samesite=none"
-        if https_only:  # Secure flag can be used with HTTPS only
-            self.security_flags += "; secure"
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] not in ("http", "websocket"):  # pragma: no cover
@@ -71,6 +68,10 @@ class WebServerSession:  # ASGI Middleware, for starlette
             uid = connection.cookies[self.session_cookie]
         else:
             uid = str(uuid.uuid4())
+
+        security_flags = "httponly; samesite=none"
+        if connection.url.scheme == "https":  # Secure flag can be used with HTTPS only
+            security_flags += "; secure"
 
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
         scope["uid"]     = uid
@@ -88,7 +89,7 @@ class WebServerSession:  # ASGI Middleware, for starlette
                     data=uid,
                     path=self.path,
                     max_age=f"Max-Age={self.max_age}; " if self.max_age else "",
-                    security_flags=self.security_flags,
+                    security_flags=security_flags,
                 )
                 headers.append("Set-Cookie", header_value)
             await send(message)
@@ -199,7 +200,7 @@ class Runner(Starlette):
                 host="0.0.0.0",
                 port=8000,
                 debug:bool=False,
-                ssl:bool=False, # now, Indicate that Secure flag should be set for middleware WebServerSession (cookies)
+                ssl=None, # DEPRECATED
                 parano:bool=False,
                 http_only:bool=False,
                 timeout_interaction:int=60,
@@ -212,6 +213,8 @@ class Runner(Starlette):
         self.timeout_interaction = timeout_interaction
         self.timeout_inactivity = timeout_inactivity
         self.fullerror = debug
+        if ssl is not None:
+            print("***WARNING**","Runner( ... ssl ...) is deprecated, and has no effect")
 
         ###################################################################
 
@@ -225,7 +228,7 @@ class Runner(Starlette):
         Starlette.__init__( self,
             debug=debug,
             routes=routes,
-            middleware=[Middleware(WebServerSession,https_only=ssl)],
+            middleware=[Middleware(WebServerSession)],
             lifespan=lifespan,
         )
 
