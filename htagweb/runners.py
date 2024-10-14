@@ -70,7 +70,7 @@ class WebServerSession:  # ASGI Middleware, for starlette
             uid = str(uuid.uuid4())
 
         security_flags = "httponly; samesite=none"
-        if connection.url.scheme in ["https","wss"]:  # Secure flag can be used with HTTPS only
+        if connection.headers.get("X-Forwarded-Proto") == "https":  # Secure flag can be used with HTTPS only
             security_flags += "; secure"
 
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
