@@ -69,9 +69,9 @@ class WebServerSession:  # ASGI Middleware, for starlette
         else:
             uid = str(uuid.uuid4())
 
-        security_flags = "httponly; samesite=none"
+        security_flags = "httponly"
         if connection.headers.get("X-Forwarded-Proto") == "https":  # Secure flag can be used with HTTPS only
-            security_flags += "; secure"
+            security_flags += "; samesite=none ; secure"            
 
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!
         scope["uid"]     = uid
