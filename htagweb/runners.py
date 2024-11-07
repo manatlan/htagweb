@@ -273,7 +273,8 @@ class Runner(Starlette):
             jslib += "\nasync function _write_(x) {return x}\n"
             pparano=""
 
-        jslib += "let webroot = document.location.pathname || '/';"
+        # jslib += "let webroot = document.location.pathname || '/';"
+        jslib += "let webroot = '/';"
 
         if is_http_only:
             # interactions use HTTP POST
