@@ -273,7 +273,7 @@ class Runner(Starlette):
             jslib += "\nasync function _write_(x) {return x}\n"
             pparano=""
 
-
+        jslib += "let webroot = document.location.pathname || '/';"
 
         if is_http_only:
             # interactions use HTTP POST
@@ -281,7 +281,7 @@ class Runner(Starlette):
 
             async function interact( o ) {
                 let body = await _write_(JSON.stringify(o));
-                let req=await window.fetch("/_/%(fqn)s%(pparano)s",{method:"POST", body: body, mode: 'cors', credentials: 'include', referrerPolicy: "origin"});
+                let req=await window.fetch(webroot + "_/%(fqn)s%(pparano)s",{method:"POST", body: body, mode: 'cors', credentials: 'include', referrerPolicy: "origin"});
                 let actions=await req.text();
                 action( await _read_(actions) );
             }
@@ -301,7 +301,7 @@ class Runner(Starlette):
             let retryms=500;
 
             function connect() {
-                _WS_= new WebSocket("//"+location.host+"/_/%(fqn)s%(pparano)s");
+                _WS_= new WebSocket("//" + location.host + webroot + "_/%(fqn)s%(pparano)s");
                 _WS_.onopen=function(evt) {
                     console.log("** WS connected")
                     document.body.classList.remove("htagoff");
