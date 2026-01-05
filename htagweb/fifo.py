@@ -77,9 +77,11 @@ class AsyncStream:
 
     async def com(self, command: str, **args) -> "str|dict":  # for client only
         try:
-            # Connexion au serveur via socket Unix
+            # Connexion au serveur via socket Unix avec une limite augmentée
+            # La limite par défaut est 64Ko, on passe à 1Mo pour gérer les gros échanges de données
             reader, writer = await asyncio.open_unix_connection(
-                self.CLIENT_TO_SERVER_SOCKET
+                self.CLIENT_TO_SERVER_SOCKET,
+                limit=1024*1024  # 1Mo
             )
             
             args["cmd"] = command

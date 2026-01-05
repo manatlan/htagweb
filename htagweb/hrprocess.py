@@ -167,7 +167,8 @@ async def main(f:AsyncStream,moduleapp:str,timeout_interaction,timeout_inactivit
 
         server = await asyncio.start_unix_server(
             handle_client,
-            path=f.CLIENT_TO_SERVER_SOCKET
+            path=f.CLIENT_TO_SERVER_SOCKET,
+            limit=1024*1024  # 1Mo pour gérer les gros échanges de données
         )
         
         # Main loop to check for inactivity timeout

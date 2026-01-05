@@ -47,12 +47,26 @@ class HUser:
 def users() -> list:
     u={}
     for i in glob.glob(AsyncStream.FOLDER+"/*/*/PID"):
-        pid = int(open(i,"r+").read())
-        fs=i.split("/")
-        uid = fs[-3]
-        moduleapp = fs[-2]
-
-        u.setdefault(uid,[]).append( HApp(uid,moduleapp,pid) )
+        try:
+            pid = int(open(i,"r+").read())
+            fs=i.split("/")
+            uid = fs[-3]
+            moduleapp = fs[-2]
+            
+            # Vérifier si le processus est toujours en cours d'exécution
+            try:
+                import os
+                os.kill(pid, 0)  # Envoyer signal 0 pour vérifier si le processus existe
+                u.setdefault(uid,[]).append( HApp(uid,moduleapp,pid) )
+            except ProcessLookupError:
+                # Le processus n'existe plus, nettoyer les fichiers
+                import os as os_module
+                fifo = AsyncStream(uid, moduleapp)
+                fifo.removePipes()
+                
+        except (FileNotFoundError, ValueError):
+            # Fichier PID corrompu ou introuvable, ignorer
+            pass
 
     ll=[]
     for uid,apps in u.items():
