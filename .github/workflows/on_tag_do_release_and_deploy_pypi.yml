@@ -19,11 +19,12 @@ jobs:
 
       - name: Install pytest + dependancies
         run: |
+            python -m pip install uv
             uv sync --dev
 
       - name: Test with pytest
         run: |
-            uv run pytest .
+            uv run pytest . -s
 
       - name: Build and publish to pypi
         uses: JRubics/poetry-publish@v1.12
