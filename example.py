@@ -1,5 +1,5 @@
 from htag import Tag
-import json,asyncio,time,os
+import orjson,asyncio,time,os
 
 """
 Complex htag's app for my tests purpose:
@@ -24,7 +24,7 @@ class TagSession(Tag.div):  #dynamic component (compliant htag >= 0.30) !!!! FIR
 
     def render(self):
         self.otitle.clear( "Live Session" )
-        self.orendu.clear( json.dumps( dict(self.session.items()), indent=1))
+        self.orendu.clear( orjson.dumps( dict(self.session.items()), option=orjson.OPT_INDENT_2).decode())
 
 class App(Tag.body):
     imports=[TagSession]

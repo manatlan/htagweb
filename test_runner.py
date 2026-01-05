@@ -1,7 +1,7 @@
 import pytest
 from htag import Tag
 from htagweb import Runner
-import sys,json
+import sys,orjson
 from starlette.testclient import TestClient
 from starlette.responses import PlainTextResponse
 
@@ -23,9 +23,9 @@ def test_runner_ws_mode():
         with client.websocket_connect('/_/examples.simple.App') as websocket:
 
             #following exchanges will be json <-> json
-            websocket.send_text( json.dumps(datas) )
+            websocket.send_text( orjson.dumps(datas).decode() )
 
-            dico = json.loads(websocket.receive_text())
+            dico = orjson.loads(websocket.receive_text())
             assert "update" in dico
 
     app=Runner("examples.simple.App")
@@ -44,8 +44,8 @@ def test_runner_http_mode():
         id=bs4.BeautifulSoup(response.text,"html.parser").select("button")[-1].get("id")
         datas={"id":int(id),"method":"__on__","args":["onclick-"+str(id)],"kargs":{},"event":{}}
 
-        response = client.post('/_/examples.simple.App',content=json.dumps(datas))
-        dico = json.loads(response.text)
+        response = client.post('/_/examples.simple.App',content=orjson.dumps(datas))
+        dico = orjson.loads(response.text)
         assert "update" in dico
 
     app=Runner("examples.simple.App",http_only=True)

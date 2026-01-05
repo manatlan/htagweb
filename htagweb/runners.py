@@ -15,7 +15,7 @@ import contextlib
 import asyncio
 import os,sys
 import sys
-import json
+import orjson
 import uuid
 import logging
 import uvicorn
@@ -140,7 +140,7 @@ class HRSocket(WebSocketEndpoint):
                         logger.warning("%s: WS Runner-LOOP breaked (coz empty fifo)",repr(self.hr))
                         break
                     if websocket.application_state==WebSocketState.CONNECTED and websocket.client_state==WebSocketState.CONNECTED:
-                        x=await self._sendback( websocket, json.dumps(actions) )
+                        x=await self._sendback( websocket, orjson.dumps(actions).decode() )
                         if not x:
                             logger.warning("%s: WS Runner-LOOP breaked (coz False response)",repr(self.hr))
                             break
@@ -160,11 +160,11 @@ class HRSocket(WebSocketEndpoint):
         uid=websocket.scope["uid"]
         if self.is_parano:
             data = crypto.decrypt(data.encode(),parano_seed( uid )).decode()
-        data=json.loads(data)
+        data=orjson.loads(data)
 
         actions=await self.hr.interact( id=data["id"], method=data["method"], args=data["args"], kargs=data["kargs"], event=data.get("event") )
 
-        await self._sendback( websocket, json.dumps(actions) )
+        await self._sendback( websocket, orjson.dumps(actions).decode() )
 
     async def on_disconnect(self, websocket, close_code):
         websocket.task.cancel()
@@ -349,9 +349,9 @@ class Runner(Starlette):
         if is_parano:
             data = crypto.decrypt(data,seed).decode()
 
-        data=json.loads(data)
+        data=orjson.loads(data)
         actions=await hr.interact( id=data["id"], method=data["method"], args=data["args"], kargs=data["kargs"], event=data.get("event") )
-        txt=json.dumps(actions)
+        txt=orjson.dumps(actions).decode()
 
         if is_parano:
             txt = crypto.encrypt(txt.encode(),seed)

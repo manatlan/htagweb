@@ -8,7 +8,7 @@
 # #############################################################################
 import asyncio
 import os
-import json
+import orjson
 import glob
 from datetime import datetime
 import socket
@@ -86,7 +86,7 @@ class AsyncStream:
             
             args["cmd"] = command
             # Envoyer la commande
-            writer.write((json.dumps(args) + '\n').encode())
+            writer.write(orjson.dumps(args) + b'\n')
             await writer.drain()
 
             # Lire la réponse
@@ -96,8 +96,8 @@ class AsyncStream:
             
             frame = data.decode().strip()
             try:
-                c = json.loads(frame)
-            except json.decoder.JSONDecodeError as e:
+                c = orjson.loads(frame)
+            except orjson.JSONDecodeError as e:
                 raise Exception(f"async_stream com json error '{e}' : >>>{frame}<<<")
             
             if "err" in c:

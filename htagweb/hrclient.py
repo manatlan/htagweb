@@ -6,7 +6,7 @@
 #
 # https://github.com/manatlan/htagweb
 # #############################################################################
-import json,os,asyncio
+import os,asyncio
 
 from .hrprocess import process
 from .fifo import AsyncStream

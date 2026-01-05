@@ -11,7 +11,7 @@ import sys
 import signal
 import os
 import time
-import json
+import orjson
 import asyncio
 import importlib
 import inspect
@@ -142,7 +142,7 @@ async def main(f:AsyncStream,moduleapp:str,timeout_interaction,timeout_inactivit
                         time_activity = time.monotonic()
                         
                         # Process the command directly
-                        q = json.loads(frame)
+                        q = orjson.loads(frame)
                         r = {}
                         try:
                             r["response"] = await cmd(**q)
@@ -154,7 +154,7 @@ async def main(f:AsyncStream,moduleapp:str,timeout_interaction,timeout_inactivit
                             r["err"] = err
                         
                         # Send the response back to the client
-                        writer.write((json.dumps(r) + '\n').encode())
+                        writer.write(orjson.dumps(r, option=orjson.OPT_NON_STR_KEYS) + b'\n')
                         await writer.drain()
                         
                         if "err" in r:
