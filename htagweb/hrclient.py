@@ -57,6 +57,17 @@ class HrClient:
             if err:
                 raise Exception(err)
 
+            # Attente active pour que les sockets soient créées par le processus
+            # Cela résout le problème de timing où le processus n'a pas encore créé les sockets
+            max_attempts = 10
+            attempt = 0
+            while attempt < max_attempts and not self._fifo.exists():
+                attempt += 1
+                await asyncio.sleep(0.1)  # Attendre 100ms entre chaque essai
+
+            if not self._fifo.exists():
+                raise Exception(f"Timeout: Process failed to create sockets after {max_attempts * 0.1}s")
+
         self._html = await self._fifo.com("create",init=init, js=js,fullerror=fullerror)
         return self._html
 
