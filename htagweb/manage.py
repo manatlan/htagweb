@@ -7,12 +7,12 @@
 # https://github.com/manatlan/htagweb
 # #############################################################################
 import glob
-from .fifo import Fifo
+from .fifo import AsyncStream
 from .session import Session
 
 class HApp:
     def __init__( self, uid:str,moduleapp:str,pid:int ):
-        self.fifo=Fifo(uid,moduleapp)
+        self.fifo=AsyncStream(uid,moduleapp)
         self.cdate,self.mdate = self.fifo.dates()
         self.pid=pid
 
@@ -46,7 +46,7 @@ class HUser:
 
 def users() -> list:
     u={}
-    for i in glob.glob(Fifo.FOLDER+"/*/*/PID"):
+    for i in glob.glob(AsyncStream.FOLDER+"/*/*/PID"):
         pid = int(open(i,"r+").read())
         fs=i.split("/")
         uid = fs[-3]

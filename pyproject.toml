@@ -12,7 +12,6 @@ dependencies = [
     "starlette>=0.40.0",
     "pycryptodomex>=3.19.0",
     "uvicorn[standard]==0.30.0",
-    "aiofiles>=23.2.1",
     "shared-memory-dict>=0.7.2",
 ]
 classifiers = [

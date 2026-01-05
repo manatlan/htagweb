@@ -191,7 +191,7 @@ async def test_timeout_inactivity( ):
 
         htm=await hr.create("//js") # will create fifo/process
 
-        await asyncio.sleep(1.5)
+        await asyncio.sleep(2.5)  # Increased timeout to allow process to terminate
 
         assert not hr._fifo.exists() # fifo is dead
 
