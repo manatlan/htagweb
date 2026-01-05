@@ -19,13 +19,11 @@ jobs:
 
       - name: Install pytest + dependancies
         run: |
-            python -m pip install --upgrade pip poetry
-            poetry lock
-            poetry install --with dev
+            uv sync --dev
 
       - name: Test with pytest
         run: |
-            poetry run pytest
+            uv run pytest .
 
       - name: Build and publish to pypi
         uses: JRubics/poetry-publish@v1.12

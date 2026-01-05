@@ -1,40 +1,43 @@
-[tool.poetry]
+[project]
 name = "htagweb"
 version = "0.0.0" # auto-updated
 description = "It's a robust webserver (http/ws) for hosting htag apps on the web (a process by user)"
-authors = ["manatlan <manatlan@gmail.com>"]
-readme = 'README.md'
-license="MIT"
-keywords=['htag','webserver']
-homepage = "https://github.com/manatlan/htagweb"
-repository = "https://github.com/manatlan/htagweb"
-documentation = "https://github.com/manatlan/htagweb"
+authors = [{name = "manatlan", email = "manatlan@gmail.com"}]
+readme = "README.md"
+license = {text = "MIT"}
+keywords = ["htag", "webserver"]
+requires-python = ">=3.8"
+dependencies = [
+    "htag>=0.51",
+    "starlette>=0.40.0",
+    "pycryptodomex>=3.19.0",
+    "uvicorn[standard]==0.30.0",
+    "aiofiles>=23.2.1",
+    "shared-memory-dict>=0.7.2",
+]
 classifiers = [
-        "Operating System :: OS Independent",
-        "Topic :: Software Development :: Libraries :: Python Modules",
-        "Topic :: Software Development :: Build Tools",
-        "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Build Tools",
+    "License :: OSI Approved :: Apache Software License",
 ]
 
-[tool.poetry.dependencies]
-python = "^3.8"
-htag = ">= 0.51"
-starlette = ">= 0.40.0"
-pycryptodomex = "^3.19.0"
-uvicorn = {version = "0.30.0", extras = ["standard"]}
-aiofiles = "^23.2.1"
-shared-memory-dict = "^0.7.2"
+[project.urls]
+Homepage = "https://github.com/manatlan/htagweb"
+Repository = "https://github.com/manatlan/htagweb"
+Documentation = "https://github.com/manatlan/htagweb"
 
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.4.2"
-pytest-asyncio = "^0.21.1"
-pytest-cov = "^4.1.0"
-httpx = "0.24.0"
-gunicorn = "^22.0.0"
-beautifulsoup4 = "^4.12.3"
-redys = "^0.9.20"
+[dependency-groups]
+dev = [
+    "pytest>=7.4.2",
+    "pytest-asyncio>=0.21.1",
+    "pytest-cov>=4.1.0",
+    "httpx==0.24.0",
+    "gunicorn>=22.0.0",
+    "beautifulsoup4>=4.12.3",
+    "redys>=0.9.20",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
