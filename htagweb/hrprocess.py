@@ -18,6 +18,7 @@ import inspect
 import traceback
 from htag import Tag
 from htag.render import HRenderer
+from asyncio import LimitOverrunError
 
 from .session import Session
 from .fifo import AsyncStream
@@ -133,8 +134,15 @@ async def main(f:AsyncStream,moduleapp:str,timeout_interaction,timeout_inactivit
             try:
                 while sys.running:
                     # Read the command from the client
-                    data = await reader.readline()
-                    if not data:
+                    try:
+                        data = await reader.readline()
+                        if not data:
+                            break
+                    except asyncio.LimitOverrunError as e:
+                        log(f"Message too large (limit: 10Mo) from client: {e}")
+                        r["err"] = f"Message too large (limit: 10Mo): {e}"
+                        writer.write((json.dumps(r) + '\n').encode())
+                        await writer.drain()
                         break
                         
                     frame = data.decode().strip()
@@ -168,7 +176,7 @@ async def main(f:AsyncStream,moduleapp:str,timeout_interaction,timeout_inactivit
         server = await asyncio.start_unix_server(
             handle_client,
             path=f.CLIENT_TO_SERVER_SOCKET,
-            limit=1024*1024  # 1Mo pour gérer les gros échanges de données
+            limit=10*1024*1024  # 10Mo pour gérer les très gros échanges de données
         )
         
         # Main loop to check for inactivity timeout

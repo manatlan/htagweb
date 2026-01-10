@@ -13,6 +13,7 @@ import glob
 from datetime import datetime
 import socket
 import tempfile
+from asyncio import LimitOverrunError
 
 class AsyncStream:
     # FOLDER="./ses"
@@ -78,10 +79,11 @@ class AsyncStream:
     async def com(self, command: str, **args) -> "str|dict":  # for client only
         try:
             # Connexion au serveur via socket Unix avec une limite augmentée
-            # La limite par défaut est 64Ko, on passe à 1Mo pour gérer les gros échanges de données
+            # La limite par défaut est 64Ko, on passe à 10Mo pour gérer les très gros échanges de données
+            # et éviter les erreurs "Separator is found, but chunk is longer than limit"
             reader, writer = await asyncio.open_unix_connection(
                 self.CLIENT_TO_SERVER_SOCKET,
-                limit=1024*1024  # 1Mo
+                limit=10*1024*1024  # 10Mo
             )
             
             args["cmd"] = command
@@ -90,9 +92,12 @@ class AsyncStream:
             await writer.drain()
 
             # Lire la réponse
-            data = await reader.readline()
-            if not data:
-                raise Exception("Connection closed by server")
+            try:
+                data = await reader.readline()
+                if not data:
+                    raise Exception("Connection closed by server")
+            except asyncio.LimitOverrunError as e:
+                raise Exception(f"Message too large (limit: 10Mo). Consider optimizing data size or increasing limit: {e}")
             
             frame = data.decode().strip()
             try:
